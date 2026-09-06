@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+body { background: #0c0d10; }
+@media print {
+  body { background: white; }
+  .print\:hidden { display: none !important; }
+}
