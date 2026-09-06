@@ -1,5 +1,6 @@
 "use client";
-import { isOverdue, scrapPct } from "@/lib/calc/yield";
+import { scrapPct, isOverdue } from "@/lib/calc/yield";
+import { StatusPill } from "./ui";
 
 export type Step = {
   id: string; step_order: number; step_name: string; atelier_id: number;
@@ -8,34 +9,41 @@ export type Step = {
   started_at: string | null; worker_id: string | null;
 };
 
-const STATUS_COLOR: Record<string, string> = {
-  PENDING: "bg-zinc-700", ACTIVE: "bg-blue-600 animate-pulse",
-  PAUSED: "bg-amber-600", DONE: "bg-emerald-600",
-  REWORK: "bg-red-600", SKIPPED_SPLIT: "bg-purple-600"
+const DOT: Record<string, string> = {
+  PENDING: "bg-zinc-500", ACTIVE: "bg-ice", PAUSED: "bg-amber-400",
+  DONE: "bg-emerald-400", REWORK: "bg-red-400", SKIPPED_SPLIT: "bg-purple-400"
 };
 
 export default function LivePipeline({ steps }: { steps: Step[] }) {
   const sorted = [...steps].sort((a, b) => a.step_order - b.step_order);
+  if (sorted.length === 0) return <p className="text-sm text-zinc-500">No steps in this view.</p>;
   return (
-    <div className="space-y-2">
+    <div className="max-h-[520px] space-y-1.5 overflow-y-auto pr-1">
       {sorted.map((s) => {
-        const sp = scrapPct(s.good_units, s.scrap_units);
-        const overdue = isOverdue(Number(s.actual_minutes), s.estimated_minutes);
+        const sp = scrapPct(s.good_units ?? 0, s.scrap_units ?? 0);
+        const overdue = isOverdue(Number(s.actual_minutes), s.estimated_minutes) && s.status !== "PENDING";
         return (
-          <div key={s.id} className="flex items-center gap-3 rounded-xl bg-zinc-900 border border-zinc-800 p-3 text-white">
-            <span className={`rounded-lg px-2 py-1 text-xs font-black ${STATUS_COLOR[s.status] ?? "bg-zinc-700"}`}>{s.status}</span>
-            <div className="flex-1 min-w-0">
-              <div className="font-bold truncate">#{s.step_order} {s.step_name}</div>
-              <div className="text-xs text-zinc-400">
-                Atelier {s.atelier_id} · {Number(s.actual_minutes).toFixed(0)}/{s.estimated_minutes} min · Good {s.good_units}/{s.expected_units}
-              </div>
+          <div key={s.id} className="glass-soft flex items-center gap-3 p-2.5">
+            <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${DOT[s.status] ?? "bg-zinc-500"} ${s.status === "ACTIVE" ? "live-dot" : ""}`} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold">#{s.step_order} {s.step_name}</p>
+              <p className="truncate text-[11px] text-zinc-500">
+                A{s.atelier_id} · {Number(s.actual_minutes).toFixed(0)}/{s.estimated_minutes} min · Good {s.good_units}/{s.expected_units}
+              </p>
             </div>
-            {overdue && s.status !== "PENDING" && (
-              <span className="rounded-lg bg-red-600 px-2 py-1 text-xs font-black">🔴 +{(Number(s.actual_minutes) - s.estimated_minutes).toFixed(0)} min</span>
-            )}
-            {sp > 5 && (
-              <span className="rounded-lg bg-orange-500 px-2 py-1 text-xs font-black text-black">⚠️ {sp.toFixed(1)}% scrap</span>
-            )}
+            <div className="flex shrink-0 items-center gap-1.5">
+              {overdue && (
+                <span className="rounded-md bg-red-500/20 border border-red-400/30 px-1.5 py-0.5 text-[10px] font-black text-red-300">
+                  +{(Number(s.actual_minutes) - s.estimated_minutes).toFixed(0)}m
+                </span>
+              )}
+              {sp > 5 && (
+                <span className="rounded-md bg-fire/20 border border-fire/30 px-1.5 py-0.5 text-[10px] font-black text-fire-soft">
+                  {sp.toFixed(0)}% scrap
+                </span>
+              )}
+              <StatusPill status={s.status} />
+            </div>
           </div>
         );
       })}

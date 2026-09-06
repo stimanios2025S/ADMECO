@@ -3,26 +3,28 @@ import type { Step } from "./LivePipeline";
 
 export default function GanttBoard({ steps }: { steps: Step[] }) {
   const sorted = [...steps].sort((a, b) => a.step_order - b.step_order);
+  if (sorted.length === 0) return <p className="text-sm text-zinc-500">No steps in this view.</p>;
   const maxEst = Math.max(1, ...sorted.map((s) => s.estimated_minutes));
   return (
-    <div className="space-y-1.5">
+    <div className="max-h-[520px] space-y-1.5 overflow-y-auto pr-1">
       {sorted.map((s) => {
         const actual = Number(s.actual_minutes) || (s.status === "ACTIVE" ? s.estimated_minutes * 0.5 : 0);
+        const bad = actual > s.estimated_minutes;
         return (
-          <div key={s.id} className="grid grid-cols-[180px_1fr] gap-2 items-center text-white text-xs">
-            <div className="truncate">#{s.step_order} {s.step_name}</div>
-            <div className="relative h-6 rounded bg-zinc-800 overflow-hidden">
-              <div className="absolute inset-y-0 left-0 bg-zinc-600" style={{ width: `${Math.min(100, (s.estimated_minutes / maxEst) * 100)}%` }} />
-              <div className={`absolute inset-y-0 left-0 ${actual > s.estimated_minutes ? "bg-red-500" : "bg-emerald-500"}`}
+          <div key={s.id} className="grid grid-cols-[150px_1fr] items-center gap-2 text-xs">
+            <div className="truncate text-zinc-300">#{s.step_order} {s.step_name}</div>
+            <div className="relative h-6 overflow-hidden rounded-lg bg-white/5">
+              <div className="absolute inset-y-0 left-0 rounded-lg bg-white/15" style={{ width: `${Math.min(100, (s.estimated_minutes / maxEst) * 100)}%` }} />
+              <div className={`absolute inset-y-0 left-0 rounded-lg ${bad ? "bg-gradient-to-r from-red-500 to-fire" : "bg-gradient-to-r from-ice to-ice-soft"}`}
                 style={{ width: `${Math.min(100, (actual / maxEst) * 100)}%`, opacity: 0.9 }} />
-              <span className="absolute inset-0 flex items-center px-2 font-mono">
+              <span className="absolute inset-0 flex items-center px-2 font-mono text-[10px] font-bold text-white/90">
                 {actual.toFixed(0)}/{s.estimated_minutes}m
               </span>
             </div>
           </div>
         );
       })}
-      <div className="text-[11px] text-zinc-400">Gray = target · Green = actual on-track · Red = overdue</div>
+      <p className="pt-1 text-[11px] text-zinc-500">Pale = target · Blue = on-track · Red-orange = overdue</p>
     </div>
   );
 }

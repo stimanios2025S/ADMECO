@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { Truck } from "lucide-react";
 import { createTransfer } from "@/app/actions";
 
 export default function OrderActions({ orderId }: { orderId: string }) {
@@ -15,9 +16,9 @@ export default function OrderActions({ orderId }: { orderId: string }) {
         catch (e: any) { alert(e.message); }
         setBusy(false);
       }}
-      className="rounded-xl bg-yellow-400 px-5 py-2.5 font-black text-black"
+      className="btn-fire inline-flex items-center gap-1.5 px-4 py-2 text-sm"
     >
-      🚚 Generate pallet manifest (A2→B3)
+      <Truck size={16} /> {busy ? "Generating…" : "Pallet manifest (A2→B3)"}
     </button>
   );
 }

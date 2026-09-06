@@ -1,5 +1,6 @@
 "use server";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createServiceSupabase } from "@/lib/supabase/service";
 import { revalidatePath } from "next/cache";
 
 export async function createWorkOrder(form: { orderNumber: string; categoryId: string; targetQuantity: number; dueAt?: string }) {
@@ -11,6 +12,7 @@ export async function createWorkOrder(form: { orderNumber: string; categoryId: s
   if (error) throw new Error(error.message);
   const { error: e2 } = await supabase.rpc("instantiate_work_order", { p_order: order.id });
   if (e2) throw new Error(e2.message);
+  revalidatePath("/admin");
   revalidatePath("/dashboard");
   return order;
 }
@@ -51,6 +53,7 @@ export async function createTransfer(orderId: string, fromAtelier: number, toAte
     work_order_id: orderId, from_atelier: fromAtelier, to_atelier: toAtelier, item_count: itemCount, manifest_qr: manifest
   }).select().single();
   if (error) throw new Error(error.message);
+  revalidatePath("/admin");
   return data;
 }
 
@@ -60,6 +63,7 @@ export async function verifyTransfer(transferId: string, ok: boolean) {
     status: ok ? "VERIFIED" : "SHORTAGE", verified_at: new Date().toISOString()
   }).eq("id", transferId);
   if (error) throw new Error(error.message);
+  revalidatePath("/admin");
   revalidatePath("/dashboard");
 }
 
@@ -72,12 +76,49 @@ export async function splitBatch(stepId: string, damagedUnits: number) {
     status: "DONE", good_units: good, scrap_units: damagedUnits, completed_at: new Date().toISOString()
   }).eq("id", stepId);
   if (e2) throw new Error(e2.message);
-  // push damaged units to rework: duplicate as REWORK row on same order
   await supabase.from("work_order_steps").insert({
     work_order_id: step.work_order_id, step_order: step.step_order + 0.5,
     atelier_id: step.atelier_id, step_name: `${step.step_name} — REWORK (${damagedUnits})`,
     status: "REWORK", estimated_minutes: step.estimated_minutes,
     expected_units: damagedUnits
   });
+  revalidatePath("/admin");
   revalidatePath("/dashboard");
+}
+
+// ---------------- Team management (ADMIN, service-role) ----------------
+
+export async function inviteMember(input: { email: string; fullName: string; role: "ADMIN" | "WORKER"; atelierId: number | null }) {
+  const service = createServiceSupabase();
+  const { data, error } = await service.auth.admin.createUser({
+    email: input.email,
+    email_confirm: true,
+    user_metadata: { full_name: input.fullName, role: input.role }
+  });
+  if (error) throw new Error(error.message);
+  const userId = data.user?.id;
+  if (!userId) throw new Error("User creation returned no id.");
+  const { error: e2 } = await service.from("profiles").insert({
+    id: userId, role: input.role, full_name: input.fullName, atelier_id: input.atelierId
+  });
+  if (e2) throw new Error(e2.message);
+  revalidatePath("/admin/team");
+  return { id: userId };
+}
+
+export async function updateMember(input: { id: string; fullName: string; role: "ADMIN" | "WORKER"; atelierId: number | null }) {
+  const service = createServiceSupabase();
+  const { error } = await service.from("profiles").update({
+    full_name: input.fullName, role: input.role, atelier_id: input.atelierId
+  }).eq("id", input.id);
+  if (error) throw new Error(error.message);
+  await service.auth.admin.updateUserById(input.id, { user_metadata: { full_name: input.fullName, role: input.role } });
+  revalidatePath("/admin/team");
+}
+
+export async function removeMember(id: string) {
+  const service = createServiceSupabase();
+  const { error } = await service.auth.admin.deleteUser(id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/team");
 }
