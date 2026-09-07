@@ -6,6 +6,8 @@ export const scrapPct = (good: number, scrap: number) =>
 
 export const isScrapAlert = (g: number, s: number) => scrapPct(g, s) > 5;
 
+export const isOverdue = (actual: number, est: number) => actual > est;
+
 export const fmtVariance = (actual: number, est: number) => {
   const d = actual - est;
   const sign = d >= 0 ? "+" : "";

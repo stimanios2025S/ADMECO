@@ -21,12 +21,10 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     ? await supabase.from("work_order_steps").select("*").in("item_id", itemIds).order("step_order")
     : { data: [] };
 
-  // Group steps by item
-  const stepsByItem = new Map<string, any[]>();
+  // Group steps by item (plain object — Maps can't cross to Client Components)
+  const stepsByItem: Record<string, any[]> = {};
   for (const s of allSteps ?? []) {
-    const list = stepsByItem.get(s.item_id) ?? [];
-    list.push(s);
-    stepsByItem.set(s.item_id, list);
+    (stepsByItem[s.item_id] ??= []).push(s);
   }
 
   const readyCount = (items ?? []).filter((i: any) => i.status === "SEMI_READY").length;

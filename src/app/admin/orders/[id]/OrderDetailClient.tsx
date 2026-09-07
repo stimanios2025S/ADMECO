@@ -8,7 +8,7 @@ import GanttBoard from "@/components/admin/GanttBoard";
 import { releaseToMobilix } from "@/app/actions";
 
 export default function OrderDetailClient({ orderId, orderStatus, items, stepsByItem, transfers }: {
-  orderId: string; orderStatus: string; items: any[]; stepsByItem: Map<string, any[]>; transfers: any[];
+  orderId: string; orderStatus: string; items: any[]; stepsByItem: Record<string, any[]>; transfers: any[];
 }) {
   const router = useRouter();
   const [expanded, setExpanded] = useState<string | null>(items[0]?.id ?? null);
@@ -48,7 +48,7 @@ export default function OrderDetailClient({ orderId, orderStatus, items, stepsBy
         <SectionTitle kicker="Products" title="Order items & production progress" />
         <div className="space-y-2">
           {items.map((item) => {
-            const steps = stepsByItem.get(item.id) ?? [];
+            const steps = stepsByItem[item.id] ?? [];
             const done = steps.filter((s: any) => s.status === "DONE").length;
             const isExpanded = expanded === item.id;
             return (

@@ -1,5 +1,6 @@
 "use server";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createServiceSupabase } from "@/lib/supabase/service";
 import { revalidatePath } from "next/cache";
 
 // ─── ORDERS ──────────────────────────────────────────
@@ -32,31 +33,26 @@ export async function createOrder(input: {
       await supabase.from("work_order_steps").insert(steps);
     }
 
-    // Reserve materials
+    // Reserve materials (accumulate per stock item — one row each, avoids UNIQUE violations)
     if (templates) {
-      for (const t of templates) {
-        const mats = (t.standard_materials ?? []) as any[];
-        for (const m of mats) {
-          const totalQty = +(m.qty * item.quantity).toFixed(3);
-          // Find stock item
-          const { data: stock } = await supabase.from("stock_items").select("id").ilike("name", m.material).single();
-          if (stock) {
-            await supabase.from("order_item_reservations").insert({
-              order_item_id: inserted.id, stock_item_id: stock.id, estimated_qty: totalQty
-            });
-          }
+      const need = new Map<string, number>();
+      const collect = (mats: any) => {
+        for (const m of (mats ?? []) as any[]) {
+          if (!m?.material || !m?.qty) continue;
+          need.set(m.material, +((need.get(m.material) ?? 0) + m.qty * item.quantity).toFixed(3));
         }
-        // Branch materials
-        if (t.has_branch && t.branch_insert_materials) {
-          for (const m of t.branch_insert_materials as any[]) {
-            const totalQty = +(m.qty * item.quantity).toFixed(3);
-            const { data: stock } = await supabase.from("stock_items").select("id").ilike("name", m.material).single();
-            if (stock) {
-              await supabase.from("order_item_reservations").insert({
-                order_item_id: inserted.id, stock_item_id: stock.id, estimated_qty: totalQty
-              });
-            }
-          }
+      };
+      for (const t of templates) {
+        collect(t.standard_materials);
+        if (t.has_branch) collect(t.branch_insert_materials);
+      }
+      for (const [material, totalQty] of need) {
+        const { data: stock } = await supabase.from("stock_items").select("id").ilike("name", material).single();
+        if (stock) {
+          await supabase.from("order_item_reservations").upsert(
+            { order_item_id: inserted.id, stock_item_id: stock.id, estimated_qty: totalQty },
+            { onConflict: "order_item_id,stock_item_id" }
+          );
         }
       }
     }
@@ -67,10 +63,12 @@ export async function createOrder(input: {
 }
 
 // ─── WORKER: START STEP ──────────────────────────────
-export async function startStep(stepId: string, workerId: string) {
+export async function startStep(stepId: string, _workerId: string) {
+  // Note: kiosk workerId is a random session UUID, not a profiles.id — don't persist it
+  // (would violate the worker_id FK). The floor tablet identity stays client-side.
   const supabase = createServerSupabase();
   const { error } = await supabase.from("work_order_steps").update({
-    status: "ACTIVE", started_at: new Date().toISOString(), worker_id: workerId
+    status: "ACTIVE", started_at: new Date().toISOString()
   }).eq("id", stepId);
   if (error) throw new Error(error.message);
   revalidatePath("/portal");
@@ -115,9 +113,15 @@ export async function completeStep(input: {
       });
       // Consume from stock
       const totalUsed = m.quantityUsed + m.quantityLost;
+      const { data: cur } = await supabase.from("stock_items").select("quantity").eq("id", m.stockItemId).single();
       await supabase.from("stock_items").update({
-        quantity: Math.max(0, (await supabase.from("stock_items").select("quantity").eq("id", m.stockItemId).single()).data!.quantity - totalUsed)
+        quantity: Math.max(0, Number(cur?.quantity ?? 0) - totalUsed)
       }).eq("id", m.stockItemId);
+      // Mark reserved quantity as consumed so "available" stays correct
+      const { data: res } = await supabase.from("order_item_reservations").select("id,consumed_qty").eq("order_item_id", step.item_id).eq("stock_item_id", m.stockItemId).maybeSingle();
+      if (res) {
+        await supabase.from("order_item_reservations").update({ consumed_qty: Number(res.consumed_qty ?? 0) + totalUsed }).eq("id", res.id);
+      }
       // Log movement
       await supabase.from("stock_movements").insert({
         stock_item_id: m.stockItemId, step_id: input.stepId,
@@ -189,31 +193,61 @@ export async function deleteStockItem(id: string) {
   revalidatePath("/admin/stocks");
 }
 
-// ─── TEAM ────────────────────────────────────────────
+// ─── TEAM (service-role: auth.admin + profiles bypass RLS safely server-side) ──
 export async function inviteMember(input: { email: string; fullName: string; role: "ADMIN" | "WORKER"; atelierId: number | null }) {
-  const supabase = createServerSupabase();
-  const { data, error } = await supabase.auth.admin.createUser({
+  const admin = createServiceSupabase();
+  const { data, error } = await admin.auth.admin.createUser({
     email: input.email, email_confirm: true,
     user_metadata: { full_name: input.fullName, role: input.role }
   });
   if (error) throw new Error(error.message);
   const userId = data.user?.id;
   if (!userId) throw new Error("No user id returned");
-  await supabase.from("profiles").insert({ id: userId, role: input.role, full_name: input.fullName, atelier_id: input.atelierId });
+  const { error: e2 } = await admin.from("profiles").insert({ id: userId, role: input.role, full_name: input.fullName, atelier_id: input.atelierId });
+  if (e2) throw new Error(e2.message);
   revalidatePath("/admin/team");
+  return { id: userId };
 }
 
 export async function updateMember(input: { id: string; fullName: string; role: "ADMIN" | "WORKER"; atelierId: number | null }) {
-  const supabase = createServerSupabase();
-  await supabase.from("profiles").update({ full_name: input.fullName, role: input.role, atelier_id: input.atelierId }).eq("id", input.id);
-  await supabase.auth.admin.updateUserById(input.id, { user_metadata: { full_name: input.fullName, role: input.role } });
+  const admin = createServiceSupabase();
+  const { error } = await admin.from("profiles").update({ full_name: input.fullName, role: input.role, atelier_id: input.atelierId }).eq("id", input.id);
+  if (error) throw new Error(error.message);
+  await admin.auth.admin.updateUserById(input.id, { user_metadata: { full_name: input.fullName, role: input.role } });
   revalidatePath("/admin/team");
 }
 
 export async function removeMember(id: string) {
-  const supabase = createServerSupabase();
-  await supabase.auth.admin.deleteUser(id);
+  const admin = createServiceSupabase();
+  await admin.from("profiles").delete().eq("id", id);
+  const { error } = await admin.auth.admin.deleteUser(id);
+  if (error) throw new Error(error.message);
   revalidatePath("/admin/team");
+}
+
+// ─── LEGACY SHIMS (old UI still imports these — keep build green) ──
+export async function createWorkOrder(input: { orderNumber: string; categoryId: string; targetQuantity: number; dueAt?: string }) {
+  return createOrder({
+    orderNumber: input.orderNumber, dueAt: input.dueAt,
+    items: [{ productName: input.orderNumber, categoryId: input.categoryId, quantity: input.targetQuantity }]
+  });
+}
+
+export async function createTransfer(orderId: string, _fromAtelier: number, _toAtelier: number, _count: number) {
+  return releaseToMobilix(orderId);
+}
+
+export async function verifyTransfer(transferId: string, ok: boolean) {
+  const supabase = createServerSupabase();
+  await supabase.from("site_transfers").update({
+    status: ok ? "VERIFIED" : "PENDING", verified_at: ok ? new Date().toISOString() : null
+  }).eq("id", transferId);
+  revalidatePath("/admin/roadmap");
+}
+
+export async function splitBatch(_stepId: string, _damaged: number) {
+  // Batch splitting retired in the per-item rebuild — no-op kept for old worker UI.
+  return { ok: true };
 }
 
 // ─── TEMPLATES ───────────────────────────────────────

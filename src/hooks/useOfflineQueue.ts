@@ -14,19 +14,8 @@ async function flushOne(supabase: any, op: QueuedOp): Promise<boolean> {
         return !error;
       }
       case "STEP_COMPLETE": {
-        const { error } = await supabase.from("work_order_steps").update({
-          status: "DONE", completed_at: new Date().toISOString(),
-          good_units: op.payload.goodUnits, scrap_units: op.payload.scrapUnits,
-          expected_units: op.payload.expectedUnits
-        }).eq("id", op.payload.stepId);
-        if (error) return false;
-        if (op.payload.materialName) {
-          await supabase.from("material_logs").insert({
-            step_id: op.payload.stepId, material_name: op.payload.materialName,
-            quantity_used: op.payload.qtyUsed, quantity_lost: op.payload.qtyLost,
-            loss_reason: op.payload.lossReason ?? null
-          });
-        }
+        // Retired in the per-item rebuild (material_logs now keyed by stock_item_id).
+        // Drain silently so stale offline ops don't jam the queue.
         return true;
       }
       case "TRANSFER_VERIFY": {

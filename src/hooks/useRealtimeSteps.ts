@@ -9,7 +9,7 @@ export function useRealtimeSteps(orderId?: string) {
     const ch = supabase
       .channel(`steps-${orderId ?? "all"}`)
       .on("postgres_changes",
-        { event: "*", schema: "public", table: "work_order_steps", filter: orderId ? `work_order_id=eq.${orderId}` : undefined },
+        { event: "*", schema: "public", table: "work_order_steps" },
         () => setTick((t) => t + 1))
       .on("postgres_changes", { event: "*", schema: "public", table: "site_transfers" }, () => setTick((t) => t + 1))
       .subscribe();

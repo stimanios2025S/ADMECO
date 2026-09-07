@@ -22,7 +22,7 @@ export default function RoadmapClient({ orders, steps, transfers, selectedId }: 
   const visible = steps.filter((s) => filter === "ALL" || s.atelier_id === filter);
   const done = steps.filter((s) => s.status === "DONE").length;
   const pct = steps.length ? Math.round((done / steps.length) * 100) : 0;
-  const orderTransfers = transfers.filter((t) => t.work_order_id === selectedId);
+  const orderTransfers = transfers.filter((t) => t.order_id === selectedId);
   const selected = orders.find((o) => o.id === selectedId);
 
   return (
@@ -42,7 +42,7 @@ export default function RoadmapClient({ orders, steps, transfers, selectedId }: 
         {selected && (
           <div className="ml-auto flex items-center gap-2 text-sm">
             <StatusPill status={selected.status} />
-            <span className="text-zinc-400">×{selected.target_quantity} · {done}/{steps.length} · <b className="text-white">{pct}%</b></span>
+            <span className="text-zinc-400">{done}/{steps.length} · <b className="text-white">{pct}%</b></span>
           </div>
         )}
       </div>
@@ -98,10 +98,10 @@ export default function RoadmapClient({ orders, steps, transfers, selectedId }: 
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-400/15 text-amber-300"><Truck size={19} /></span>
                 <div className="min-w-0 flex-1">
                   <p className="font-mono text-sm font-bold text-fire-soft">{t.manifest_qr}</p>
-                  <p className="text-xs text-zinc-400">A{t.from_atelier} → A{t.to_atelier} · ×{t.item_count} items</p>
+                  <p className="text-xs text-zinc-400">ADEMCO → MOBILIX · ×{t.item_count} items</p>
                   <div className="mt-1"><StatusPill status={t.status} /></div>
                 </div>
-                {t.status === "IN_TRANSIT" && (
+                {t.status === "PENDING" && (
                   <button disabled={busy === t.id}
                     onClick={async () => { setBusy(t.id); await verifyTransfer(t.id, true); setBusy(null); router.refresh(); }}
                     className="btn-ice inline-flex shrink-0 items-center gap-1 px-3 py-2 text-xs">

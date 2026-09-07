@@ -5,7 +5,7 @@ import { StatusPill } from "./ui";
 export type Step = {
   id: string; step_order: number; step_name: string; atelier_id: number;
   status: string; estimated_minutes: number; actual_minutes: number;
-  good_units: number; scrap_units: number; expected_units: number;
+  good_units?: number; scrap_units?: number; expected_units?: number;
   started_at: string | null; worker_id: string | null;
 };
 
@@ -28,7 +28,7 @@ export default function LivePipeline({ steps }: { steps: Step[] }) {
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-bold">#{s.step_order} {s.step_name}</p>
               <p className="truncate text-[11px] text-zinc-500">
-                A{s.atelier_id} · {Number(s.actual_minutes).toFixed(0)}/{s.estimated_minutes} min · Good {s.good_units}/{s.expected_units}
+                A{s.atelier_id} · {Number(s.actual_minutes ?? 0).toFixed(0)}/{s.estimated_minutes} min
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">

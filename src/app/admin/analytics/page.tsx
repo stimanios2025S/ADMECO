@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function AnalyticsPage() {
   const supabase = createServerSupabase();
   const [{ data: items }, { data: logs }, { data: steps }, { data: orders }] = await Promise.all([
-    supabase.from("work_order_items").select("id,product_name,quantity,status,product_categories(name)").limit(200),
+    supabase.from("work_order_items").select("id,order_id,product_name,quantity,status").limit(500),
     supabase.from("material_logs").select("*, stock_items(name,unit)").limit(3000),
     supabase.from("work_order_steps").select("step_name,atelier_id,status,actual_minutes,estimated_minutes").limit(3000),
     supabase.from("work_orders").select("id,order_number,status,created_at").limit(100)
