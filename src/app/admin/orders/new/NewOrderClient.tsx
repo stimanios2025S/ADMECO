@@ -30,7 +30,7 @@ export default function NewOrderClient({ categories, templates }: { categories: 
         }
       }
     }
-    return [...map.entries()].map(([material, qty]) => ({ material, qty: +qty.toFixed(2) }));
+    return Array.from(map.entries()).map(([material, qty]) => ({ material, qty: +qty.toFixed(2) }));
   }, [items, templates]);
 
   return (

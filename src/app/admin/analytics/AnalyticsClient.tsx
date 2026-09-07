@@ -29,7 +29,7 @@ export default function AnalyticsClient({ items, logs, steps, orders }: { items:
       cur.lost += Number(l.quantity_lost) || 0;
       matMap.set(key, cur);
     }
-    const materials = [...matMap.entries()].map(([name, v]) => ({ name: name.length > 18 ? name.slice(0, 18) + "…" : name, used: +v.used.toFixed(1), lost: +v.lost.toFixed(1) })).sort((a, b) => b.used - a.used).slice(0, 8);
+    const materials = Array.from(matMap.entries()).map(([name, v]) => ({ name: name.length > 18 ? name.slice(0, 18) + "…" : name, used: +v.used.toFixed(1), lost: +v.lost.toFixed(1) })).sort((a, b) => b.used - a.used).slice(0, 8);
     const trend = orders.slice(-12).map((o) => {
       const myItems = items.filter((i) => i.order_id === o.id);
       const ready = myItems.filter((i) => i.status === "SEMI_READY" || i.status === "RELEASED").length;

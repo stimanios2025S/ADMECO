@@ -46,7 +46,7 @@ export async function createOrder(input: {
         collect(t.standard_materials);
         if (t.has_branch) collect(t.branch_insert_materials);
       }
-      for (const [material, totalQty] of need) {
+      for (const [material, totalQty] of Array.from(need.entries())) {
         const { data: stock } = await supabase.from("stock_items").select("id").ilike("name", material).single();
         if (stock) {
           await supabase.from("order_item_reservations").upsert(
