@@ -1,0 +1,48 @@
+import { createServerSupabase } from "@/lib/supabase/server";
+import Link from "next/link";
+import AdminShell from "@/components/admin/AdminShell";
+import { GlassCard, SectionTitle, StatusPill, Empty } from "@/components/admin/ui";
+
+export const dynamic = "force-dynamic";
+
+export default async function OrdersPage() {
+  const supabase = createServerSupabase();
+  const { data: orders } = await supabase.from("work_orders").select("*, work_order_items(id,product_name,quantity,status)").order("created_at", { ascending: false }).limit(50);
+
+  return (
+    <AdminShell pageTitle="Orders" pageHint="All production orders — create, track and release to MOBILIX.">
+      <div className="stagger space-y-5">
+        <div className="flex justify-end">
+          <Link href="/admin/orders/new" className="btn-fire inline-flex items-center gap-1.5 px-5 py-2.5 text-sm">+ New order</Link>
+        </div>
+        {!orders || orders.length === 0 ? (
+          <Empty icon="📦" title="No orders yet" hint="Create your first production order." />
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {orders.map((o: any) => (
+              <Link key={o.id} href={`/admin/orders/${o.id}`} className="glass-soft group p-4 transition hover:border-fire/30">
+                <div className="flex items-center justify-between">
+                  <span className="font-black text-lg">{o.order_number}</span>
+                  <StatusPill status={o.status} />
+                </div>
+                <p className="mt-1 text-xs text-zinc-400">
+                  {o.work_order_items?.length ?? 0} items · {new Date(o.created_at).toLocaleDateString("fr-FR")}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {(o.work_order_items ?? []).slice(0, 3).map((item: any) => (
+                    <span key={item.id} className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-bold text-zinc-400">
+                      {item.product_name} ×{item.quantity}
+                    </span>
+                  ))}
+                  {(o.work_order_items?.length ?? 0) > 3 && (
+                    <span className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] text-zinc-500">+{(o.work_order_items?.length ?? 0) - 3} more</span>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </AdminShell>
+  );
+}

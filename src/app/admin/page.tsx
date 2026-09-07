@@ -7,35 +7,30 @@ export const dynamic = "force-dynamic";
 export default async function AdminDashboard() {
   const supabase = createServerSupabase();
 
-  const [{ data: orders }, { data: steps }, { data: transfers }, { data: categories }, { data: badSteps }] =
+  const [{ data: orders }, { data: items }, { data: stocks }, { data: semiStock }, { data: transfers }, { data: badSteps }] =
     await Promise.all([
-      supabase.from("work_orders").select("*, product_categories(name)").order("created_at", { ascending: false }).limit(50),
-      supabase.from("work_order_steps").select("id,work_order_id,status,atelier_id,estimated_minutes,actual_minutes,good_units,scrap_units,expected_units").limit(2000),
-      supabase.from("site_transfers").select("*, work_orders(order_number)").order("id", { ascending: false }).limit(10),
-      supabase.from("product_categories").select("id,name"),
-      supabase.from("v_step_variance").select("*").gt("scrap_pct", 5).order("scrap_pct", { ascending: false }).limit(8)
+      supabase.from("work_orders").select("id,order_number,status,created_at"),
+      supabase.from("work_order_items").select("id,status,steps_completed,steps_total"),
+      supabase.from("v_stock_status").select("*"),
+      supabase.from("semi_finished_stock").select("id,status"),
+      supabase.from("site_transfers").select("*").order("created_at", { ascending: false }).limit(10),
+      supabase.from("v_step_variance").select("*").gt("variance_min", 0).neq("status", "PENDING").limit(10)
     ]);
 
-  const s = steps ?? [];
   const kpi = {
-    activeOrders: (orders ?? []).filter((o: any) => !["COMPLETED"].includes(o.status)).length,
-    totalOrders: (orders ?? []).length,
-    stepsDone: s.filter((x: any) => x.status === "DONE").length,
-    stepsTotal: s.length,
-    overdue: s.filter((x: any) => Number(x.actual_minutes) > Number(x.estimated_minutes) && x.status !== "PENDING").length,
-    scrapAlerts: (badSteps ?? []).length,
-    inTransit: (transfers ?? []).filter((t: any) => t.status === "IN_TRANSIT").length
+    activeOrders: (orders ?? []).filter((o: any) => !["RELEASED", "CANCELLED"].includes(o.status)).length,
+    totalItems: (items ?? []).length,
+    readyItems: (items ?? []).filter((i: any) => i.status === "SEMI_READY").length,
+    lowStock: (stocks ?? []).filter((s: any) => s.low_stock).length,
+    pendingSemi: (semiStock ?? []).filter((s: any) => s.status === "PENDING").length,
+    overdueSteps: (badSteps ?? []).length,
+    transfers: (transfers ?? []).length,
+    totalStock: (stocks ?? []).length
   };
 
   return (
-    <AdminShell pageTitle="Dashboard" pageHint="Live command center — every atelier, every order, right now.">
-      <DashboardClient
-        kpi={kpi}
-        orders={orders ?? []}
-        categories={categories ?? []}
-        transfers={transfers ?? []}
-        badSteps={badSteps ?? []}
-      />
+    <AdminShell pageTitle="Dashboard" pageHint="Command center ADEMCO — production, stock, transferts.">
+      <DashboardClient kpi={kpi} orders={orders ?? []} stocks={(stocks ?? []) as any[]} transfers={transfers ?? []} />
     </AdminShell>
   );
 }

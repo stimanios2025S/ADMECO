@@ -124,6 +124,10 @@ body {
 }
 .live-dot { animation: pulseDot 1.8s ease-in-out infinite; }
 
+/* Hide scrollbar on small containers */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 @media print {
   body { background: white; color: black; }
   .print\:hidden { display: none !important; }
