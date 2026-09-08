@@ -1,21 +1,10 @@
-﻿"use client";
+"use client";
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Package,
-  Warehouse,
-  Siren,
-  Users,
-  BarChart3,
-  Menu,
-  X,
-  Wifi,
-  TabletSmartphone,
-  ChevronLeft,
-  ChevronRight,
-  ArrowUpRight,
+  LayoutDashboard, Package, Warehouse, Siren, Users, BarChart3,
+  Menu, X, TabletSmartphone, ChevronLeft, ChevronRight, Bell, Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import UserChip from "./UserChip";
@@ -29,96 +18,70 @@ const TABS = [
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
-export default function AdminShell({
-  children,
-  pageTitle,
-  pageHint,
-}: {
-  children: ReactNode;
-  pageTitle: string;
-  pageHint?: string;
-}) {
+export default function AdminShell({ children, pageTitle, pageHint }: { children: ReactNode; pageTitle: string; pageHint?: string }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
+
+  const isActive = (href: string) => {
+    if (href === "/admin") return pathname === "/admin";
+    return pathname.startsWith(href);
+  };
 
   const sidebarBody = (
-    <div className="flex h-full flex-col bg-[linear-gradient(180deg,rgba(10,13,20,0.92),rgba(13,16,24,0.96))]">
-      <div className="flex items-center gap-3 px-4 pt-5">
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-fire to-fire-soft text-xl font-black text-[#1a0d02] shadow-[0_18px_35px_rgba(255,122,26,0.32)]">
-          🪑
-        </div>
+    <div className="flex h-full flex-col bg-white">
+      {/* Logo */}
+      <div className="flex items-center gap-2.5 px-4 pt-6 pb-5">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#4a7c59] text-xl font-black text-white shadow-sm">🪑</div>
         {!collapsed && (
           <div>
-            <p className="truncate text-[15px] font-black tracking-tight">
-              ADMECO <span className="text-fire">MES</span>
-            </p>
-            <p className="text-[11px] uppercase tracking-[0.22em] text-zinc-500">
-              Factory command
-            </p>
+            <p className="text-[15px] font-extrabold tracking-tight text-[#1a1d23]">ADMECO <span className="text-[#4a7c59]">MES</span></p>
+            <p className="text-[11px] text-[#7c8091]">Factory command center</p>
           </div>
         )}
       </div>
 
-      <nav className="mt-7 flex-1 space-y-1.5 px-3">
+      {/* Main nav */}
+      <nav className="flex-1 space-y-1 px-3">
         {TABS.map((t) => {
-          const active =
-            pathname === t.href ||
-            (t.href === "/admin/orders" && pathname.startsWith("/admin/orders"));
+          const active = isActive(t.href);
           const Icon = t.icon;
-
           return (
-            <Link
-              key={t.href}
-              href={t.href}
-              title={collapsed ? t.label : undefined}
+            <Link key={t.href} href={t.href} title={collapsed ? t.label : undefined}
               className={cn(
-                "group flex items-center gap-3 rounded-2xl border px-3 py-2.5 transition-all duration-200",
+                "flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all duration-150",
                 active
-                  ? "border-fire/30 bg-[linear-gradient(135deg,rgba(255,122,26,0.18),rgba(255,255,255,0.02))] text-white shadow-[0_12px_26px_rgba(255,122,26,0.12)]"
-                  : "border-transparent text-zinc-400 hover:border-white/10 hover:bg-white/5 hover:text-white"
-              )}
-            >
-              <span
-                className={cn(
-                  "grid h-9 w-9 shrink-0 place-items-center rounded-xl",
-                  active
-                    ? "bg-gradient-to-br from-fire to-fire-soft text-[#1a0d02]"
-                    : "bg-white/5 text-zinc-300"
-                )}
-              >
-                <Icon size={17} strokeWidth={2.4} />
+                  ? "bg-[#4a7c59] text-white shadow-sm"
+                  : "text-[#7c8091] hover:bg-[#f0ede8] hover:text-[#1a1d23]"
+              )}>
+              <span className={cn(
+                "grid h-9 w-9 shrink-0 place-items-center rounded-xl transition-colors",
+                active ? "bg-white/20" : ""
+              )}>
+                <Icon size={18} strokeWidth={active ? 2.5 : 2} />
               </span>
-              {!collapsed && <span className="min-w-0 truncate text-sm font-bold">{t.label}</span>}
-              {!collapsed && active && (
-                <span className="ml-auto h-2.5 w-2.5 rounded-full bg-fire shadow-[0_0_16px_rgba(255,122,26,0.8)]" />
-              )}
+              {!collapsed && <span className="text-[13px] font-semibold">{t.label}</span>}
             </Link>
           );
         })}
       </nav>
 
+      {/* Worker portal link */}
       {!collapsed && (
-        <div className="space-y-2 px-3 pb-3">
-          <Link
-            href="/portal"
-            className="flex items-center justify-between rounded-2xl border border-ice/25 bg-ice/10 px-3 py-2.5 text-sm font-bold text-ice-soft transition hover:bg-ice/16"
-          >
-            <span className="flex items-center gap-2">
-              <TabletSmartphone size={16} /> Worker portal
-            </span>
-            <ArrowUpRight size={14} />
+        <div className="px-3 pb-3">
+          <Link href="/portal"
+            className="flex items-center gap-3 rounded-2xl border border-[#4a7c59]/20 bg-[#4a7c59]/8 px-3 py-2.5 text-[13px] font-semibold text-[#4a7c59] hover:bg-[#4a7c59]/15 transition-colors">
+            <TabletSmartphone size={16} /> Worker Portal
           </Link>
         </div>
       )}
 
-      <div className="border-t border-white/10 p-3">
-        <div className="flex items-center gap-2 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-300">
-          <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+      {/* Live status */}
+      <div className="border-t border-black/5 p-3">
+        <div className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold bg-[#4a7c59]/8 text-[#4a7c59]">
+          <span className="h-2 w-2 rounded-full bg-[#4a7c59] live-dot" />
           {!collapsed && "All systems live"}
         </div>
       </div>
@@ -126,88 +89,71 @@ export default function AdminShell({
   );
 
   return (
-    <div className="bg-mesh min-h-screen text-zinc-100">
-      <div className="bg-grid-faint pointer-events-none fixed inset-0" />
-
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-40 hidden border-r border-white/10 bg-black/40 backdrop-blur-2xl transition-all duration-300 lg:block",
-          collapsed ? "w-[82px]" : "w-[270px]"
-        )}
-      >
+    <div className="min-h-screen bg-[#f3f0eb] text-[#1a1d23]">
+      {/* Desktop sidebar */}
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-40 hidden border-r border-black/5 bg-white transition-all duration-300 lg:flex lg:flex-col",
+        collapsed ? "w-[76px]" : "w-[260px]"
+      )}>
         {sidebarBody}
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          className="absolute -right-3.5 top-20 grid h-7 w-7 place-items-center rounded-full border border-white/15 bg-[#10151d] text-zinc-300 shadow-xl hover:text-white"
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+        <button onClick={() => setCollapsed((c) => !c)}
+          className="absolute -right-3 top-20 grid h-7 w-7 place-items-center rounded-full border border-black/10 bg-white text-[#7c8091] shadow-md hover:text-[#1a1d23] transition-colors"
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
+          {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
       </aside>
 
+      {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={() => setMobileOpen(false)}
-          />
-          <aside className="absolute inset-y-0 left-0 w-[280px] border-r border-white/10 bg-[#0a0d12]/95 backdrop-blur-2xl">
-            {sidebarBody}
-          </aside>
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <aside className="absolute inset-y-0 left-0 w-[280px] bg-white shadow-2xl flex flex-col">{sidebarBody}</aside>
         </div>
       )}
 
-      <div className={cn("relative transition-all duration-300", collapsed ? "lg:pl-[82px]" : "lg:pl-[270px]")}>
-        <header className="sticky top-0 z-30 border-b border-white/10 bg-[#070a10]/70 backdrop-blur-2xl">
-          <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3">
-            <button
-              onClick={() => setMobileOpen(true)}
-              className="btn-ghost grid h-10 w-10 place-items-center lg:hidden"
-              aria-label="Menu"
-            >
-              {mobileOpen ? <X size={19} /> : <Menu size={19} />}
+      {/* Main content area */}
+      <div className={cn("transition-all duration-300", collapsed ? "lg:pl-[76px]" : "lg:pl-[260px]")}>
+        {/* Top bar */}
+        <header className="sticky top-0 z-30 bg-[#f3f0eb]/80 backdrop-blur-xl border-b border-black/5">
+          <div className="mx-auto flex max-w-[1400px] items-center gap-4 px-6 py-4">
+            <button onClick={() => setMobileOpen(true)} className="btn-ghost grid h-10 w-10 place-items-center lg:hidden" aria-label="Menu">
+              {mobileOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
-
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-zinc-500">
-                <span className="live-dot mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <p className="text-[12px] font-medium text-[#7c8091]">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#4a7c59] live-dot mr-1.5 align-middle" />
                 ADEMCO · live
               </p>
-              <h1 className="truncate text-lg font-black tracking-tight sm:text-xl">{pageTitle}</h1>
-              {pageHint && (
-                <p className="hidden truncate text-xs text-zinc-500 sm:block">{pageHint}</p>
-              )}
+              <h1 className="text-[22px] font-extrabold tracking-tight text-[#1a1d23]">{pageTitle}</h1>
+              {pageHint && <p className="hidden truncate text-[13px] text-[#7c8091] sm:block">{pageHint}</p>}
             </div>
-
-            <div className="hidden items-center gap-2 rounded-full border border-fire/20 bg-fire/10 px-3 py-1.5 text-xs font-bold text-fire-soft sm:inline-flex">
-              <span className="text-base">🪑</span> Factory OS
+            <div className="flex items-center gap-2">
+              <button className="relative grid h-10 w-10 place-items-center rounded-xl hover:bg-black/5 transition-colors" title="Notifications">
+                <Bell size={18} className="text-[#7c8091]" />
+                <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[#c24a08]" />
+              </button>
+              <button className="grid h-10 w-10 place-items-center rounded-xl hover:bg-black/5 transition-colors" title="Settings">
+                <Settings size={18} className="text-[#7c8091]" />
+              </button>
+              <UserChip />
             </div>
-            <UserChip />
           </div>
-
+          {/* Mobile tab bar */}
           <nav className="flex gap-1 overflow-x-auto px-4 pb-3 lg:hidden no-scrollbar">
             {TABS.map((t) => {
-              const active =
-                pathname === t.href ||
-                (t.href === "/admin/orders" && pathname.startsWith("/admin/orders"));
-
+              const active = isActive(t.href);
               return (
-                <Link
-                  key={t.href}
-                  href={t.href}
-                  className={cn(
-                    "flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold",
-                    active ? "border-fire/30 bg-fire/15 text-white" : "border-white/10 text-zinc-400"
-                  )}
-                >
+                <Link key={t.href} href={t.href} className={cn(
+                  "flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-colors",
+                  active ? "border-[#4a7c59]/30 bg-[#4a7c59]/10 text-[#4a7c59]" : "border-transparent text-[#7c8091] hover:bg-black/5"
+                )}>
                   <t.icon size={14} /> {t.label}
                 </Link>
               );
             })}
           </nav>
         </header>
-
-        <main className="mx-auto max-w-7xl px-4 py-6">{children}</main>
+        <main className="mx-auto max-w-[1400px] px-6 py-6">{children}</main>
       </div>
     </div>
   );

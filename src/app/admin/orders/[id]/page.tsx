@@ -33,7 +33,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     <AdminShell pageTitle={order.order_number}
       pageHint={`${(items ?? []).length} items · ${readyCount} ready · ${order.status}`}>
       <div className="stagger space-y-5">
-        {order.due_at && <p className="text-sm text-zinc-400">Due: {new Date(order.due_at).toLocaleDateString("fr-FR")}</p>}
+        {order.due_at && <p className="text-sm text-[#7c8091]">Due: {new Date(order.due_at).toLocaleDateString("fr-FR")}</p>}
         <OrderDetailClient orderId={order.id} orderStatus={order.status} items={(items ?? []) as any[]} stepsByItem={stepsByItem} transfers={(transfers ?? []) as any[]} />
       </div>
     </AdminShell>

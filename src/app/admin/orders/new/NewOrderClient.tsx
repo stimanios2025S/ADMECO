@@ -39,9 +39,9 @@ export default function NewOrderClient({ categories, templates }: { categories: 
         <SectionTitle kicker="Order" title="General information" />
         <div className="grid grid-cols-2 gap-3">
           <input required placeholder="Order number — e.g. WO-2026-042" value={orderNumber}
-            onChange={(e) => setOrderNumber(e.target.value)} className="glass-input col-span-2 px-4 py-2.5 text-sm" />
+            onChange={(e) => setOrderNumber(e.target.value)} className="input col-span-2 px-4 py-2.5 text-sm" />
           <input type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)}
-            className="glass-input px-4 py-2.5 text-sm" />
+            className="input px-4 py-2.5 text-sm" />
         </div>
       </GlassCard>
 
@@ -50,51 +50,51 @@ export default function NewOrderClient({ categories, templates }: { categories: 
           right={<button onClick={addItem} className="btn-fire inline-flex items-center gap-1 px-3 py-2 text-sm"><Plus size={15} /> Add item</button>} />
         <div className="space-y-4">
           {items.map((item, i) => (
-            <div key={i} className="glass-soft p-4 space-y-3">
+            <div key={i} className="card p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="font-mono text-xs text-fire-soft">ITEM #{i + 1}</span>
+                <span className="font-mono text-xs text-[#c24a08]">ITEM #{i + 1}</span>
                 {items.length > 1 && (
-                  <button onClick={() => removeItem(i)} className="grid h-7 w-7 place-items-center rounded-lg border border-red-400/25 bg-red-400/10 text-red-300"><Trash2 size={13} /></button>
+                  <button onClick={() => removeItem(i)} className="grid h-7 w-7 place-items-center rounded-lg border border-red-200 bg-red-50 text-red-500"><Trash2 size={13} /></button>
                 )}
               </div>
               <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
                 <input required placeholder="Product name — e.g. Chaise Maïa" value={item.productName}
                   onChange={(e) => updateItem(i, "productName", e.target.value)}
-                  className="glass-input col-span-2 px-3 py-2.5 text-sm" />
+                  className="input col-span-2 px-3 py-2.5 text-sm" />
                 <select value={item.categoryId} onChange={(e) => updateItem(i, "categoryId", e.target.value)}
-                  className="glass-input px-3 py-2.5 text-sm">
-                  {categories.map((c) => <option key={c.id} value={c.id} className="bg-zinc-900">{c.name}</option>)}
+                  className="input px-3 py-2.5 text-sm">
+                  {categories.map((c) => <option key={c.id} value={c.id} className="bg-white">{c.name}</option>)}
                 </select>
                 <input type="number" min={1} value={item.quantity} onChange={(e) => updateItem(i, "quantity", Number(e.target.value))}
-                  className="glass-input px-3 py-2.5 text-sm" placeholder="Quantity" />
+                  className="input px-3 py-2.5 text-sm" placeholder="Quantity" />
               </div>
               <div className="grid grid-cols-3 gap-2">
-                <input placeholder="Length (cm)" value={item.length} onChange={(e) => updateItem(i, "length", e.target.value)} className="glass-input px-3 py-2 text-sm" />
-                <input placeholder="Width (cm)" value={item.width} onChange={(e) => updateItem(i, "width", e.target.value)} className="glass-input px-3 py-2 text-sm" />
-                <input placeholder="Height (cm)" value={item.height} onChange={(e) => updateItem(i, "height", e.target.value)} className="glass-input px-3 py-2 text-sm" />
+                <input placeholder="Length (cm)" value={item.length} onChange={(e) => updateItem(i, "length", e.target.value)} className="input px-3 py-2 text-sm" />
+                <input placeholder="Width (cm)" value={item.width} onChange={(e) => updateItem(i, "width", e.target.value)} className="input px-3 py-2 text-sm" />
+                <input placeholder="Height (cm)" value={item.height} onChange={(e) => updateItem(i, "height", e.target.value)} className="input px-3 py-2 text-sm" />
               </div>
               <input placeholder="Design notes — e.g. Style moderne, finition noire mate, accenty dorés" value={item.designNotes}
-                onChange={(e) => updateItem(i, "designNotes", e.target.value)} className="glass-input w-full px-3 py-2 text-sm" />
+                onChange={(e) => updateItem(i, "designNotes", e.target.value)} className="input w-full px-3 py-2 text-sm" />
             </div>
           ))}
         </div>
       </GlassCard>
 
       {totalEstimates.length > 0 && (
-        <GlassCard className="border-fire/25 bg-gradient-to-r from-fire/5 to-transparent">
+        <GlassCard className="border-[#c24a08]/25 bg-[#c24a08]/5">
           <SectionTitle kicker="Auto-estimate" title="Material reservation summary" hint="These quantities will be RESERVED from stock when the order is created." />
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
             {totalEstimates.map((e) => (
-              <div key={e.material} className="glass-soft px-3 py-2 text-sm">
+              <div key={e.material} className="card px-3 py-2 text-sm">
                 <p className="font-bold">{e.material}</p>
-                <p className="text-fire-soft font-mono">{e.qty}</p>
+                <p className="text-[#c24a08] font-mono">{e.qty}</p>
               </div>
             ))}
           </div>
         </GlassCard>
       )}
 
-      {error && <p className="rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-2 text-sm text-red-300">{error}</p>}
+      {error && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-500">{error}</p>}
 
       <button disabled={busy || items.every((i) => !i.productName.trim())} onClick={async () => {
         setBusy(true); setError("");

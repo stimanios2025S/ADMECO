@@ -19,7 +19,7 @@ export default function CreateOrderDialog({ categories }: { categories: { id: st
     <div className="fixed inset-0 z-[90] grid place-items-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setOpen(false)} />
       <form
-        className="glass relative w-full max-w-md space-y-3 p-6"
+        className="card relative w-full max-w-md space-y-3 p-6"
         onSubmit={async (e) => {
           e.preventDefault(); setBusy(true);
           try { await createWorkOrder(f); setOpen(false); location.reload(); }
@@ -31,17 +31,17 @@ export default function CreateOrderDialog({ categories }: { categories: { id: st
           <h3 className="text-lg font-black">New work order</h3>
           <button type="button" onClick={() => setOpen(false)} className="btn-ghost grid h-8 w-8 place-items-center"><X size={16} /></button>
         </div>
-        <p className="text-xs text-zinc-400">Auto-instances the routing template for the chosen category.</p>
+        <p className="text-xs text-[#7c8091]">Auto-instances the routing template for the chosen category.</p>
         <input required placeholder="Order number — e.g. WO-2026-001" value={f.orderNumber}
-          onChange={(e) => setF({ ...f, orderNumber: e.target.value })} className="glass-input w-full px-4 py-2.5 text-sm" />
+          onChange={(e) => setF({ ...f, orderNumber: e.target.value })} className="input w-full px-4 py-2.5 text-sm" />
         <div className="grid grid-cols-2 gap-2">
-          <select value={f.categoryId} onChange={(e) => setF({ ...f, categoryId: e.target.value })} className="glass-input px-3 py-2.5 text-sm">
-            {categories.map((c) => <option key={c.id} value={c.id} className="bg-zinc-900">{c.name}</option>)}
+          <select value={f.categoryId} onChange={(e) => setF({ ...f, categoryId: e.target.value })} className="input px-3 py-2.5 text-sm">
+            {categories.map((c) => <option key={c.id} value={c.id} className="bg-white">{c.name}</option>)}
           </select>
           <input type="number" min={1} value={f.targetQuantity} title="Target quantity"
-            onChange={(e) => setF({ ...f, targetQuantity: Number(e.target.value) })} className="glass-input px-3 py-2.5 text-sm" />
+            onChange={(e) => setF({ ...f, targetQuantity: Number(e.target.value) })} className="input px-3 py-2.5 text-sm" />
         </div>
-        <input type="date" value={f.dueAt} onChange={(e) => setF({ ...f, dueAt: e.target.value })} className="glass-input w-full px-4 py-2.5 text-sm" />
+        <input type="date" value={f.dueAt} onChange={(e) => setF({ ...f, dueAt: e.target.value })} className="input w-full px-4 py-2.5 text-sm" />
         <div className="flex gap-2 pt-1">
           <button disabled={busy} className="btn-fire flex-1 px-5 py-2.5 text-sm">{busy ? "Generating…" : "Generate order"}</button>
           <button type="button" onClick={() => setOpen(false)} className="btn-ghost px-4 py-2.5 text-sm">Cancel</button>

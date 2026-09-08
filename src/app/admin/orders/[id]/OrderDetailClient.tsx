@@ -19,7 +19,7 @@ export default function OrderDetailClient({ orderId, orderStatus, items, stepsBy
   return (
     <div className="stagger space-y-5">
       {readyItems.length > 0 && (
-        <GlassCard className="border-emerald-400/30 bg-gradient-to-r from-emerald-500/10 to-transparent">
+        <GlassCard className="border-emerald-200 bg-emerald-50">
           <SectionTitle kicker="Release" title={`${readyItems.length} item(s) ready for MOBILIX`}
             hint="All semi-finished products are waiting for your confirmation."
             right={
@@ -35,10 +35,10 @@ export default function OrderDetailClient({ orderId, orderStatus, items, stepsBy
         <GlassCard>
           <SectionTitle kicker="Logistics" title="Transfers to MOBILIX" />
           {transfers.map((t: any) => (
-            <div key={t.id} className="glass-soft flex items-center gap-3 p-3">
+            <div key={t.id} className="card flex items-center gap-3 p-3">
               <StatusPill status={t.status} />
-              <span className="font-mono text-sm font-bold text-fire-soft">{t.manifest_qr}</span>
-              <span className="text-xs text-zinc-400">{t.item_count} items · {new Date(t.created_at).toLocaleString("fr-FR")}</span>
+              <span className="font-mono text-sm font-bold text-[#c24a08]">{t.manifest_qr}</span>
+              <span className="text-xs text-[#7c8091]">{t.item_count} items · {new Date(t.created_at).toLocaleString("fr-FR")}</span>
             </div>
           ))}
         </GlassCard>
@@ -52,31 +52,31 @@ export default function OrderDetailClient({ orderId, orderStatus, items, stepsBy
             const done = steps.filter((s: any) => s.status === "DONE").length;
             const isExpanded = expanded === item.id;
             return (
-              <div key={item.id} className="glass-soft overflow-hidden">
+              <div key={item.id} className="card overflow-hidden">
                 <button onClick={() => setExpanded(isExpanded ? null : item.id)}
                   className="flex w-full items-center gap-3 p-3.5 text-left">
-                  {isExpanded ? <ChevronDown size={16} className="text-zinc-400" /> : <ChevronRight size={16} className="text-zinc-400" />}
+                  {isExpanded ? <ChevronDown size={16} className="text-[#7c8091]" /> : <ChevronRight size={16} className="text-[#7c8091]" />}
                   <span className="min-w-0 flex-1 truncate font-bold">{item.product_name}</span>
-                  <span className="text-xs text-zinc-500">×{item.quantity}</span>
-                  <span className="text-xs text-zinc-500">{item.product_categories?.name}</span>
+                  <span className="text-xs text-[#7c8091]">×{item.quantity}</span>
+                  <span className="text-xs text-[#7c8091]">{item.product_categories?.name}</span>
                   {item.dimensions && Object.values(item.dimensions).some(Boolean) && (
-                    <span className="hidden text-xs text-zinc-500 sm:block">
+                    <span className="hidden text-xs text-[#7c8091] sm:block">
                       {item.dimensions.length}×{item.dimensions.width}×{item.dimensions.height} cm
                     </span>
                   )}
                   <StatusPill status={item.status} />
-                  <span className="ml-1 text-xs font-bold text-zinc-400">{done}/{steps.length}</span>
+                  <span className="ml-1 text-xs font-bold text-[#7c8091]">{done}/{steps.length}</span>
                 </button>
                 {isExpanded && (
-                  <div className="border-t border-white/5 p-4 space-y-4">
-                    {item.design_notes && <p className="text-xs text-zinc-400">Design: {item.design_notes}</p>}
+                  <div className="border-t border-[#e6e1d8] p-4 space-y-4">
+                    {item.design_notes && <p className="text-xs text-[#7c8091]">Design: {item.design_notes}</p>}
                     <div className="grid gap-5 lg:grid-cols-2">
                       <div>
-                        <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Live pipeline</p>
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-[#7c8091] mb-2">Live pipeline</p>
                         <LivePipeline steps={steps} />
                       </div>
                       <div>
-                        <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Gantt</p>
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-[#7c8091] mb-2">Gantt</p>
                         <GanttBoard steps={steps} />
                       </div>
                     </div>

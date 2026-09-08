@@ -9,9 +9,9 @@ import { verifyTransfer } from "@/app/actions";
 import { cn } from "@/lib/utils";
 
 const ATELIER_META: Record<number, { name: string; site: string; color: string }> = {
-  1: { name: "Atelier 1 · Woodworking", site: "Zone A — Site A", color: "from-fire to-fire-soft" },
-  2: { name: "Atelier 2 · Assembly & Metal", site: "Zone A — Site A", color: "from-amber-400 to-fire-soft" },
-  3: { name: "Atelier 3 · Finishing & QC", site: "Site B", color: "from-ice to-ice-soft" }
+  1: { name: "Atelier 1 · Woodworking", site: "Zone A — Site A", color: "from-[#c24a08] to-[#c24a08]" },
+  2: { name: "Atelier 2 · Assembly & Metal", site: "Zone A — Site A", color: "from-amber-400 to-[#c24a08]" },
+  3: { name: "Atelier 3 · Finishing & QC", site: "Site B", color: "from-[#2f6eb5] to-[#2f6eb5]" }
 };
 
 export default function RoadmapClient({ orders, steps, transfers, selectedId }: { orders: any[]; steps: any[]; transfers: any[]; selectedId: string }) {
@@ -28,13 +28,13 @@ export default function RoadmapClient({ orders, steps, transfers, selectedId }: 
   return (
     <div className="stagger space-y-5">
       {/* order picker */}
-      <div className="glass flex flex-wrap items-center gap-2 p-3">
-        <span className="px-1 text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-500">Order</span>
+      <div className="card flex flex-wrap items-center gap-2 p-3">
+        <span className="px-1 text-[11px] font-bold uppercase tracking-[0.2em] text-[#7c8091]">Order</span>
         <div className="flex flex-wrap gap-1.5">
           {orders.map((o: any) => (
             <button key={o.id} onClick={() => router.push(`/admin/roadmap?order=${o.id}`)}
               className={cn("rounded-xl border px-3 py-1.5 text-sm font-bold transition",
-                o.id === selectedId ? "border-fire/40 bg-fire/15 text-white shadow-fire" : "border-white/10 text-zinc-400 hover:bg-white/5 hover:text-white")}>
+                o.id === selectedId ? "border-[#c24a08]/40 bg-[#c24a08]/10 text-[#c24a08]" : "border-[#e6e1d8] text-[#7c8091] hover:bg-[#f8f7f5] hover:text-[#1a1d23]")}>
               {o.order_number}
             </button>
           ))}
@@ -42,7 +42,7 @@ export default function RoadmapClient({ orders, steps, transfers, selectedId }: 
         {selected && (
           <div className="ml-auto flex items-center gap-2 text-sm">
             <StatusPill status={selected.status} />
-            <span className="text-zinc-400">{done}/{steps.length} · <b className="text-white">{pct}%</b></span>
+            <span className="text-[#7c8091]">{done}/{steps.length} · <b className="text-[#1a1d23]">{pct}%</b></span>
           </div>
         )}
       </div>
@@ -50,8 +50,8 @@ export default function RoadmapClient({ orders, steps, transfers, selectedId }: 
       {/* progress river */}
       <GlassCard>
         <SectionTitle kicker="Journey" title={`${selected?.order_number ?? ""} — Site A → Site B`} hint="Progress river across the three ateliers." />
-        <div className="mb-2 h-3 overflow-hidden rounded-full bg-white/5">
-          <div className="h-full rounded-full bg-gradient-to-r from-fire via-fire-soft to-ice transition-all" style={{ width: `${pct}%` }} />
+        <div className="mb-2 h-3 overflow-hidden rounded-full bg-[#f0ede8]">
+          <div className="h-full rounded-full bg-gradient-to-r from-[#c24a08] via-[#c24a08] to-[#2f6eb5] transition-all" style={{ width: `${pct}%` }} />
         </div>
         <div className="grid gap-2 sm:grid-cols-3">
           {[1, 2, 3].map((a) => {
@@ -60,10 +60,10 @@ export default function RoadmapClient({ orders, steps, transfers, selectedId }: 
             const m = ATELIER_META[a];
             return (
               <button key={a} onClick={() => setFilter(filter === a ? "ALL" : (a as 1 | 2 | 3))}
-                className={cn("glass-soft p-3 text-left transition", filter === a && "border-fire/40")}>
-                <p className="text-xs font-bold text-zinc-300">{m.name}</p>
-                <p className="text-[11px] text-zinc-500">{m.site} · {d}/{mine.length} done</p>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/5">
+                className={cn("card p-3 text-left transition", filter === a && "border-[#c24a08]/40")}>
+                <p className="text-xs font-bold text-[#1a1d23]">{m.name}</p>
+                <p className="text-[11px] text-[#7c8091]">{m.site} · {d}/{mine.length} done</p>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#f0ede8]">
                   <div className={cn("h-full rounded-full bg-gradient-to-r", m.color)} style={{ width: mine.length ? `${(d / mine.length) * 100}%` : "0%" }} />
                 </div>
               </button>
@@ -90,15 +90,15 @@ export default function RoadmapClient({ orders, steps, transfers, selectedId }: 
       <GlassCard>
         <SectionTitle kicker="Logistics" title="Inter-site transfers" hint="Verify manifests arriving at Site B." />
         {orderTransfers.length === 0 ? (
-          <p className="text-sm text-zinc-500">No manifests for this order yet — generate one from the order page.</p>
+          <p className="text-sm text-[#7c8091]">No manifests for this order yet — generate one from the order page.</p>
         ) : (
           <div className="grid gap-2.5 md:grid-cols-2">
             {orderTransfers.map((t: any) => (
-              <div key={t.id} className="glass-soft flex items-center gap-3 p-4">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-400/15 text-amber-300"><Truck size={19} /></span>
+              <div key={t.id} className="card flex items-center gap-3 p-4">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-600"><Truck size={19} /></span>
                 <div className="min-w-0 flex-1">
-                  <p className="font-mono text-sm font-bold text-fire-soft">{t.manifest_qr}</p>
-                  <p className="text-xs text-zinc-400">ADEMCO → MOBILIX · ×{t.item_count} items</p>
+                  <p className="font-mono text-sm font-bold text-[#c24a08]">{t.manifest_qr}</p>
+                  <p className="text-xs text-[#7c8091]">ADEMCO → MOBILIX · ×{t.item_count} items</p>
                   <div className="mt-1"><StatusPill status={t.status} /></div>
                 </div>
                 {t.status === "PENDING" && (

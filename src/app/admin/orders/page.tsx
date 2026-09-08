@@ -20,22 +20,22 @@ export default async function OrdersPage() {
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {orders.map((o: any) => (
-              <Link key={o.id} href={`/admin/orders/${o.id}`} className="glass-soft group p-4 transition hover:border-fire/30">
+              <Link key={o.id} href={`/admin/orders/${o.id}`} className="card group p-4 transition hover:border-[#4a7c59]/30">
                 <div className="flex items-center justify-between">
                   <span className="font-black text-lg">{o.order_number}</span>
                   <StatusPill status={o.status} />
                 </div>
-                <p className="mt-1 text-xs text-zinc-400">
+                <p className="mt-1 text-xs text-[#7c8091]">
                   {o.work_order_items?.length ?? 0} items · {new Date(o.created_at).toLocaleDateString("fr-FR")}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {(o.work_order_items ?? []).slice(0, 3).map((item: any) => (
-                    <span key={item.id} className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-bold text-zinc-400">
+                    <span key={item.id} className="rounded-md bg-[#f0ede8] px-2 py-0.5 text-[10px] font-bold text-[#7c8091]">
                       {item.product_name} ×{item.quantity}
                     </span>
                   ))}
                   {(o.work_order_items?.length ?? 0) > 3 && (
-                    <span className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] text-zinc-500">+{(o.work_order_items?.length ?? 0) - 3} more</span>
+                    <span className="rounded-md bg-[#f0ede8] px-2 py-0.5 text-[10px] text-[#7c8091]">+{(o.work_order_items?.length ?? 0) - 3} more</span>
                   )}
                 </div>
               </Link>

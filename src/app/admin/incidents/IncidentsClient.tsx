@@ -27,16 +27,16 @@ export default function IncidentsClient({ overdue, transfers, lowStock }: Props)
         {liveOverdue.length === 0 ? <Empty icon="⏱️" title="Nothing overdue" hint="All steps are within target." /> : (
           <div className="grid gap-2.5 md:grid-cols-2">
             {liveOverdue.map((s: any) => (
-              <div key={s.id} className="glass-soft flex items-center gap-3 p-3.5">
+              <div key={s.id} className="card flex items-center gap-3 p-3.5">
                 <span className="text-2xl">🔴</span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">#{s.step_order} {s.step_name}</p>
-                  <p className="text-xs text-zinc-500">Actual {Number(s.actual_minutes).toFixed(0)} min vs target {s.estimated_minutes} min</p>
+                  <p className="text-xs text-[#7c8091]">Actual {Number(s.actual_minutes).toFixed(0)} min vs target {s.estimated_minutes} min</p>
                 </div>
-                <span className="rounded-lg bg-red-500/20 border border-red-400/30 px-2 py-1 text-xs font-black text-red-300">
+                <span className="rounded-lg bg-red-50 border border-red-200 px-2 py-1 text-xs font-black text-red-500">
                   +{Number(s.variance_min).toFixed(0)}m
                 </span>
-                <button onClick={() => setDismissed((d) => [...d, s.id])} className="text-xs font-bold text-emerald-300 hover:underline" title="Acknowledge">
+                <button onClick={() => setDismissed((d) => [...d, s.id])} className="text-xs font-bold text-emerald-600 hover:underline" title="Acknowledge">
                   <CheckCheck size={14} />
                 </button>
               </div>
@@ -51,13 +51,13 @@ export default function IncidentsClient({ overdue, transfers, lowStock }: Props)
         {lowStock.length === 0 ? <Empty icon="✅" title="Stock is healthy" hint="All materials above threshold." /> : (
           <div className="grid gap-2.5 md:grid-cols-2">
             {lowStock.map((s: any) => (
-              <div key={s.id} className="glass-soft flex items-center gap-3 p-3.5">
+              <div key={s.id} className="card flex items-center gap-3 p-3.5">
                 <span className="text-2xl">⚠️</span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{s.name}</p>
-                  <p className="text-xs text-zinc-500">{s.quantity} {s.unit} remaining · threshold {s.alert_threshold}</p>
+                  <p className="text-xs text-[#7c8091]">{s.quantity} {s.unit} remaining · threshold {s.alert_threshold}</p>
                 </div>
-                <Link href="/admin/stocks" className="text-xs font-bold text-ice-soft hover:underline">Restock →</Link>
+                <Link href="/admin/stocks" className="text-xs font-bold text-[#2f6eb5] hover:underline">Restock →</Link>
               </div>
             ))}
           </div>
@@ -70,11 +70,11 @@ export default function IncidentsClient({ overdue, transfers, lowStock }: Props)
         {transfers.length === 0 ? <Empty icon="🚚" title="No transfers yet" hint="Release items from orders to send to MOBILIX." /> : (
           <div className="space-y-2">
             {transfers.map((t: any) => (
-              <div key={t.id} className="glass-soft flex items-center gap-3 p-3.5">
+              <div key={t.id} className="card flex items-center gap-3 p-3.5">
                 <StatusPill status={t.status} />
-                <span className="font-mono text-sm font-bold text-fire-soft">{t.manifest_qr}</span>
-                <span className="text-xs text-zinc-400">{t.work_orders?.order_number} · {t.item_count} items</span>
-                <span className="ml-auto text-xs text-zinc-500">{new Date(t.created_at).toLocaleString("fr-FR")}</span>
+                <span className="font-mono text-sm font-bold text-[#c24a08]">{t.manifest_qr}</span>
+                <span className="text-xs text-[#7c8091]">{t.work_orders?.order_number} · {t.item_count} items</span>
+                <span className="ml-auto text-xs text-[#7c8091]">{new Date(t.created_at).toLocaleString("fr-FR")}</span>
               </div>
             ))}
           </div>

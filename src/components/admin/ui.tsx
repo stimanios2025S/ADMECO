@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 export function GlassCard({ className, children, style }: { className?: string; children: ReactNode; style?: CSSProperties }) {
   return (
-    <section className={cn("premium-card animate-fade-up rounded-[24px] p-5", className)} style={style}>
+    <section className={cn("card animate-fade-up p-5", className)} style={style}>
       {children}
     </section>
   );
@@ -14,11 +14,9 @@ export function SectionTitle({ kicker, title, hint, right }: { kicker?: string; 
   return (
     <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
       <div>
-        {kicker && (
-          <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-zinc-500">{kicker}</p>
-        )}
-        <h2 className="text-xl font-extrabold tracking-tight text-white">{title}</h2>
-        {hint && <p className="mt-0.5 text-sm text-zinc-400">{hint}</p>}
+        {kicker && <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8091]">{kicker}</p>}
+        <h2 className="text-lg font-extrabold tracking-tight text-[#1a1d23]">{title}</h2>
+        {hint && <p className="mt-0.5 text-[13px] text-[#7c8091]">{hint}</p>}
       </div>
       {right}
     </div>
@@ -26,54 +24,58 @@ export function SectionTitle({ kicker, title, hint, right }: { kicker?: string; 
 }
 
 export function Stat({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: "fire" | "ice" | "green" | "red" }) {
-  const ring =
-    accent === "fire" ? "border-fire/30 bg-fire/5" :
-    accent === "ice" ? "border-ice/30 bg-ice/5" :
-    accent === "green" ? "border-emerald-400/30 bg-emerald-500/5" :
-    accent === "red" ? "border-red-400/30 bg-red-500/5" : "bg-white/5 border-white/10";
-  const glow =
-    accent === "fire" ? "text-fire" :
-    accent === "ice" ? "text-ice" :
-    accent === "green" ? "text-emerald-300" :
-    accent === "red" ? "text-red-300" : "text-white";
+  const accentBg =
+    accent === "fire" ? "bg-[#c24a08]/8" :
+    accent === "ice" ? "bg-[#2f6eb5]/8" :
+    accent === "green" ? "bg-[#4a7c59]/8" :
+    accent === "red" ? "bg-red-50" : "bg-[#f3f0eb]";
+  const accentText =
+    accent === "fire" ? "text-[#c24a08]" :
+    accent === "ice" ? "text-[#2f6eb5]" :
+    accent === "green" ? "text-[#4a7c59]" :
+    accent === "red" ? "text-red-500" : "text-[#1a1d23]";
   return (
-    <div className={cn("glass-soft border p-4", ring)}>
-      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">{label}</p>
-      <p className={cn("mt-2 text-3xl font-black tracking-tight", glow)}>{value}</p>
-      {sub && <p className="mt-1 text-xs text-zinc-400">{sub}</p>}
+    <div className={cn("card p-4", accentBg)}>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-[#7c8091]">{label}</p>
+      <p className={cn("mt-2 text-3xl font-black tracking-tight", accentText)}>{value}</p>
+      {sub && <p className="mt-1 text-[12px] text-[#7c8091]">{sub}</p>}
     </div>
   );
 }
 
 export function StatusPill({ status }: { status: string }) {
   const map: Record<string, string> = {
-    DONE: "bg-emerald-400/15 text-emerald-300 border-emerald-400/30",
-    ACTIVE: "bg-ice/15 text-ice-soft border-ice/30",
-    PENDING: "bg-zinc-400/10 text-zinc-300 border-white/10",
-    PAUSED: "bg-amber-400/15 text-amber-300 border-amber-400/30",
-    REWORK: "bg-red-400/15 text-red-300 border-red-400/30",
-    VERIFIED: "bg-emerald-400/15 text-emerald-300 border-emerald-400/30",
-    IN_TRANSIT: "bg-amber-400/15 text-amber-300 border-amber-400/30",
-    SHORTAGE: "bg-red-400/15 text-red-300 border-red-400/30",
-    IN_PROGRESS: "bg-ice/15 text-ice-soft border-ice/30",
-    COMPLETED: "bg-emerald-400/15 text-emerald-300 border-emerald-400/30",
-    CREATED: "bg-zinc-400/10 text-zinc-300 border-white/10",
-    ADMIN: "bg-fire/15 text-fire-soft border-fire/30",
-    WORKER: "bg-ice/15 text-ice-soft border-ice/30"
+    DONE: "bg-[#4a7c59]/10 text-[#4a7c59] border-[#4a7c59]/20",
+    ACTIVE: "bg-[#2f6eb5]/10 text-[#2f6eb5] border-[#2f6eb5]/20",
+    PENDING: "bg-[#7c8091]/10 text-[#7c8091] border-black/10",
+    PAUSED: "bg-amber-50 text-amber-600 border-amber-200",
+    REWORK: "bg-red-50 text-red-500 border-red-200",
+    VERIFIED: "bg-[#4a7c59]/10 text-[#4a7c59] border-[#4a7c59]/20",
+    IN_TRANSIT: "bg-amber-50 text-amber-600 border-amber-200",
+    SHORTAGE: "bg-red-50 text-red-500 border-red-200",
+    IN_PROGRESS: "bg-[#2f6eb5]/10 text-[#2f6eb5] border-[#2f6eb5]/20",
+    COMPLETED: "bg-[#4a7c59]/10 text-[#4a7c59] border-[#4a7c59]/20",
+    CREATED: "bg-[#7c8091]/10 text-[#7c8091] border-black/10",
+    RELEASED: "bg-[#4a7c59]/10 text-[#4a7c59] border-[#4a7c59]/20",
+    CANCELLED: "bg-red-50 text-red-500 border-red-200",
+    ALL_READY: "bg-[#4a7c59]/10 text-[#4a7c59] border-[#4a7c59]/20",
+    PARTIAL_READY: "bg-amber-50 text-amber-600 border-amber-200",
+    ADMIN: "bg-[#c24a08]/10 text-[#c24a08] border-[#c24a08]/20",
+    WORKER: "bg-[#2f6eb5]/10 text-[#2f6eb5] border-[#2f6eb5]/20"
   };
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold", map[status] ?? "bg-zinc-400/10 text-zinc-300 border-white/10")}>
-      {status}
+    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold", map[status] ?? "bg-[#7c8091]/10 text-[#7c8091] border-black/10")}>
+      {status.replace(/_/g, " ")}
     </span>
   );
 }
 
 export function Empty({ icon, title, hint }: { icon: string; title: string; hint?: string }) {
   return (
-    <div className="glass-soft flex flex-col items-center gap-2 rounded-[20px] border border-dashed border-white/10 px-6 py-10 text-center">
+    <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-black/10 bg-[#f8f7f5] px-6 py-10 text-center">
       <div className="text-4xl">{icon}</div>
-      <p className="font-bold text-zinc-100">{title}</p>
-      {hint && <p className="text-sm text-zinc-500">{hint}</p>}
+      <p className="font-bold text-[#1a1d23]">{title}</p>
+      {hint && <p className="text-[13px] text-[#7c8091]">{hint}</p>}
     </div>
   );
 }
