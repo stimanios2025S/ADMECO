@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 export function GlassCard({ className, children, style }: { className?: string; children: ReactNode; style?: CSSProperties }) {
   return (
-    <section className={cn("glass animate-fade-up p-5", className)} style={style}>
+    <section className={cn("premium-card animate-fade-up rounded-[24px] p-5", className)} style={style}>
       {children}
     </section>
   );
@@ -27,19 +27,19 @@ export function SectionTitle({ kicker, title, hint, right }: { kicker?: string; 
 
 export function Stat({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: "fire" | "ice" | "green" | "red" }) {
   const ring =
-    accent === "fire" ? "border-fire/30" :
-    accent === "ice" ? "border-ice/30" :
-    accent === "green" ? "border-emerald-400/30" :
-    accent === "red" ? "border-red-400/30" : "";
+    accent === "fire" ? "border-fire/30 bg-fire/5" :
+    accent === "ice" ? "border-ice/30 bg-ice/5" :
+    accent === "green" ? "border-emerald-400/30 bg-emerald-500/5" :
+    accent === "red" ? "border-red-400/30 bg-red-500/5" : "bg-white/5 border-white/10";
   const glow =
     accent === "fire" ? "text-fire" :
     accent === "ice" ? "text-ice" :
     accent === "green" ? "text-emerald-300" :
     accent === "red" ? "text-red-300" : "text-white";
   return (
-    <div className={cn("glass-soft p-4", ring)}>
+    <div className={cn("glass-soft border p-4", ring)}>
       <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">{label}</p>
-      <p className={cn("mt-1 text-3xl font-black tracking-tight", glow)}>{value}</p>
+      <p className={cn("mt-2 text-3xl font-black tracking-tight", glow)}>{value}</p>
       {sub && <p className="mt-1 text-xs text-zinc-400">{sub}</p>}
     </div>
   );
@@ -70,9 +70,9 @@ export function StatusPill({ status }: { status: string }) {
 
 export function Empty({ icon, title, hint }: { icon: string; title: string; hint?: string }) {
   return (
-    <div className="glass-soft flex flex-col items-center gap-1 px-6 py-10 text-center">
+    <div className="glass-soft flex flex-col items-center gap-2 rounded-[20px] border border-dashed border-white/10 px-6 py-10 text-center">
       <div className="text-4xl">{icon}</div>
-      <p className="font-bold text-zinc-200">{title}</p>
+      <p className="font-bold text-zinc-100">{title}</p>
       {hint && <p className="text-sm text-zinc-500">{hint}</p>}
     </div>
   );

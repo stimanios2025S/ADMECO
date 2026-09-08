@@ -14,6 +14,7 @@ import { Wifi, WifiOff, Play, CheckCircle2, ChevronRight } from "lucide-react";
 type ActiveStep = {
   id: string; step_order: number; step_name: string; atelier_id: number;
   status: string; estimated_minutes: number; has_branch: boolean;
+  branch_insert_name: string | null; branch_insert_minutes: number;
   started_at: string | null; item_id: string; item_name: string;
   item_quantity: number; design_notes: string; dimensions: any;
   qr_code_hash: string;
@@ -21,7 +22,7 @@ type ActiveStep = {
 
 type MaterialRow = { stockItemId: string; stockItemName: string; unit: string; quantityUsed: number; quantityLost: number };
 
-export default function PortalClient() {
+export default function PortalClient({ mode = "factory" }: { mode?: "factory" | "warehouse" }) {
   const { kiosk, flash, online } = useMes();
   const [step, setStep] = useState<ActiveStep | null>(null);
   const [msg, setMsg] = useState("");
@@ -45,10 +46,23 @@ export default function PortalClient() {
     }
 
     const item = data.work_order_items;
+
+    // Fetch branch template data for indirect path
+    let branchName: string | null = null;
+    let branchMinutes = 20;
+    if (data.has_branch) {
+      const { data: tpl } = await supabase.from("process_templates")
+        .select("branch_insert_name, branch_insert_minutes")
+        .eq("category_id", item?.category_id)
+        .eq("step_order", data.step_order).maybeSingle();
+      if (tpl) { branchName = tpl.branch_insert_name; branchMinutes = tpl.branch_insert_minutes; }
+    }
+
     setStep({
       id: data.id, step_order: data.step_order, step_name: data.step_name,
       atelier_id: data.atelier_id, status: data.status,
       estimated_minutes: data.estimated_minutes, has_branch: data.has_branch,
+      branch_insert_name: branchName, branch_insert_minutes: branchMinutes,
       started_at: data.started_at, item_id: data.item_id,
       item_name: item?.product_name ?? "—", item_quantity: item?.quantity ?? 0,
       design_notes: item?.design_notes ?? "", dimensions: item?.dimensions ?? {},
@@ -78,7 +92,9 @@ export default function PortalClient() {
         branchChoice: branchChoice ?? undefined,
         materials: materials.filter((m) => m.quantityUsed > 0 || m.quantityLost > 0).map((m) => ({
           stockItemId: m.stockItemId, quantityUsed: m.quantityUsed, quantityLost: m.quantityLost
-        }))
+        })),
+        nextStepName: branchChoice === "indirect" ? step.branch_insert_name ?? undefined : undefined,
+        nextStepMinutes: branchChoice === "indirect" ? step.branch_insert_minutes : undefined
       });
       cueSuccess();
       flash({ kind: "success", message: "Step completed ✅", id: Date.now() });
@@ -91,87 +107,104 @@ export default function PortalClient() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <CueOverlay />
-      <div className={`flex items-center gap-2 rounded-xl px-4 py-2 font-bold ${online ? "bg-emerald-900 text-emerald-200" : "bg-red-900 text-red-200"}`}>
-        {online ? <Wifi size={18} /> : <WifiOff size={18} />}
-        {online ? "Online" : "Offline — inputs queued for sync"}
+
+      <div className="glass flex items-center justify-between gap-3 rounded-2xl p-3.5">
+        <div className="flex items-center gap-3">
+          <div className={`grid h-10 w-10 place-items-center rounded-xl ${online ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"}`}>
+            {online ? <Wifi size={18} /> : <WifiOff size={18} />}
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-500">Connection</p>
+            <p className="text-sm font-bold text-white">{online ? "Online and synced" : "Offline — queued for sync"}</p>
+          </div>
+        </div>
+        <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-300">
+          {mode === "warehouse" ? "Warehouse mode" : "Factory mode"}
+        </div>
       </div>
+
       <KioskLock />
 
-      <div className="glass p-4">
-        <div className="font-black text-xl mb-2">📷 Scan step QR</div>
+      <div className="premium-card rounded-[26px] p-4 sm:p-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-zinc-500">Step intake</p>
+            <div className="mt-1 text-xl font-black tracking-tight">Scan production QR</div>
+          </div>
+          <div className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+            Tablet ready
+          </div>
+        </div>
         <Scanner onScan={handleScan} />
-        {msg && <p className="mt-2 text-lg font-bold">{msg}</p>}
+        {msg && <p className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-zinc-100">{msg}</p>}
       </div>
 
       {step && (
-        <div className="glass space-y-4 border-2 border-fire/40 p-5">
-          {/* Header */}
-          <div className="flex items-start justify-between">
+        <div className="premium-card space-y-4 rounded-[26px] border border-fire/30 p-5">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-xs text-zinc-500">ITEM: {step.item_name} ×{step.item_quantity}</div>
-              <div className="font-black text-xl">#{step.step_order} {step.step_name}</div>
-              {step.design_notes && <div className="text-xs text-zinc-400 mt-0.5">Design: {step.design_notes}</div>}
+              <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-500">Item {step.item_name} ×{step.item_quantity}</div>
+              <div className="mt-1 text-2xl font-black tracking-tight">#{step.step_order} {step.step_name}</div>
+              {step.design_notes && <div className="mt-1 text-xs text-zinc-400">Design: {step.design_notes}</div>}
             </div>
-            <div className={`text-center rounded-xl px-4 py-2 ${timer.overdue ? "bg-red-600" : "bg-zinc-800"}`}>
-              <div className="text-2xl font-mono font-black">⏱️ {timer.label}</div>
-              {timer.overdue && <div className="text-xs font-bold">🔴 OVERDUE</div>}
+            <div className={`min-w-[130px] rounded-2xl px-3 py-2 text-center ${timer.overdue ? "bg-red-500/15 text-red-200" : "bg-white/5 text-zinc-100"}`}>
+              <div className="font-mono text-xl font-black">{timer.label}</div>
+              {timer.overdue && <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-300">Overdue</div>}
             </div>
           </div>
 
-          {/* Branch choice */}
           {step.has_branch && step.status === "ACTIVE" && !branchChoice && (
-            <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4">
-              <p className="font-black text-amber-300 mb-2">🔀 Choisissez le chemin :</p>
-              <div className="flex gap-2">
+            <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4">
+              <p className="mb-3 text-sm font-black text-amber-200">Choose path :</p>
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <button onClick={() => setBranchChoice("direct")} className="btn-fire flex-1 px-4 py-3 text-sm">
-                  ⚡ DIRECT (passer l'étape intermédiaire)
+                  ⚡ Direct branch
                 </button>
                 <button onClick={() => setBranchChoice("indirect")} className="btn-ice flex-1 px-4 py-3 text-sm">
-                  🔄 INDIRECT (ajouter étape intermédiaire)
+                  🔄 Indirect branch
                 </button>
               </div>
             </div>
           )}
+
           {branchChoice && (
-            <div className="rounded-xl bg-white/5 p-3 text-sm">
-              <span className="font-bold">Chemin choisi : </span>
-              {branchChoice === "direct" ? "⚡ Direct" : "🔄 Via étape intermédiaire"}
-              <button onClick={() => setBranchChoice(null)} className="ml-2 text-xs text-zinc-400 hover:text-white">(changer)</button>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-sm">
+              <span className="font-bold text-zinc-200">Path chosen: </span>
+              {branchChoice === "direct" ? "⚡ Direct" : "🔄 Via intermediate step"}
+              <button onClick={() => setBranchChoice(null)} className="ml-2 text-xs text-zinc-400 hover:text-white">(change)</button>
             </div>
           )}
 
-          {/* Material declaration */}
           {step.status === "ACTIVE" && (
-            <div className="space-y-2">
-              <p className="font-black text-sm">📦 Matière utilisée :</p>
-              <MaterialInput label="Matériau principal" unit="unité" onAdd={(m) => setMaterials((prev) => [...prev, m])} />
+            <div className="space-y-2.5">
+              <p className="text-sm font-black text-zinc-200">Material usage</p>
+              <MaterialInput label="Main material" unit="unit" onAdd={(m) => setMaterials((prev) => [...prev, m])} />
               {materials.map((m, i) => (
                 <div key={i} className="glass-soft flex items-center gap-2 p-2.5 text-sm">
-                  <span className="min-w-0 flex-1 font-bold">{m.stockItemName}</span>
+                  <span className="min-w-0 flex-1 font-bold text-white">{m.stockItemName}</span>
                   <input type="number" min={0} step="any" value={m.quantityUsed}
                     onChange={(e) => setMaterials((prev) => prev.map((x, idx) => idx === i ? { ...x, quantityUsed: Number(e.target.value) } : x))}
-                    className="w-20 rounded-lg bg-zinc-800 border px-2 py-1 text-center" placeholder="Used" title="Used" />
+                    className="w-20 rounded-lg border border-white/10 bg-zinc-900 px-2 py-1 text-center text-white" placeholder="Used" title="Used" />
                   <input type="number" min={0} step="any" value={m.quantityLost}
                     onChange={(e) => setMaterials((prev) => prev.map((x, idx) => idx === i ? { ...x, quantityLost: Number(e.target.value) } : x))}
-                    className="w-20 rounded-lg bg-zinc-800 border px-2 py-1 text-center" placeholder="Lost" title="Lost" />
+                    className="w-20 rounded-lg border border-white/10 bg-zinc-900 px-2 py-1 text-center text-white" placeholder="Lost" title="Lost" />
                   <span className="text-xs text-zinc-500">{m.unit}</span>
                 </div>
               ))}
             </div>
           )}
 
-          {/* Actions */}
           <div className="flex gap-2">
             {step.status === "PENDING" && (
-              <button disabled={busy} onClick={handleStart} className="btn-fire flex-1 flex items-center justify-center gap-2 px-6 py-3">
-                <Play size={18} /> {busy ? "Starting…" : "Start step"}
+              <button disabled={busy} onClick={handleStart} className="btn-fire flex-1 px-6 py-3">
+                <span className="flex items-center justify-center gap-2"><Play size={18} /> {busy ? "Starting…" : "Start step"}</span>
               </button>
             )}
             {step.status === "ACTIVE" && (
-              <button disabled={busy} onClick={handleComplete} className="btn-fire flex-1 flex items-center justify-center gap-2 px-6 py-3">
-                <CheckCircle2 size={18} /> {busy ? "Saving…" : "Complete step"}
+              <button disabled={busy} onClick={handleComplete} className="btn-fire flex-1 px-6 py-3">
+                <span className="flex items-center justify-center gap-2"><CheckCircle2 size={18} /> {busy ? "Saving…" : "Complete step"}</span>
               </button>
             )}
           </div>

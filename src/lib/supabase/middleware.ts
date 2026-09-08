@@ -1,8 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { hasSupabaseConfig } from "./demo";
 
 /** Refreshes the auth session on every request + gates /admin behind login. */
 export async function updateSession(request: NextRequest) {
+  if (!hasSupabaseConfig()) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(

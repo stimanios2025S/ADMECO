@@ -10,8 +10,8 @@ export default function UserChip() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => setEmail(session?.user?.email ?? null));
+    supabase.auth.getUser().then((result: any) => setEmail(result.data.user?.email ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e: string, session: any) => setEmail(session?.user?.email ?? null)) as any;
     return () => sub.subscription.unsubscribe();
   }, []);
 
