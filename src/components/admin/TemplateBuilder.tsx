@@ -20,7 +20,7 @@ export default function TemplateBuilder({ categories, rows }: { categories: { id
   return (
     <div className="stagger space-y-5">
       <GlassCard>
-        <SectionTitle kicker="Categories" title="Select product line" hint="Each category owns its own routing." />
+        <SectionTitle kicker="Catégories" title="Choisir la gamme produit" hint="Chaque catégorie a sa propre gamme." />
         <div className="flex flex-wrap gap-1.5">
           {categories.map((c) => (
             <button key={c.id} onClick={() => { setCat(c.id); setDraft((d) => ({ ...d, step_order: rows.filter((r) => r.category_id === c.id).length + 1 })); }}
@@ -31,21 +31,21 @@ export default function TemplateBuilder({ categories, rows }: { categories: { id
           ))}
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-xs text-[#7c8091]">Clone routing from:</span>
+          <span className="text-xs text-[#7c8091]">Dupliquer la gamme depuis :</span>
           <select value={cloneFrom} onChange={(e) => setCloneFrom(e.target.value)} className="input px-2 py-1.5 text-xs">
             <option value="" className="bg-white">—</option>
             {categories.filter((c) => c.id !== cat).map((c) => <option key={c.id} value={c.id} className="bg-white">{c.name}</option>)}
           </select>
           <button disabled={!cloneFrom || busy} onClick={async () => { setBusy(true); await cloneTemplate(cat, cloneFrom); setBusy(false); location.reload(); }}
             className="btn-ghost inline-flex items-center gap-1 px-3 py-1.5 text-xs">
-            <Copy size={13} /> Clone
+            <Copy size={13} /> Dupliquer
           </button>
         </div>
       </GlassCard>
 
       <GlassCard>
-        <SectionTitle kicker={`Routing · ${list.length} steps`} title={categories.find((c) => c.id === cat)?.name ?? ""}
-          hint="Ordered atelier sequence inherited by every new order." />
+        <SectionTitle kicker={`Gamme · ${list.length} étapes`} title={categories.find((c) => c.id === cat)?.name ?? ""}
+          hint="Séquence d'ateliers héritée par chaque nouvelle commande." />
         <div className="space-y-1.5">
           {list.map((r) => (
             <div key={r.id} className="card flex items-center gap-2.5 px-3 py-2 text-sm">
@@ -59,7 +59,7 @@ export default function TemplateBuilder({ categories, rows }: { categories: { id
               <span className="shrink-0 font-mono text-xs text-[#7c8091]">{r.estimated_minutes}m</span>
             </div>
           ))}
-          {list.length === 0 && <p className="text-sm text-[#7c8091]">No steps yet — add the first one below.</p>}
+          {list.length === 0 && <p className="text-sm text-[#7c8091]">Aucune étape — ajoutez la première ci-dessous.</p>}
         </div>
 
         <form
@@ -72,18 +72,17 @@ export default function TemplateBuilder({ categories, rows }: { categories: { id
           }}
         >
           <input type="number" min={1} value={draft.step_order} onChange={(e) => setDraft({ ...draft, step_order: Number(e.target.value) })}
-            className="input px-2 py-2 text-sm" title="Step order" />
+            className="input px-2 py-2 text-sm" title="Ordre de l'étape" />
           <select value={draft.atelier_id} onChange={(e) => setDraft({ ...draft, atelier_id: Number(e.target.value) })} className="input px-2 py-2 text-sm">
             <option value={1} className="bg-white">Atelier 1</option>
             <option value={2} className="bg-white">Atelier 2</option>
-            <option value={3} className="bg-white">Atelier 3</option>
           </select>
-          <input required placeholder="Step name" value={draft.step_name} onChange={(e) => setDraft({ ...draft, step_name: e.target.value })}
+          <input required placeholder="Nom de l'étape" value={draft.step_name} onChange={(e) => setDraft({ ...draft, step_name: e.target.value })}
             className="input col-span-2 px-2 py-2 text-sm" />
           <input type="number" min={1} value={draft.estimated_minutes} onChange={(e) => setDraft({ ...draft, estimated_minutes: Number(e.target.value) })}
             className="input px-2 py-2 text-sm" title="Minutes" />
           <button disabled={busy} className="btn-fire inline-flex items-center justify-center gap-1 px-3 py-2 text-sm">
-            <Plus size={15} /> Add
+            <Plus size={15} /> Ajouter
           </button>
         </form>
       </GlassCard>

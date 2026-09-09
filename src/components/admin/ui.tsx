@@ -43,6 +43,8 @@ export function Stat({ label, value, sub, accent }: { label: string; value: stri
   );
 }
 
+import { statutFr } from "@/lib/fr";
+
 export function StatusPill({ status }: { status: string }) {
   const map: Record<string, string> = {
     DONE: "bg-[#4a7c59]/10 text-[#4a7c59] border-[#4a7c59]/20",
@@ -65,7 +67,7 @@ export function StatusPill({ status }: { status: string }) {
   };
   return (
     <span className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold", map[status] ?? "bg-[#7c8091]/10 text-[#7c8091] border-black/10")}>
-      {status.replace(/_/g, " ")}
+      {statutFr(status)}
     </span>
   );
 }

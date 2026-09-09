@@ -15,20 +15,20 @@ export default async function NewOrderPage() {
     if (e2) throw new Error("process_templates: " + e2.message);
 
     return (
-      <AdminShell pageTitle="New order" pageHint="Create a production order with items, dimensions, design and material estimates.">
+      <AdminShell pageTitle="Nouvelle commande" pageHint="Créez une commande avec articles, dimensions, design et estimations matière.">
         <NewOrderClient categories={categories ?? []} templates={templates ?? []} />
       </AdminShell>
     );
   } catch (e: any) {
     return (
-      <AdminShell pageTitle="New order" pageHint="Create a production order with items, dimensions, design and material estimates.">
+      <AdminShell pageTitle="Nouvelle commande" pageHint="Créez une commande avec articles, dimensions, design et estimations matière.">
         <div className="card space-y-2 border-red-200 p-6">
-          <p className="font-black text-[#1a1d23]">Couldn't load the order form</p>
+          <p className="font-black text-[#1a1d23]">Chargement du formulaire impossible</p>
           <p className="rounded-xl bg-red-50 px-3 py-2 font-mono text-xs text-red-500">{e?.message ?? String(e)}</p>
           <p className="text-sm text-[#7c8091]">
-            Most common cause: database migrations <b>0005 → 0006 → 0007</b> were not run in Supabase
-            (missing <span className="font-mono">process_templates.standard_materials</span> column).
-            Run them in the Supabase SQL Editor, in order, then reload this page.
+            Cause la plus fréquente : migrations <b>0005 → 0006 → 0007 → 0008</b> non exécutées dans Supabase
+            (colonne <span className="font-mono">process_templates.standard_materials</span> manquante).
+            Exécutez-les dans l'éditeur SQL Supabase, dans l'ordre, puis rechargez la page.
           </p>
         </div>
       </AdminShell>

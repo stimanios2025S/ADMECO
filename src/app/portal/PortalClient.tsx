@@ -22,8 +22,9 @@ type ActiveStep = {
 
 type MaterialRow = { stockItemId: string; stockItemName: string; unit: string; quantityUsed: number; quantityLost: number };
 
-export default function PortalClient({ mode = "factory" }: { mode?: "factory" | "warehouse" }) {
+export default function PortalClient({ mode = "factory", atelierId }: { mode?: "factory" | "warehouse"; atelierId?: 1 | 2 | null }) {
   const { kiosk, flash, online } = useMes();
+  const atelierCible = atelierId ?? kiosk?.atelierId ?? null;
   const [step, setStep] = useState<ActiveStep | null>(null);
   const [msg, setMsg] = useState("");
   const [materials, setMaterials] = useState<MaterialRow[]>([]);
@@ -34,15 +35,19 @@ export default function PortalClient({ mode = "factory" }: { mode?: "factory" | 
   const handleScan = useCallback(async (text: string) => {
     setMsg("");
     const parsed = parseQr(text);
-    if (parsed.kind !== "STEP") { cueError(); setMsg("❌ Scan a step QR code"); return; }
+    if (parsed.kind !== "STEP") { cueError(); setMsg("❌ Scannez un QR d'étape"); return; }
 
     const supabase = createClient();
     const { data, error } = await supabase.from("work_order_steps")
-      .select("*, work_order_items(product_name, quantity, design_notes, dimensions)")
+      .select("*, work_order_items(product_name, quantity, category_id, design_notes, dimensions)")
       .eq("qr_code_hash", parsed.hash).single();
-    if (error || !data) { cueError(); setMsg("❌ Unknown step QR"); return; }
-    if (kiosk && data.atelier_id !== kiosk.atelierId) {
-      cueError(); setMsg(`❌ This step is Atelier ${data.atelier_id}, station locked to ${kiosk.atelierId}`); return;
+    if (error || !data) { cueError(); setMsg("❌ QR d'étape inconnu"); return; }
+    const poste = kiosk?.atelierId ?? atelierId ?? null;
+    if (poste && data.atelier_id !== poste) {
+      cueError(); setMsg(`❌ Cette étape est Atelier ${data.atelier_id}, poste verrouillé sur ${poste}`); return;
+    }
+    if (atelierId && data.atelier_id !== atelierId) {
+      cueError(); setMsg(`❌ Cette étape appartient à l'Atelier ${data.atelier_id} — portail Atelier ${atelierId}`); return;
     }
 
     const item = data.work_order_items;
@@ -71,8 +76,8 @@ export default function PortalClient({ mode = "factory" }: { mode?: "factory" | 
     setMaterials([]);
     setBranchChoice(null);
     cueSuccess();
-    flash({ kind: "success", message: `Step ${data.step_order}: ${data.step_name}`, id: Date.now() });
-  }, [kiosk, flash]);
+    flash({ kind: "success", message: `Étape ${data.step_order} : ${data.step_name}`, id: Date.now() });
+  }, [kiosk, flash, atelierId]);
 
   const handleStart = async () => {
     if (!step || !kiosk) return;
@@ -97,8 +102,8 @@ export default function PortalClient({ mode = "factory" }: { mode?: "factory" | 
         nextStepMinutes: branchChoice === "indirect" ? step.branch_insert_minutes : undefined
       });
       cueSuccess();
-      flash({ kind: "success", message: "Step completed ✅", id: Date.now() });
-      setMsg(`✅ ${step.step_name} completed`);
+      flash({ kind: "success", message: "Étape terminée ✅", id: Date.now() });
+      setMsg(`✅ ${step.step_name} terminée`);
       setStep(null); setMaterials([]); setBranchChoice(null);
     } catch (e: any) {
       cueError(); setMsg(`❌ ${e.message}`);
@@ -116,25 +121,25 @@ export default function PortalClient({ mode = "factory" }: { mode?: "factory" | 
             {online ? <Wifi size={18} /> : <WifiOff size={18} />}
           </div>
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-500">Connection</p>
-            <p className="text-sm font-bold text-white">{online ? "Online and synced" : "Offline — queued for sync"}</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-500">Connexion</p>
+            <p className="text-sm font-bold text-white">{online ? "En ligne et synchronisé" : "Hors ligne — file de synchro"}</p>
           </div>
         </div>
         <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-300">
-          {mode === "warehouse" ? "Warehouse mode" : "Factory mode"}
+          {atelierCible === 1 ? "Atelier 1 — Bois & Découpe" : atelierCible === 2 ? "Atelier 2 — Assemblage & Finition" : mode === "warehouse" ? "Mode magasin" : "Mode usine"}
         </div>
       </div>
 
-      <KioskLock />
+      <KioskLock atelierId={atelierId} />
 
       <div className="premium-card rounded-[26px] p-4 sm:p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-zinc-500">Step intake</p>
-            <div className="mt-1 text-xl font-black tracking-tight">Scan production QR</div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-zinc-500">Prise d'étape</p>
+            <div className="mt-1 text-xl font-black tracking-tight">Scanner le QR de production</div>
           </div>
           <div className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
-            Tablet ready
+            Tablette prête
           </div>
         </div>
         <Scanner onScan={handleScan} />
@@ -145,25 +150,25 @@ export default function PortalClient({ mode = "factory" }: { mode?: "factory" | 
         <div className="premium-card space-y-4 rounded-[26px] border border-fire/30 p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-500">Item {step.item_name} ×{step.item_quantity}</div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-500">Article {step.item_name} ×{step.item_quantity}</div>
               <div className="mt-1 text-2xl font-black tracking-tight">#{step.step_order} {step.step_name}</div>
-              {step.design_notes && <div className="mt-1 text-xs text-zinc-400">Design: {step.design_notes}</div>}
+              {step.design_notes && <div className="mt-1 text-xs text-zinc-400">Design : {step.design_notes}</div>}
             </div>
             <div className={`min-w-[130px] rounded-2xl px-3 py-2 text-center ${timer.overdue ? "bg-red-500/15 text-red-200" : "bg-white/5 text-zinc-100"}`}>
               <div className="font-mono text-xl font-black">{timer.label}</div>
-              {timer.overdue && <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-300">Overdue</div>}
+              {timer.overdue && <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-300">En retard</div>}
             </div>
           </div>
 
           {step.has_branch && step.status === "ACTIVE" && !branchChoice && (
             <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4">
-              <p className="mb-3 text-sm font-black text-amber-200">Choose path :</p>
+              <p className="mb-3 text-sm font-black text-amber-200">Choisir le chemin :</p>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <button onClick={() => setBranchChoice("direct")} className="btn-fire flex-1 px-4 py-3 text-sm">
-                  ⚡ Direct branch
+                  ⚡ Chemin direct
                 </button>
                 <button onClick={() => setBranchChoice("indirect")} className="btn-ice flex-1 px-4 py-3 text-sm">
-                  🔄 Indirect branch
+                  🔄 Chemin indirect
                 </button>
               </div>
             </div>
@@ -171,25 +176,25 @@ export default function PortalClient({ mode = "factory" }: { mode?: "factory" | 
 
           {branchChoice && (
             <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-sm">
-              <span className="font-bold text-zinc-200">Path chosen: </span>
-              {branchChoice === "direct" ? "⚡ Direct" : "🔄 Via intermediate step"}
-              <button onClick={() => setBranchChoice(null)} className="ml-2 text-xs text-zinc-400 hover:text-white">(change)</button>
+              <span className="font-bold text-zinc-200">Chemin choisi : </span>
+              {branchChoice === "direct" ? "⚡ Direct" : "🔄 Via étape intermédiaire"}
+              <button onClick={() => setBranchChoice(null)} className="ml-2 text-xs text-zinc-400 hover:text-white">(modifier)</button>
             </div>
           )}
 
           {step.status === "ACTIVE" && (
             <div className="space-y-2.5">
-              <p className="text-sm font-black text-zinc-200">Material usage</p>
-              <MaterialInput label="Main material" unit="unit" onAdd={(m) => setMaterials((prev) => [...prev, m])} />
+              <p className="text-sm font-black text-zinc-200">Consommation matière</p>
+              <MaterialInput label="Matière principale" unit="unit" onAdd={(m) => setMaterials((prev) => [...prev, m])} />
               {materials.map((m, i) => (
                 <div key={i} className="glass-soft flex items-center gap-2 p-2.5 text-sm">
                   <span className="min-w-0 flex-1 font-bold text-white">{m.stockItemName}</span>
                   <input type="number" min={0} step="any" value={m.quantityUsed}
                     onChange={(e) => setMaterials((prev) => prev.map((x, idx) => idx === i ? { ...x, quantityUsed: Number(e.target.value) } : x))}
-                    className="w-20 rounded-lg border border-white/10 bg-zinc-900 px-2 py-1 text-center text-white" placeholder="Used" title="Used" />
+                    className="w-20 rounded-lg border border-white/10 bg-zinc-900 px-2 py-1 text-center text-white" placeholder="Utilisé" title="Utilisé" />
                   <input type="number" min={0} step="any" value={m.quantityLost}
                     onChange={(e) => setMaterials((prev) => prev.map((x, idx) => idx === i ? { ...x, quantityLost: Number(e.target.value) } : x))}
-                    className="w-20 rounded-lg border border-white/10 bg-zinc-900 px-2 py-1 text-center text-white" placeholder="Lost" title="Lost" />
+                    className="w-20 rounded-lg border border-white/10 bg-zinc-900 px-2 py-1 text-center text-white" placeholder="Perdu" title="Perdu" />
                   <span className="text-xs text-zinc-500">{m.unit}</span>
                 </div>
               ))}
@@ -199,12 +204,12 @@ export default function PortalClient({ mode = "factory" }: { mode?: "factory" | 
           <div className="flex gap-2">
             {step.status === "PENDING" && (
               <button disabled={busy} onClick={handleStart} className="btn-fire flex-1 px-6 py-3">
-                <span className="flex items-center justify-center gap-2"><Play size={18} /> {busy ? "Starting…" : "Start step"}</span>
+                <span className="flex items-center justify-center gap-2"><Play size={18} /> {busy ? "Démarrage…" : "Démarrer l'étape"}</span>
               </button>
             )}
             {step.status === "ACTIVE" && (
               <button disabled={busy} onClick={handleComplete} className="btn-fire flex-1 px-6 py-3">
-                <span className="flex items-center justify-center gap-2"><CheckCircle2 size={18} /> {busy ? "Saving…" : "Complete step"}</span>
+                <span className="flex items-center justify-center gap-2"><CheckCircle2 size={18} /> {busy ? "Enregistrement…" : "Terminer l'étape"}</span>
               </button>
             )}
           </div>
@@ -229,7 +234,7 @@ function MaterialInput({ label, unit, onAdd }: { label: string; unit: string; on
         className="glass-input flex-1 px-3 py-2 text-sm" />
       <input type="number" min={0} step="any" value={qty} onChange={(e) => setQty(Number(e.target.value))}
         className="glass-input w-24 px-2 py-2 text-sm text-center" />
-      <button className="btn-ghost px-3 py-2 text-sm font-bold">+ Add</button>
+      <button className="btn-ghost px-3 py-2 text-sm font-bold">+ Ajouter</button>
     </form>
   );
 }

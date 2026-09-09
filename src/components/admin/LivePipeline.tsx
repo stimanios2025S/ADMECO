@@ -16,7 +16,7 @@ const DOT: Record<string, string> = {
 
 export default function LivePipeline({ steps }: { steps: Step[] }) {
   const sorted = [...steps].sort((a, b) => a.step_order - b.step_order);
-  if (sorted.length === 0) return <p className="text-sm text-[#7c8091]">No steps in this view.</p>;
+  if (sorted.length === 0) return <p className="text-sm text-[#7c8091]">Aucune étape dans cette vue.</p>;
   return (
     <div className="max-h-[520px] space-y-1.5 overflow-y-auto pr-1">
       {sorted.map((s) => {

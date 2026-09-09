@@ -15,23 +15,23 @@ export default function IncidentsClient({ overdue, transfers, lowStock }: Props)
   return (
     <div className="stagger space-y-5">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Open incidents" value={String(total)} sub="Across platform" accent={total > 0 ? "red" : "green"} />
-        <Stat label="Overdue steps" value={String(liveOverdue.length)} sub="Past target time" accent="fire" />
-        <Stat label="Low stock" value={String(lowStock.length)} sub="Below threshold" accent={lowStock.length > 0 ? "red" : "green"} />
-        <Stat label="Transfers" value={String(transfers.length)} sub="To MOBILIX" accent="ice" />
+        <Stat label="Incidents ouverts" value={String(total)} sub="Toute la plateforme" accent={total > 0 ? "red" : "green"} />
+        <Stat label="Étapes en retard" value={String(liveOverdue.length)} sub="Temps cible dépassé" accent="fire" />
+        <Stat label="Stock bas" value={String(lowStock.length)} sub="Sous le seuil" accent={lowStock.length > 0 ? "red" : "green"} />
+        <Stat label="Transferts" value={String(transfers.length)} sub="Vers l'Atelier 2" accent="ice" />
       </div>
 
-      {/* Overdue */}
+      {/* En retard */}
       <GlassCard>
-        <SectionTitle kicker="Time" title="Overdue steps" hint="Steps that exceeded their estimated time." />
-        {liveOverdue.length === 0 ? <Empty icon="⏱️" title="Nothing overdue" hint="All steps are within target." /> : (
+        <SectionTitle kicker="Temps" title="Étapes en retard" hint="Étapes ayant dépassé leur temps estimé." />
+        {liveOverdue.length === 0 ? <Empty icon="⏱️" title="Aucun retard" hint="Toutes les étapes sont dans les temps." /> : (
           <div className="grid gap-2.5 md:grid-cols-2">
             {liveOverdue.map((s: any) => (
               <div key={s.id} className="card flex items-center gap-3 p-3.5">
                 <span className="text-2xl">🔴</span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">#{s.step_order} {s.step_name}</p>
-                  <p className="text-xs text-[#7c8091]">Actual {Number(s.actual_minutes).toFixed(0)} min vs target {s.estimated_minutes} min</p>
+                  <p className="text-xs text-[#7c8091]">Réel {Number(s.actual_minutes).toFixed(0)} min / cible {s.estimated_minutes} min</p>
                 </div>
                 <span className="rounded-lg bg-red-50 border border-red-200 px-2 py-1 text-xs font-black text-red-500">
                   +{Number(s.variance_min).toFixed(0)}m
@@ -45,29 +45,29 @@ export default function IncidentsClient({ overdue, transfers, lowStock }: Props)
         )}
       </GlassCard>
 
-      {/* Low stock */}
+      {/* Stock bas */}
       <GlassCard>
-        <SectionTitle kicker="Stock" title="Low stock alerts" hint="Materials below their alert threshold." />
-        {lowStock.length === 0 ? <Empty icon="✅" title="Stock is healthy" hint="All materials above threshold." /> : (
+        <SectionTitle kicker="Stock" title="Alertes stock bas" hint="Matières sous leur seuil d'alerte." />
+        {lowStock.length === 0 ? <Empty icon="✅" title="Stock sain" hint="Toutes les matières sont au-dessus du seuil." /> : (
           <div className="grid gap-2.5 md:grid-cols-2">
             {lowStock.map((s: any) => (
               <div key={s.id} className="card flex items-center gap-3 p-3.5">
                 <span className="text-2xl">⚠️</span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{s.name}</p>
-                  <p className="text-xs text-[#7c8091]">{s.quantity} {s.unit} remaining · threshold {s.alert_threshold}</p>
+                  <p className="text-xs text-[#7c8091]">{s.quantity} {s.unit} restants · seuil {s.alert_threshold}</p>
                 </div>
-                <Link href="/admin/stocks" className="text-xs font-bold text-[#2f6eb5] hover:underline">Restock →</Link>
+                <Link href="/admin/stocks" className="text-xs font-bold text-[#2f6eb5] hover:underline">Réappro →</Link>
               </div>
             ))}
           </div>
         )}
       </GlassCard>
 
-      {/* Transfers */}
+      {/* Transferts */}
       <GlassCard>
-        <SectionTitle kicker="Logistics" title="Transfers to MOBILIX" hint="Manifest status for released products." />
-        {transfers.length === 0 ? <Empty icon="🚚" title="No transfers yet" hint="Release items from orders to send to MOBILIX." /> : (
+        <SectionTitle kicker="Logistique" title="Transferts vers l'Atelier 2" hint="Statut des bordereaux des produits libérés." />
+        {transfers.length === 0 ? <Empty icon="🚚" title="Aucun transfert" hint="Libérez des articles depuis les commandes." /> : (
           <div className="space-y-2">
             {transfers.map((t: any) => (
               <div key={t.id} className="card flex items-center gap-3 p-3.5">

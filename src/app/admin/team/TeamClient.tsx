@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { UserPlus, Pencil, Trash2, X, Search } from "lucide-react";
 import { GlassCard, SectionTitle, Stat, StatusPill, Empty } from "@/components/admin/ui";
 import { inviteMember, updateMember, removeMember } from "@/app/actions";
+import { ATELIERS, atelierNom } from "@/lib/ateliers";
 import { cn } from "@/lib/utils";
 
 type Member = {
@@ -10,11 +11,7 @@ type Member = {
   created_at: string; stats: { active: number; done: number };
 };
 
-const ATELIERS = [
-  { id: 1, label: "Atelier 1 · Woodworking" },
-  { id: 2, label: "Atelier 2 · Assembly & Metal" },
-  { id: 3, label: "Atelier 3 · Finishing (Site B)" }
-];
+const ATELIERS_LOCAL = ATELIERS;
 
 export default function TeamClient({ members: initial }: { members: Member[] }) {
   const [members, setMembers] = useState(initial);
@@ -39,35 +36,35 @@ export default function TeamClient({ members: initial }: { members: Member[] }) 
   return (
     <div className="stagger space-y-5">
       <div className="grid grid-cols-3 gap-3">
-        <Stat label="Total members" value={String(members.length)} sub="Admins + workers" accent="ice" />
-        <Stat label="Admins" value={String(admins)} sub="Full control" accent="fire" />
-        <Stat label="Workers" value={String(workers)} sub="Floor stations" />
+        <Stat label="Membres total" value={String(members.length)} sub="Admins + opérateurs" accent="ice" />
+        <Stat label="Admins" value={String(admins)} sub="Contrôle total" accent="fire" />
+        <Stat label="Opérateurs" value={String(workers)} sub="Postes ateliers" />
       </div>
 
       <GlassCard>
-        <SectionTitle kicker="Directory" title="Team members"
-          hint="Invite by email — they can sign in immediately."
+        <SectionTitle kicker="Annuaire" title="Membres de l'équipe"
+          hint="Invitez par e-mail — connexion immédiate."
           right={
             <button onClick={() => { setInviteOpen(true); setError(""); }} className="btn-fire inline-flex items-center gap-1.5 px-4 py-2 text-sm">
-              <UserPlus size={16} /> Invite member
+              <UserPlus size={16} /> Inviter
             </button>
           } />
 
         <div className="mb-3 flex flex-wrap gap-2">
           <div className="input flex min-w-[220px] flex-1 items-center gap-2 px-3 py-2">
             <Search size={15} className="text-[#7c8091]" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name…" className="w-full bg-transparent text-sm outline-none" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher par nom…" className="w-full bg-transparent text-sm outline-none" />
           </div>
           {(["ALL", "ADMIN", "WORKER"] as const).map((r) => (
             <button key={r} onClick={() => setRoleFilter(r)}
               className={cn("rounded-xl border px-3 py-2 text-xs font-bold", roleFilter === r ? "border-[#c24a08]/40 bg-[#c24a08]/10 text-[#c24a08]" : "border-[#e6e1d8] text-[#7c8091]")}>
-              {r === "ALL" ? "Everyone" : r === "ADMIN" ? "Admins" : "Workers"}
+              {r === "ALL" ? "Tous" : r === "ADMIN" ? "Admins" : "Opérateurs"}
             </button>
           ))}
         </div>
 
         {filtered.length === 0 ? (
-          <Empty icon="👥" title="No members found" hint="Adjust the search or invite someone." />
+          <Empty icon="👥" title="Aucun membre trouvé" hint="Ajustez la recherche ou invitez quelqu'un." />
         ) : (
           <div className="grid gap-2.5 md:grid-cols-2">
             {filtered.map((m) => (
@@ -79,19 +76,19 @@ export default function TeamClient({ members: initial }: { members: Member[] }) 
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{m.full_name}</p>
                   <p className="truncate text-xs text-[#7c8091]">
-                    {m.atelier_id ? ATELIERS.find((a) => a.id === m.atelier_id)?.label : "No atelier assigned"} · {m.stats.done} done / {m.stats.active} active
+                    {m.atelier_id ? atelierNom(m.atelier_id) : "Aucun atelier"} · {m.stats.done} terminées / {m.stats.active} actives
                   </p>
                   <div className="mt-1"><StatusPill status={m.role} /></div>
                 </div>
                 <div className="flex shrink-0 gap-1.5">
-                  <button onClick={() => { setEditing(m); setError(""); }} className="btn-ghost grid h-8 w-8 place-items-center" title="Edit"><Pencil size={14} /></button>
+                  <button onClick={() => { setEditing(m); setError(""); }} className="btn-ghost grid h-8 w-8 place-items-center" title="Modifier"><Pencil size={14} /></button>
                   <button onClick={async () => {
-                    if (!confirm(`Remove ${m.full_name}? Their auth account will be deleted.`)) return;
+                    if (!confirm(`Retirer ${m.full_name} ? Son compte sera supprimé.`)) return;
                     setBusy(true);
                     try { await removeMember(m.id); setMembers((list) => list.filter((x) => x.id !== m.id)); }
                     catch (e: any) { alert(e.message); }
                     setBusy(false);
-                  }} className="grid h-8 w-8 place-items-center rounded-xl border border-red-200 bg-red-50 text-red-500 hover:bg-red-100" title="Remove">
+                  }} className="grid h-8 w-8 place-items-center rounded-xl border border-red-200 bg-red-50 text-red-500 hover:bg-red-100" title="Retirer">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -102,7 +99,7 @@ export default function TeamClient({ members: initial }: { members: Member[] }) 
       </GlassCard>
 
       {inviteOpen && (
-        <MemberModal title="Invite member" error={error} busy={busy} onClose={() => setInviteOpen(false)}
+        <MemberModal title="Inviter un membre" error={error} busy={busy} onClose={() => setInviteOpen(false)}
           onSubmit={async (v) => {
             setBusy(true); setError("");
             try {
@@ -115,7 +112,7 @@ export default function TeamClient({ members: initial }: { members: Member[] }) 
       )}
 
       {editing && (
-        <MemberModal title={`Edit — ${editing.full_name}`} error={error} busy={busy} initial={editing} hideEmail onClose={() => setEditing(null)}
+        <MemberModal title={`Modifier — ${editing.full_name}`} error={error} busy={busy} initial={editing} hideEmail onClose={() => setEditing(null)}
           onSubmit={async (v) => {
             setBusy(true); setError("");
             try {
@@ -131,7 +128,7 @@ export default function TeamClient({ members: initial }: { members: Member[] }) 
 }
 
 function friendlyError(msg: string) {
-  if (msg.includes("SERVICE_ROLE")) return "Server is missing SUPABASE_SERVICE_ROLE_KEY — add it in Vercel env vars + .env.local, then redeploy.";
+  if (msg.includes("SERVICE_ROLE")) return "SUPABASE_SERVICE_ROLE_KEY manquante — ajoutez-la dans Vercel + .env.local, puis redéployez.";
   return msg;
 }
 
@@ -156,24 +153,24 @@ function MemberModal({ title, error, busy, initial, hideEmail, onClose, onSubmit
         </div>
         {!hideEmail && (
           <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-            placeholder="Work email — e.g. karim@admeco.ma" className="input w-full px-4 py-2.5 text-sm" />
+            placeholder="E-mail pro — ex. karim@admedco.ma" className="input w-full px-4 py-2.5 text-sm" />
         )}
         <input required value={fullName} onChange={(e) => setFullName(e.target.value)}
-          placeholder="Full name" className="input w-full px-4 py-2.5 text-sm" />
+          placeholder="Nom complet" className="input w-full px-4 py-2.5 text-sm" />
         <div className="grid grid-cols-2 gap-2">
           <select value={role} onChange={(e) => setRole(e.target.value as any)} className="input px-3 py-2.5 text-sm">
-            <option value="WORKER" className="bg-white">WORKER</option>
-            <option value="ADMIN" className="bg-white">ADMIN</option>
+            <option value="WORKER" className="bg-white">Opérateur</option>
+            <option value="ADMIN" className="bg-white">Admin</option>
           </select>
           <select value={atelierId} onChange={(e) => setAtelierId(e.target.value)} className="input px-3 py-2.5 text-sm">
-            <option value="" className="bg-white">No atelier</option>
-            {ATELIERS.map((a) => <option key={a.id} value={a.id} className="bg-white">{a.label}</option>)}
+            <option value="" className="bg-white">Aucun atelier</option>
+            {ATELIERS_LOCAL.map((a) => <option key={a.id} value={a.id} className="bg-white">{a.nom}</option>)}
           </select>
         </div>
         {error && <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-500">{error}</p>}
         <div className="flex gap-2">
-          <button disabled={busy} className="btn-fire flex-1 px-4 py-2.5 text-sm">{busy ? "Saving…" : hideEmail ? "Save changes" : "Send invite"}</button>
-          <button type="button" onClick={onClose} className="btn-ghost px-4 py-2.5 text-sm">Cancel</button>
+          <button disabled={busy} className="btn-fire flex-1 px-4 py-2.5 text-sm">{busy ? "Enregistrement…" : hideEmail ? "Enregistrer" : "Envoyer l'invitation"}</button>
+          <button type="button" onClick={onClose} className="btn-ghost px-4 py-2.5 text-sm">Annuler</button>
         </div>
       </form>
     </div>

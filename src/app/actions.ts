@@ -8,11 +8,13 @@ export async function createOrder(input: {
   orderNumber: string; dueAt?: string;
   items: { productName: string; categoryId: string; quantity: number; dimensions?: any; designNotes?: string }[];
 }) {
-  const supabase = createServerSupabase();
-  const { data: order, error } = await supabase.from("work_orders").insert({
-    order_number: input.orderNumber, due_at: input.dueAt || null, status: "CREATED"
-  }).select().single();
-  if (error) throw new Error(error.message);
+  try {
+    const supabase = createServerSupabase();
+    const { data: order, error } = await supabase.from("work_orders").insert({
+      order_number: input.orderNumber, due_at: input.dueAt || null, status: "CREATED"
+    }).select().single();
+    if (error) throw new Error(error.message);
+    if (!order) throw new Error("Order insert returned no row.");
 
   for (const item of input.items) {
     const { data: inserted, error: e2 } = await supabase.from("work_order_items").insert({
@@ -57,9 +59,17 @@ export async function createOrder(input: {
       }
     }
   }
-  revalidatePath("/admin");
-  revalidatePath("/admin/orders");
-  return order;
+    revalidatePath("/admin");
+    revalidatePath("/admin/orders");
+    return order;
+  } catch (e: any) {
+    const hint = /relation|column|table|schema|migration|does not exist/i.test(e?.message ?? "")
+      ? " — exécutez les migrations 0005 → 0006 → 0007 → 0008 dans l'éditeur SQL Supabase (dans l'ordre), puis réessayez."
+      : /NEXT_PUBLIC_SUPABASE|fetch|network|ECONN/i.test(e?.message ?? "")
+        ? " — vérifiez les variables Vercel Production (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY) et que le projet Supabase n'est pas en pause."
+        : "";
+    throw new Error(`Échec de création commande : ${e?.message ?? String(e)}${hint}`);
+  }
 }
 
 // ─── WORKER: START STEP ──────────────────────────────
@@ -85,7 +95,7 @@ export async function completeStep(input: {
 
   // Get current step
   const { data: step } = await supabase.from("work_order_steps").select("*, work_order_items(*)").eq("id", input.stepId).single();
-  if (!step) throw new Error("Step not found");
+  if (!step) throw new Error("Étape introuvable");
 
   // Complete the step
   const { error } = await supabase.from("work_order_steps").update({
@@ -95,7 +105,7 @@ export async function completeStep(input: {
 
   // Insert branch step if indirect
   if (input.branchChoice === "indirect" && input.nextStepName) {
-    const branchOrder = +(step.step_order + 0.1).toFixed(1);
+    const branchOrder = +(Number(step.step_order) + 0.1).toFixed(1);
     const { data: newStep, error: e2 } = await supabase.from("work_order_steps").insert({
       item_id: step.item_id, step_order: branchOrder, atelier_id: step.atelier_id,
       step_name: `↳ ${input.nextStepName}`, status: "PENDING",
@@ -135,12 +145,12 @@ export async function completeStep(input: {
   revalidatePath("/admin/stocks");
 }
 
-// ─── ADMIN: RELEASE TO MOBILIX ───────────────────────
-export async function releaseToMobilix(orderId: string) {
+// ─── ADMIN : LIBÉRATION VERS L'ATELIER 2 ──────────────
+export async function libererVersAtelier2(orderId: string) {
   const supabase = createServerSupabase();
   const { data: items } = await supabase.from("work_order_items").select("*")
     .eq("order_id", orderId).eq("status", "SEMI_READY");
-  if (!items || items.length === 0) throw new Error("No ready items to release");
+  if (!items || items.length === 0) throw new Error("Aucun article prêt à libérer");
 
   for (const item of items) {
     await supabase.from("work_order_items").update({ status: "RELEASED" }).eq("id", item.id);
@@ -167,7 +177,7 @@ export async function releaseToMobilix(orderId: string) {
 export async function adjustStock(stockItemId: string, newQuantity: number, note?: string) {
   const supabase = createServerSupabase();
   const { data: current } = await supabase.from("stock_items").select("quantity").eq("id", stockItemId).single();
-  if (!current) throw new Error("Stock item not found");
+  if (!current) throw new Error("Article de stock introuvable");
   const diff = newQuantity - current.quantity;
   await supabase.from("stock_items").update({ quantity: newQuantity }).eq("id", stockItemId);
   await supabase.from("stock_movements").insert({
@@ -202,7 +212,7 @@ export async function inviteMember(input: { email: string; fullName: string; rol
   });
   if (error) throw new Error(error.message);
   const userId = data.user?.id;
-  if (!userId) throw new Error("No user id returned");
+  if (!userId) throw new Error("Aucun identifiant utilisateur retourné");
   const { error: e2 } = await admin.from("profiles").insert({ id: userId, role: input.role, full_name: input.fullName, atelier_id: input.atelierId });
   if (e2) throw new Error(e2.message);
   revalidatePath("/admin/team");
@@ -234,7 +244,7 @@ export async function createWorkOrder(input: { orderNumber: string; categoryId: 
 }
 
 export async function createTransfer(orderId: string, _fromAtelier: number, _toAtelier: number, _count: number) {
-  return releaseToMobilix(orderId);
+  return libererVersAtelier2(orderId);
 }
 
 export async function verifyTransfer(transferId: string, ok: boolean) {

@@ -25,10 +25,10 @@ export default function DashboardLive({ orders: initial }: { orders: Order[] }) 
     <div className="space-y-4">
       {alerts.length > 0 && (
         <div className="rounded-2xl border border-red-600 bg-red-950 p-4">
-          <div className="font-black text-red-300">⚠️ Overdue steps — live</div>
+          <div className="font-black text-red-300">⚠️ Étapes en retard — en direct</div>
           {alerts.map((a: any) => (
             <div key={a.id} className="text-sm text-red-200">
-              #{a.step_order} {a.step_name}: +{Number(a.variance_min).toFixed(0)} min over target ({Number(a.actual_minutes).toFixed(0)}/{a.estimated_minutes} min)
+              #{a.step_order} {a.step_name} : +{Number(a.variance_min).toFixed(0)} min hors cible ({Number(a.actual_minutes).toFixed(0)}/{a.estimated_minutes} min)
             </div>
           ))}
         </div>
@@ -42,10 +42,10 @@ export default function DashboardLive({ orders: initial }: { orders: Order[] }) 
               <span className="rounded-lg bg-zinc-700 px-2 py-0.5 text-xs font-bold">{o.status}</span>
             </div>
             <div className="text-sm text-zinc-400 mt-1">{o.status}</div>
-            <div className="text-yellow-300 text-sm mt-1 font-bold">Open → live pipeline</div>
+            <div className="text-yellow-300 text-sm mt-1 font-bold">Ouvrir → pipeline en direct</div>
           </Link>
         ))}
-        {orders.length === 0 && <p className="text-zinc-500">No work orders yet — create one above.</p>}
+        {orders.length === 0 && <p className="text-zinc-500">Aucune commande — créez-en une ci-dessus.</p>}
       </div>
     </div>
   );

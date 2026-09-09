@@ -20,20 +20,20 @@ export default function LoginPage() {
             🪑
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-[#1a1d23]">
-            ADMECO <span className="text-[#4a7c59]">MES</span>
+            ADMEDCO <span className="text-[#4a7c59]">MES</span>
           </h1>
-          <p className="mt-1 text-[14px] text-[#7c8091]">Factory command center</p>
+          <p className="mt-1 text-[14px] text-[#7c8091]">Centre de commande de l'usine</p>
         </div>
 
         {/* Login card */}
         <div className="card p-6 sm:p-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8091]">Secure access</p>
-              <h2 className="text-xl font-extrabold text-[#1a1d23]">Sign in to your portal</h2>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7c8091]">Accès sécurisé</p>
+              <h2 className="text-xl font-extrabold text-[#1a1d23]">Connectez-vous à votre portail</h2>
             </div>
             <div className="flex items-center gap-1.5 rounded-full bg-[#4a7c59]/10 px-2.5 py-1 text-[11px] font-semibold text-[#4a7c59]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#4a7c59] live-dot" /> Live
+              <span className="h-1.5 w-1.5 rounded-full bg-[#4a7c59] live-dot" /> En direct
             </div>
           </div>
 
@@ -46,14 +46,14 @@ export default function LoginPage() {
           }}>
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[12px] font-semibold text-[#7c8091]">Email</label>
+                <label className="text-[12px] font-semibold text-[#7c8091]">E-mail</label>
                 <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@admeco.ma" className="input w-full px-4 py-3 text-sm" autoComplete="email" />
+                  placeholder="vous@admedco.ma" className="input w-full px-4 py-3 text-sm" autoComplete="email" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[12px] font-semibold text-[#7c8091]">Password</label>
+                <label className="text-[12px] font-semibold text-[#7c8091]">Mot de passe</label>
                 <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password" className="input w-full px-4 py-3 text-sm" autoComplete="current-password" />
+                  placeholder="Mot de passe" className="input w-full px-4 py-3 text-sm" autoComplete="current-password" />
               </div>
             </div>
 
@@ -63,13 +63,13 @@ export default function LoginPage() {
 
             <button disabled={busy} className="btn-accent mt-5 flex w-full items-center justify-center gap-2 px-4 py-3.5 text-sm">
               {busy ? <Loader2 size={16} className="animate-spin" /> : <LogIn size={16} />}
-              {busy ? "Signing in…" : "Sign in"}
+              {busy ? "Connexion…" : "Se connecter"}
             </button>
           </form>
 
           <div className="mt-4 flex items-center justify-center gap-1.5 text-[12px] text-[#7c8091]">
             <Factory size={14} />
-            Worker on a tablet? <a href="/portal" className="font-semibold text-[#4a7c59] hover:underline">Open Worker Portal <ArrowRight size={12} className="inline" /></a>
+            Opérateur sur tablette ? <a href="/portal" className="font-semibold text-[#4a7c59] hover:underline">Ouvrir le portail atelier <ArrowRight size={12} className="inline" /></a>
           </div>
         </div>
       </div>

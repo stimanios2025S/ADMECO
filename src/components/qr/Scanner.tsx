@@ -29,7 +29,7 @@ export default function Scanner({ onScan, paused }: { onScan: (text: string) => 
           () => {}
         );
       } catch (e: any) {
-        setErr("Camera unavailable — use manual entry below.");
+        setErr("Caméra indisponible — utilisez la saisie manuelle ci-dessous.");
       }
     })();
     return () => { mounted = false; try { scannerRef.current?.stop(); } catch {} };
@@ -52,10 +52,10 @@ export default function Scanner({ onScan, paused }: { onScan: (text: string) => 
         <input
           value={manual}
           onChange={(e) => setManual(e.target.value)}
-          placeholder="Manual code entry (e.g. MNF-AB12CD)"
+          placeholder="Saisie manuelle (ex. MNF-AB12CD)"
           className="flex-1 rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-lg text-white"
         />
-        <button className="rounded-xl bg-yellow-400 px-5 font-bold text-black text-lg">GO</button>
+        <button className="rounded-xl bg-yellow-400 px-5 font-bold text-black text-lg">OK</button>
       </form>
     </div>
   );

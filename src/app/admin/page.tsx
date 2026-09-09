@@ -29,7 +29,7 @@ export default async function AdminDashboard() {
   };
 
   return (
-    <AdminShell pageTitle="Dashboard" pageHint="Command center ADEMCO — production, stock, transferts.">
+    <AdminShell pageTitle="Tableau de bord" pageHint="Centre de commande ADMEDCO — production, stocks, transferts.">
       <DashboardClient kpi={kpi} orders={orders ?? []} stocks={(stocks ?? []) as any[]} transfers={transfers ?? []} />
     </AdminShell>
   );

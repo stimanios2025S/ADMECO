@@ -4,6 +4,7 @@ import { Package, AlertTriangle, CheckCircle, Clock, Truck, Plus, Pencil, Trash2
 import { GlassCard, SectionTitle, Stat, StatusPill, Empty } from "@/components/admin/ui";
 import { adjustStock, addStockItem, deleteStockItem } from "@/app/actions";
 import { stockHealth, fmtQty } from "@/lib/calc/stock";
+import { mouvementFr } from "@/lib/fr";
 import { cn } from "@/lib/utils";
 
 type StockRow = { id: string; name: string; unit: string; quantity: number; reserved: number; available: number; low_stock: boolean; alert_threshold: number };
@@ -25,22 +26,22 @@ export default function StocksClient({ stocks, movements, reservations, semiStoc
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div className="card flex items-center gap-3 p-4">
           <span className="grid h-11 w-11 place-items-center rounded-xl bg-[#c24a08]/10 text-[#c24a08] shadow-sm"><Package size={20} /></span>
-          <div><p className="text-2xl font-black">{stocks.length}</p><p className="text-[11px] font-bold uppercase tracking-widest text-[#7c8091]">Stock items</p></div>
+          <div><p className="text-2xl font-black">{stocks.length}</p><p className="text-[11px] font-bold uppercase tracking-widest text-[#7c8091]">Articles en stock</p></div>
         </div>
-        <Stat label="Total quantity" value={totalStock.toLocaleString()} sub="Across all materials" accent="ice" />
-        <Stat label="Reserved" value={totalReserved.toLocaleString()} sub="Locked for production" accent="fire" />
+        <Stat label="Quantité totale" value={totalStock.toLocaleString()} sub="Toutes matières confondues" accent="ice" />
+        <Stat label="Réservé" value={totalReserved.toLocaleString()} sub="Bloqué pour la production" accent="fire" />
         <div className="card flex items-center gap-3 p-4">
           <span className={cn("grid h-11 w-11 place-items-center rounded-xl", lowCount > 0 ? "bg-red-50 text-red-500" : "bg-[#4a7c59]/10 text-[#4a7c59]")}>
             {lowCount > 0 ? <AlertTriangle size={20} /> : <CheckCircle size={20} />}
           </span>
-          <div><p className="text-2xl font-black">{lowCount}</p><p className="text-[11px] font-bold uppercase tracking-widest text-[#7c8091]">Low stock alerts</p></div>
+          <div><p className="text-2xl font-black">{lowCount}</p><p className="text-[11px] font-bold uppercase tracking-widest text-[#7c8091]">Alertes stock bas</p></div>
         </div>
       </div>
 
       {pendingSemi > 0 && (
         <GlassCard className="border-amber-200 bg-amber-50">
-          <SectionTitle kicker="Ready" title={`${pendingSemi} items at semi-finished stock`} hint="Waiting for admin release to MOBILIX." right={
-            <a href="/admin/orders" className="btn-fire inline-flex items-center gap-1 px-4 py-2 text-sm"><Truck size={15} /> Review orders</a>
+          <SectionTitle kicker="Prêt" title={`${pendingSemi} articles au stock semi-fini`} hint="En attente de libération vers l'Atelier 2." right={
+            <a href="/admin/orders" className="btn-fire inline-flex items-center gap-1 px-4 py-2 text-sm"><Truck size={15} /> Voir les commandes</a>
           } />
         </GlassCard>
       )}
@@ -49,16 +50,16 @@ export default function StocksClient({ stocks, movements, reservations, semiStoc
         {(["inventory", "movements", "semi"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)} className={cn("rounded-xl border px-4 py-2 text-sm font-bold transition",
             tab === t ? "border-[#4a7c59]/30 bg-[#4a7c59]/10 text-[#4a7c59]" : "border-black/8 text-[#7c8091] hover:text-[#1a1d23]")}>
-            {t === "inventory" ? "📦 Inventory" : t === "movements" ? "🔄 Movements" : "🏗️ Semi-finished"}
+            {t === "inventory" ? "📦 Inventaire" : t === "movements" ? "🔄 Mouvements" : "🏗️ Semi-finis"}
           </button>
         ))}
       </div>
 
       {tab === "inventory" && (
         <GlassCard>
-          <SectionTitle kicker="Materials" title="Raw materials inventory" hint="Real-time stock with reservation tracking."
-            right={<button onClick={() => setAddOpen(true)} className="btn-fire inline-flex items-center gap-1 px-4 py-2 text-sm"><Plus size={15} /> Add item</button>} />
-          {stocks.length === 0 ? <Empty icon="📦" title="No stock items" hint="Add your first material above." /> : (
+          <SectionTitle kicker="Matières" title="Inventaire des matières premières" hint="Stock temps réel avec suivi des réservations."
+            right={<button onClick={() => setAddOpen(true)} className="btn-fire inline-flex items-center gap-1 px-4 py-2 text-sm"><Plus size={15} /> Ajouter</button>} />
+          {stocks.length === 0 ? <Empty icon="📦" title="Aucun article en stock" hint="Ajoutez votre première matière ci-dessus." /> : (
             <div className="space-y-1.5">
               {stocks.map((s) => {
                 const health = stockHealth(s);
@@ -70,12 +71,12 @@ export default function StocksClient({ stocks, movements, reservations, semiStoc
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold">{s.name}</p>
-                      <p className="text-xs text-[#7c8091]">{fmtQty(s.quantity, s.unit)} · Reserved {fmtQty(s.reserved, s.unit)} · Available {fmtQty(s.available, s.unit)}</p>
+                      <p className="text-xs text-[#7c8091]">{fmtQty(s.quantity, s.unit)} · Réservé {fmtQty(s.reserved, s.unit)} · Dispo {fmtQty(s.available, s.unit)}</p>
                     </div>
                     <div className="flex shrink-0 gap-1.5">
-                      <button onClick={() => setEditItem(s)} className="btn-ghost grid h-8 w-8 place-items-center" title="Adjust"><Pencil size={14} /></button>
-                      <button onClick={async () => { if (confirm(`Delete "${s.name}"?`)) await deleteStockItem(s.id); }}
-                        className="grid h-8 w-8 place-items-center rounded-xl border border-red-200 bg-red-50 text-red-500" title="Delete"><Trash2 size={14} /></button>
+                      <button onClick={() => setEditItem(s)} className="btn-ghost grid h-8 w-8 place-items-center" title="Ajuster"><Pencil size={14} /></button>
+                      <button onClick={async () => { if (confirm(`Supprimer « ${s.name} » ?`)) await deleteStockItem(s.id); }}
+                        className="grid h-8 w-8 place-items-center rounded-xl border border-red-200 bg-red-50 text-red-500" title="Supprimer"><Trash2 size={14} /></button>
                     </div>
                   </div>
                 );
@@ -87,8 +88,8 @@ export default function StocksClient({ stocks, movements, reservations, semiStoc
 
       {tab === "movements" && (
         <GlassCard>
-          <SectionTitle kicker="History" title="Stock movements" hint="Every reserve / consume / adjust action." />
-          {movements.length === 0 ? <Empty icon="🔄" title="No movements yet" hint="Activity will appear here once production starts." /> : (
+          <SectionTitle kicker="Historique" title="Mouvements de stock" hint="Chaque action réserver / consommer / ajuster." />
+          {movements.length === 0 ? <Empty icon="🔄" title="Aucun mouvement" hint="L'activité apparaîtra ici une fois la production lancée." /> : (
             <div className="space-y-1.5 max-h-[500px] overflow-y-auto pr-1">
               {movements.map((m) => (
                 <div key={m.id} className="card flex items-center gap-3 p-3 text-sm">
@@ -96,7 +97,7 @@ export default function StocksClient({ stocks, movements, reservations, semiStoc
                     m.movement_type === "consume" ? "bg-red-50 text-red-500" :
                     m.movement_type === "reserve" ? "bg-amber-50 text-amber-600" :
                     m.movement_type === "adjust" ? "bg-[#2f6eb5]/10 text-[#2f6eb5]" : "bg-[#4a7c59]/10 text-[#4a7c59]")}>
-                    {m.movement_type.toUpperCase()}
+                    {mouvementFr(m.movement_type)}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-bold">{m.stock_items?.name}</p>
@@ -113,8 +114,8 @@ export default function StocksClient({ stocks, movements, reservations, semiStoc
 
       {tab === "semi" && (
         <GlassCard>
-          <SectionTitle kicker="Ready" title="Semi-finished products" hint="Items completed and awaiting admin release to MOBILIX." />
-          {semiStock.length === 0 ? <Empty icon="🏗️" title="No semi-finished products" hint="Complete all steps to see items here." /> : (
+          <SectionTitle kicker="Prêt" title="Produits semi-finis" hint="Articles terminés en attente de libération vers l'Atelier 2." />
+          {semiStock.length === 0 ? <Empty icon="🏗️" title="Aucun produit semi-fini" hint="Terminez toutes les étapes pour voir les articles ici." /> : (
             <div className="grid gap-2.5 md:grid-cols-2">
               {semiStock.map((s) => (
                 <div key={s.id} className="card flex items-center gap-3 p-3.5">
@@ -158,20 +159,20 @@ function AddItemModal({ onClose }: { onClose: () => void }) {
       e.preventDefault(); setBusy(true); await addStockItem(f.name, f.unit, f.quantity, f.alert_threshold); setBusy(false); onClose();
     }}>
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-black">Add stock item</h3>
+        <h3 className="text-lg font-black">Ajouter un article</h3>
         <button type="button" onClick={onClose} className="btn-ghost grid h-8 w-8 place-items-center"><X size={16} /></button>
       </div>
-      <input required placeholder="Material name" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="input w-full px-4 py-2.5 text-sm" />
+      <input required placeholder="Nom de la matière" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="input w-full px-4 py-2.5 text-sm" />
       <div className="grid grid-cols-3 gap-2">
         <select value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} className="input px-2 py-2.5 text-sm">
           {["pcs", "m", "m²", "kg", "L", "pcs"].map((u) => <option key={u} value={u} className="bg-white">{u}</option>)}
         </select>
         <input type="number" step="any" min={0} value={f.quantity} onChange={(e) => setF({ ...f, quantity: Number(e.target.value) })}
-          className="input px-2 py-2.5 text-sm" placeholder="Qty" />
+          className="input px-2 py-2.5 text-sm" placeholder="Qté" />
         <input type="number" step="any" min={0} value={f.alert_threshold} onChange={(e) => setF({ ...f, alert_threshold: Number(e.target.value) })}
-          className="input px-2 py-2.5 text-sm" placeholder="Alert at" />
+          className="input px-2 py-2.5 text-sm" placeholder="Seuil" />
       </div>
-      <button disabled={busy} className="btn-fire w-full px-4 py-2.5 text-sm">{busy ? "…" : "Add item"}</button>
+      <button disabled={busy} className="btn-fire w-full px-4 py-2.5 text-sm">{busy ? "…" : "Ajouter"}</button>
     </form>
   );
 }
@@ -185,13 +186,13 @@ function AdjustModal({ item, onClose }: { item: StockRow; onClose: () => void })
       e.preventDefault(); setBusy(true); await adjustStock(item.id, qty, note); setBusy(false); onClose();
     }}>
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-black">Adjust: {item.name}</h3>
+        <h3 className="text-lg font-black">Ajuster : {item.name}</h3>
         <button type="button" onClick={onClose} className="btn-ghost grid h-8 w-8 place-items-center"><X size={16} /></button>
       </div>
-      <p className="text-sm text-[#7c8091]">Current: {fmtQty(item.quantity, item.unit)}</p>
+      <p className="text-sm text-[#7c8091]">Actuel : {fmtQty(item.quantity, item.unit)}</p>
       <input type="number" step="any" min={0} value={qty} onChange={(e) => setQty(Number(e.target.value))} className="input w-full px-4 py-3 text-lg font-bold" />
-      <input placeholder="Adjustment reason (optional)" value={note} onChange={(e) => setNote(e.target.value)} className="input w-full px-4 py-2.5 text-sm" />
-      <button disabled={busy} className="btn-fire w-full px-4 py-2.5 text-sm">{busy ? "…" : "Save adjustment"}</button>
+      <input placeholder="Motif d'ajustement (optionnel)" value={note} onChange={(e) => setNote(e.target.value)} className="input w-full px-4 py-2.5 text-sm" />
+      <button disabled={busy} className="btn-fire w-full px-4 py-2.5 text-sm">{busy ? "…" : "Enregistrer"}</button>
     </form>
   );
 }

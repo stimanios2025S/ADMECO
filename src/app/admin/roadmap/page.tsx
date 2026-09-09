@@ -22,13 +22,13 @@ export default async function RoadmapPage({ searchParams }: { searchParams: { or
   }
 
   return (
-    <AdminShell pageTitle="Roadmap" pageHint="Every order's journey through Zone A ateliers to Site B finishing.">
+    <AdminShell pageTitle="Feuille de route" pageHint="Le parcours de chaque commande : Atelier 1 puis Atelier 2.">
       {(!orders || orders.length === 0) ? (
         <div className="card p-10 text-center">
           <div className="text-4xl">🗺️</div>
-          <p className="mt-2 font-bold">No orders to map yet</p>
-          <p className="text-sm text-[#7c8091]">Create an order from the Dashboard to see its roadmap here.</p>
-          <Link href="/admin" className="btn-fire mt-4 inline-block px-5 py-2 text-sm">Go to Dashboard</Link>
+          <p className="mt-2 font-bold">Aucune commande à cartographier</p>
+          <p className="text-sm text-[#7c8091]">Créez une commande depuis le tableau de bord pour voir sa feuille de route.</p>
+          <Link href="/admin" className="btn-fire mt-4 inline-block px-5 py-2 text-sm">Aller au tableau de bord</Link>
         </div>
       ) : (
         <RoadmapClient orders={orders ?? []} steps={steps} transfers={transfers ?? []} selectedId={selectedId} />

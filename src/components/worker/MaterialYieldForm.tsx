@@ -27,49 +27,49 @@ export default function MaterialYieldForm({
       className="space-y-3 rounded-2xl bg-zinc-900 border border-zinc-700 p-4 text-white"
       onSubmit={(e) => { e.preventDefault(); if (sp > 5) cueScrapAlert(); onSubmit(f); }}
     >
-      <div className="font-black text-xl">📦 Material & Yield logging</div>
-      <label className="block">Material
+      <div className="font-black text-xl">📦 Matière & rendement</div>
+      <label className="block">Matière
         <input value={f.materialName} onChange={(e) => set("materialName", e.target.value)}
           className="mt-1 w-full rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-lg" required />
       </label>
       <div className="grid grid-cols-2 gap-2">
-        <label className="block">Used
+        <label className="block">Utilisé
           <input type="number" step="any" min={0} value={f.qtyUsed} onChange={(e) => set("qtyUsed", Number(e.target.value))}
             className="mt-1 w-full rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-lg" required />
         </label>
-        <label className="block">Lost
+        <label className="block">Perdu
           <input type="number" step="any" min={0} value={f.qtyLost} onChange={(e) => set("qtyLost", Number(e.target.value))}
             className="mt-1 w-full rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-lg" required />
         </label>
       </div>
       <div className="grid grid-cols-3 gap-2">
-        <label className="block">Good ✅
+        <label className="block">Bons ✅
           <input type="number" min={0} value={f.goodUnits} onChange={(e) => set("goodUnits", Number(e.target.value))}
             className="mt-1 w-full rounded-xl bg-emerald-950 border border-emerald-700 px-4 py-3 text-lg" required />
         </label>
-        <label className="block">Scrap 🗑️
+        <label className="block">Rebuts 🗑️
           <input type="number" min={0} value={f.scrapUnits} onChange={(e) => set("scrapUnits", Number(e.target.value))}
             className="mt-1 w-full rounded-xl bg-red-950 border border-red-700 px-4 py-3 text-lg" required />
         </label>
-        <label className="block">Expected
+        <label className="block">Attendu
           <input type="number" min={0} value={f.expectedUnits} onChange={(e) => set("expectedUnits", Number(e.target.value))}
             className="mt-1 w-full rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-lg" required />
         </label>
       </div>
       {f.qtyLost > 0 && (
-        <label className="block">Loss reason
-          <input value={f.lossReason} onChange={(e) => set("lossReason", e.target.value)} placeholder="e.g. cracked board, weld defect"
+        <label className="block">Motif de perte
+          <input value={f.lossReason} onChange={(e) => set("lossReason", e.target.value)} placeholder="ex. panneau fissuré, défaut de soudure"
             className="mt-1 w-full rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-lg" />
         </label>
       )}
       <div className="flex gap-2 text-sm">
         <span className={`rounded-lg px-3 py-1 font-bold ${sp > 5 ? "bg-red-600" : "bg-zinc-700"}`}>
-          Scrap {sp.toFixed(1)}% {sp > 5 ? "⚠️ ALERT" : ""}
+          Rebuts {sp.toFixed(1)}% {sp > 5 ? "⚠️ ALERTE" : ""}
         </span>
-        <span className="rounded-lg px-3 py-1 bg-zinc-700 font-bold">Yield {(yc * 100).toFixed(1)}%</span>
+        <span className="rounded-lg px-3 py-1 bg-zinc-700 font-bold">Rendement {(yc * 100).toFixed(1)}%</span>
       </div>
       <button className="w-full rounded-2xl bg-yellow-400 py-4 text-xl font-black text-black">
-        ✅ COMPLETE STEP
+        ✅ TERMINER L'ÉTAPE
       </button>
     </form>
   );

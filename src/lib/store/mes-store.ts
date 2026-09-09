@@ -1,7 +1,7 @@
 "use client";
 import { create } from "zustand";
 
-export type Kiosk = { atelierId: 1 | 2 | 3; stepOrder: number; workerId: string; workerName: string } | null;
+export type Kiosk = { atelierId: 1 | 2; stepOrder: number; workerId: string; workerName: string } | null;
 export type Cue = { kind: "success" | "error" | "scrap"; message: string; id: number } | null;
 
 type State = {

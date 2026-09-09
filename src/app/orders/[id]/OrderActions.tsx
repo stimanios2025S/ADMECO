@@ -9,16 +9,16 @@ export default function OrderActions({ orderId }: { orderId: string }) {
     <button
       disabled={busy}
       onClick={async () => {
-        const count = Number(prompt("How many good items in this pallet manifest?", "50") ?? "0");
+        const count = Number(prompt("Combien de bons articles dans ce bordereau palette ?", "50") ?? "0");
         if (!count) return;
         setBusy(true);
-        try { await createTransfer(orderId, 2, 3, count); alert("Manifest generated ✅"); location.reload(); }
+        try { await createTransfer(orderId, 1, 2, count); alert("Bordereau généré ✅"); location.reload(); }
         catch (e: any) { alert(e.message); }
         setBusy(false);
       }}
       className="btn-fire inline-flex items-center gap-1.5 px-4 py-2 text-sm"
     >
-      <Truck size={16} /> {busy ? "Generating…" : "Pallet manifest (A2→B3)"}
+      <Truck size={16} /> {busy ? "Génération…" : "Bordereau palette (A1→A2)"}
     </button>
   );
 }

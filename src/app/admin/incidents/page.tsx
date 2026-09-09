@@ -13,7 +13,7 @@ export default async function IncidentsPage() {
   ]);
 
   return (
-    <AdminShell pageTitle="Incidents" pageHint="Overdue steps, low stock alerts and transfer status.">
+    <AdminShell pageTitle="Incidents" pageHint="Étapes en retard, alertes stock bas et statut des transferts.">
       <IncidentsClient overdue={overdue ?? []} transfers={transfers ?? []} lowStock={(lowStock ?? []) as any[]} />
     </AdminShell>
   );

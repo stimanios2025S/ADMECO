@@ -14,7 +14,7 @@ export default async function AnalyticsPage() {
   ]);
 
   return (
-    <AdminShell pageTitle="Analytics" pageHint="Whole-platform intelligence — yield, time, materials, sites.">
+    <AdminShell pageTitle="Analyses" pageHint="Intelligence globale — rendement, temps, matières, ateliers.">
       <AnalyticsClient items={(items ?? []) as any[]} logs={(logs ?? []) as any[]} steps={(steps ?? []) as any[]} orders={(orders ?? []) as any[]} />
     </AdminShell>
   );

@@ -3,7 +3,7 @@ import type { Step } from "./LivePipeline";
 
 export default function GanttBoard({ steps }: { steps: Step[] }) {
   const sorted = [...steps].sort((a, b) => a.step_order - b.step_order);
-  if (sorted.length === 0) return <p className="text-sm text-[#7c8091]">No steps in this view.</p>;
+  if (sorted.length === 0) return <p className="text-sm text-[#7c8091]">Aucune étape dans cette vue.</p>;
   const maxEst = Math.max(1, ...sorted.map((s) => s.estimated_minutes));
   return (
     <div className="max-h-[520px] space-y-1.5 overflow-y-auto pr-1">
@@ -24,7 +24,7 @@ export default function GanttBoard({ steps }: { steps: Step[] }) {
           </div>
         );
       })}
-      <p className="pt-1 text-[11px] text-[#7c8091]">Pale = target · Blue = on-track · Red-orange = overdue</p>
+      <p className="pt-1 text-[11px] text-[#7c8091]">Clair = cible · Bleu = dans les temps · Rouge-orange = en retard</p>
     </div>
   );
 }

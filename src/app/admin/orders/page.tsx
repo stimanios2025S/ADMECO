@@ -8,12 +8,12 @@ export const dynamic = "force-dynamic";
 function LoadError({ message }: { message: string }) {
   return (
     <div className="card space-y-2 border-red-200 p-6">
-      <p className="font-black text-[#1a1d23]">Couldn't load orders</p>
+      <p className="font-black text-[#1a1d23]">Chargement des commandes impossible</p>
       <p className="rounded-xl bg-red-50 px-3 py-2 font-mono text-xs text-red-500">{message}</p>
       <p className="text-sm text-[#7c8091]">
-        Check: Supabase project active (not paused)? Migrations <b>0005 → 0006 → 0007</b> run in order?
-        Vercel Production env has <span className="font-mono">NEXT_PUBLIC_SUPABASE_URL</span> +{" "}
-        <span className="font-mono">NEXT_PUBLIC_SUPABASE_ANON_KEY</span>?
+        Vérifiez : projet Supabase actif (non en pause) ? Migrations <b>0005 → 0006 → 0007 → 0008</b> exécutées dans l'ordre ?
+        Variables Vercel Production <span className="font-mono">NEXT_PUBLIC_SUPABASE_URL</span> +{" "}
+        <span className="font-mono">NEXT_PUBLIC_SUPABASE_ANON_KEY</span> présentes ?
       </p>
     </div>
   );
@@ -26,13 +26,13 @@ export default async function OrdersPage() {
     if (error) throw new Error("work_orders: " + error.message);
 
     return (
-      <AdminShell pageTitle="Orders" pageHint="All production orders — create, track and release to MOBILIX.">
+      <AdminShell pageTitle="Commandes" pageHint="Toutes les commandes — créer, suivre et libérer vers l'Atelier 2.">
         <div className="stagger space-y-5">
           <div className="flex justify-end">
-            <Link href="/admin/orders/new" className="btn-fire inline-flex items-center gap-1.5 px-5 py-2.5 text-sm">+ New order</Link>
+            <Link href="/admin/orders/new" className="btn-fire inline-flex items-center gap-1.5 px-5 py-2.5 text-sm">+ Nouvelle commande</Link>
           </div>
           {!orders || orders.length === 0 ? (
-            <Empty icon="📦" title="No orders yet" hint="Create your first production order." />
+            <Empty icon="📦" title="Aucune commande" hint="Créez votre première commande de production." />
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
               {orders.map((o: any) => (
@@ -42,7 +42,7 @@ export default async function OrdersPage() {
                     <StatusPill status={o.status} />
                   </div>
                   <p className="mt-1 text-xs text-[#7c8091]">
-                    {o.work_order_items?.length ?? 0} items · {new Date(o.created_at).toLocaleDateString("fr-FR")}
+                    {o.work_order_items?.length ?? 0} articles · {new Date(o.created_at).toLocaleDateString("fr-FR")}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {(o.work_order_items ?? []).slice(0, 3).map((item: any) => (
@@ -51,7 +51,7 @@ export default async function OrdersPage() {
                       </span>
                     ))}
                     {(o.work_order_items?.length ?? 0) > 3 && (
-                      <span className="rounded-md bg-[#f0ede8] px-2 py-0.5 text-[10px] text-[#7c8091]">+{(o.work_order_items?.length ?? 0) - 3} more</span>
+                      <span className="rounded-md bg-[#f0ede8] px-2 py-0.5 text-[10px] text-[#7c8091]">+{(o.work_order_items?.length ?? 0) - 3} autres</span>
                     )}
                   </div>
                 </Link>
@@ -64,7 +64,7 @@ export default async function OrdersPage() {
   } catch (e: any) {
     console.error("[OrdersPage]", e);
     return (
-      <AdminShell pageTitle="Orders" pageHint="All production orders — create, track and release to MOBILIX.">
+      <AdminShell pageTitle="Commandes" pageHint="Toutes les commandes — créer, suivre et libérer vers l'Atelier 2.">
         <LoadError message={e?.message ?? String(e)} />
       </AdminShell>
     );

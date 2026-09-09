@@ -35,7 +35,7 @@ export default function UserChip() {
       </div>
       <button
         onClick={async () => { await createClient().auth.signOut(); router.push("/login"); router.refresh(); }}
-        className="grid h-9 w-9 place-items-center rounded-xl hover:bg-black/5 text-[#7c8091] hover:text-[#1a1d23] transition-colors" title="Sign out">
+        className="grid h-9 w-9 place-items-center rounded-xl hover:bg-black/5 text-[#7c8091] hover:text-[#1a1d23] transition-colors" title="Se déconnecter">
         <LogOut size={16} />
       </button>
     </div>

@@ -16,7 +16,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     if (ei) throw new Error("work_order_items: " + ei.message);
     if (et) throw new Error("site_transfers: " + et.message);
 
-    if (!order) return <AdminShell pageTitle="Order not found" pageHint=""><p>Not found.</p></AdminShell>;
+    if (!order) return <AdminShell pageTitle="Commande introuvable" pageHint=""><p>Introuvable.</p></AdminShell>;
 
     // Get steps per item
     const itemIds = (items ?? []).map((i: any) => i.id);
@@ -35,9 +35,9 @@ export default async function OrderDetailPage({ params }: { params: { id: string
 
     return (
       <AdminShell pageTitle={order.order_number}
-        pageHint={`${(items ?? []).length} items · ${readyCount} ready · ${order.status}`}>
+        pageHint={`${(items ?? []).length} articles · ${readyCount} prêts`}>
         <div className="stagger space-y-5">
-          {order.due_at && <p className="text-sm text-[#7c8091]">Due: {new Date(order.due_at).toLocaleDateString("fr-FR")}</p>}
+          {order.due_at && <p className="text-sm text-[#7c8091]">Échéance : {new Date(order.due_at).toLocaleDateString("fr-FR")}</p>}
           <OrderDetailClient orderId={order.id} orderStatus={order.status} items={(items ?? []) as any[]} stepsByItem={stepsByItem} transfers={(transfers ?? []) as any[]} />
         </div>
       </AdminShell>
@@ -45,9 +45,9 @@ export default async function OrderDetailPage({ params }: { params: { id: string
   } catch (e: any) {
     console.error("[OrderDetailPage]", e);
     return (
-      <AdminShell pageTitle="Order" pageHint="">
+      <AdminShell pageTitle="Commande" pageHint="">
         <div className="card space-y-2 border-red-200 p-6">
-          <p className="font-black text-[#1a1d23]">Couldn't load this order</p>
+          <p className="font-black text-[#1a1d23]">Chargement de la commande impossible</p>
           <p className="rounded-xl bg-red-50 px-3 py-2 font-mono text-xs text-red-500">{e?.message ?? String(e)}</p>
         </div>
       </AdminShell>

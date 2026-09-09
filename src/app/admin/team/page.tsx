@@ -21,7 +21,7 @@ export default async function TeamPage() {
   }
 
   return (
-    <AdminShell pageTitle="Team" pageHint="Workers, ateliers and roles — invite, assign, manage.">
+    <AdminShell pageTitle="Équipe" pageHint="Opérateurs, ateliers et rôles — inviter, affecter, gérer.">
       <TeamClient members={(members ?? []).map((m: any) => ({ ...m, stats: perWorker.get(m.id) ?? { active: 0, done: 0 } }))} />
     </AdminShell>
   );

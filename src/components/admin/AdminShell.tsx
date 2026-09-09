@@ -10,12 +10,12 @@ import { cn } from "@/lib/utils";
 import UserChip from "./UserChip";
 
 const TABS = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/orders", label: "Orders", icon: Package },
+  { href: "/admin", label: "Tableau de bord", icon: LayoutDashboard },
+  { href: "/admin/orders", label: "Commandes", icon: Package },
   { href: "/admin/stocks", label: "Stocks", icon: Warehouse },
   { href: "/admin/incidents", label: "Incidents", icon: Siren },
-  { href: "/admin/team", label: "Team", icon: Users },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/admin/team", label: "Équipe", icon: Users },
+  { href: "/admin/analytics", label: "Analyses", icon: BarChart3 },
 ];
 
 export default function AdminShell({ children, pageTitle, pageHint }: { children: ReactNode; pageTitle: string; pageHint?: string }) {
@@ -37,8 +37,8 @@ export default function AdminShell({ children, pageTitle, pageHint }: { children
         <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#4a7c59] text-xl font-black text-white shadow-sm">🪑</div>
         {!collapsed && (
           <div>
-            <p className="text-[15px] font-extrabold tracking-tight text-[#1a1d23]">ADMECO <span className="text-[#4a7c59]">MES</span></p>
-            <p className="text-[11px] text-[#7c8091]">Factory command center</p>
+            <p className="text-[15px] font-extrabold tracking-tight text-[#1a1d23]">ADMEDCO <span className="text-[#4a7c59]">MES</span></p>
+            <p className="text-[11px] text-[#7c8091]">Centre de commande de l'usine</p>
           </div>
         )}
       </div>
@@ -73,7 +73,7 @@ export default function AdminShell({ children, pageTitle, pageHint }: { children
         <div className="px-3 pb-3">
           <Link href="/portal"
             className="flex items-center gap-3 rounded-2xl border border-[#4a7c59]/20 bg-[#4a7c59]/8 px-3 py-2.5 text-[13px] font-semibold text-[#4a7c59] hover:bg-[#4a7c59]/15 transition-colors">
-            <TabletSmartphone size={16} /> Worker Portal
+            <TabletSmartphone size={16} /> Portail ateliers
           </Link>
         </div>
       )}
@@ -82,7 +82,7 @@ export default function AdminShell({ children, pageTitle, pageHint }: { children
       <div className="border-t border-black/5 p-3">
         <div className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold bg-[#4a7c59]/8 text-[#4a7c59]">
           <span className="h-2 w-2 rounded-full bg-[#4a7c59] live-dot" />
-          {!collapsed && "All systems live"}
+          {!collapsed && "Systèmes en ligne"}
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@ export default function AdminShell({ children, pageTitle, pageHint }: { children
         {sidebarBody}
         <button onClick={() => setCollapsed((c) => !c)}
           className="absolute -right-3 top-20 grid h-7 w-7 place-items-center rounded-full border border-black/10 bg-white text-[#7c8091] shadow-md hover:text-[#1a1d23] transition-colors"
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
+          title={collapsed ? "Déplier le menu" : "Replier le menu"}>
           {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
       </aside>
@@ -122,17 +122,17 @@ export default function AdminShell({ children, pageTitle, pageHint }: { children
             <div className="min-w-0 flex-1">
               <p className="text-[12px] font-medium text-[#7c8091]">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#4a7c59] live-dot mr-1.5 align-middle" />
-                ADEMCO · live
+                ADMEDCO · en ligne
               </p>
               <h1 className="text-[22px] font-extrabold tracking-tight text-[#1a1d23]">{pageTitle}</h1>
               {pageHint && <p className="hidden truncate text-[13px] text-[#7c8091] sm:block">{pageHint}</p>}
             </div>
             <div className="flex items-center gap-2">
-              <button className="relative grid h-10 w-10 place-items-center rounded-xl hover:bg-black/5 transition-colors" title="Notifications">
+              <button className="relative grid h-10 w-10 place-items-center rounded-xl hover:bg-black/5 transition-colors" title="Notifications reçues">
                 <Bell size={18} className="text-[#7c8091]" />
                 <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[#c24a08]" />
               </button>
-              <button className="grid h-10 w-10 place-items-center rounded-xl hover:bg-black/5 transition-colors" title="Settings">
+              <button className="grid h-10 w-10 place-items-center rounded-xl hover:bg-black/5 transition-colors" title="Réglages">
                 <Settings size={18} className="text-[#7c8091]" />
               </button>
               <UserChip />

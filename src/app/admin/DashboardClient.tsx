@@ -88,7 +88,7 @@ export default function DashboardClient({ kpi, orders, stocks, transfers }: Prop
             <SparkBars data={sparkData.orders} color="bg-[#c24a08]" />
           </div>
           <p className="mt-4 text-3xl font-black tracking-tight text-[#1a1d23]">{kpi.activeOrders}</p>
-          <p className="mt-0.5 text-[12px] font-medium text-[#7c8091]">Active orders</p>
+          <p className="mt-0.5 text-[12px] font-medium text-[#7c8091]">Commandes actives</p>
         </div>
 
         {/* Items in Production */}
@@ -100,7 +100,7 @@ export default function DashboardClient({ kpi, orders, stocks, transfers }: Prop
             <SparkBars data={sparkData.items} color="bg-[#4a7c59]" />
           </div>
           <p className="mt-4 text-3xl font-black tracking-tight text-[#1a1d23]">{kpi.readyItems}/{kpi.totalItems}</p>
-          <p className="mt-0.5 text-[12px] font-medium text-[#7c8091]">Items completed</p>
+          <p className="mt-0.5 text-[12px] font-medium text-[#7c8091]">Articles terminés</p>
         </div>
 
         {/* Stock Health */}
@@ -112,10 +112,10 @@ export default function DashboardClient({ kpi, orders, stocks, transfers }: Prop
             <SparkBars data={sparkData.stock} color={kpi.lowStock > 0 ? "bg-red-400" : "bg-[#4a7c59]"} />
           </div>
           <p className="mt-4 text-3xl font-black tracking-tight text-[#1a1d23]">{kpi.totalStock}</p>
-          <p className="mt-0.5 text-[12px] font-medium text-[#7c8091]">{kpi.lowStock > 0 ? `${kpi.lowStock} low stock alerts` : "Stock healthy"}</p>
+          <p className="mt-0.5 text-[12px] font-medium text-[#7c8091]">{kpi.lowStock > 0 ? `${kpi.lowStock} alertes stock bas` : "Stock sain"}</p>
         </div>
 
-        {/* Pending MOBILIX — dark accent card like the screenshot's Activity card */}
+        {/* En attente entre ateliers — carte sombre */}
         <div className="card p-5 bg-[#1a1d23] text-white border-[#1a1d23]">
           <div className="flex items-start justify-between">
             <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/10 text-white">
@@ -124,17 +124,17 @@ export default function DashboardClient({ kpi, orders, stocks, transfers }: Prop
             <MiniLineChart data={sparkData.transfers} color="#6fa67d" />
           </div>
           <p className="mt-4 text-3xl font-black tracking-tight">{kpi.pendingSemi}</p>
-          <p className="mt-0.5 text-[12px] font-medium text-white/60">Pending MOBILIX</p>
+          <p className="mt-0.5 text-[12px] font-medium text-white/60">En attente Atelier 2</p>
         </div>
       </div>
 
       {/* ── Row 2: Production Pipeline + Yield Gauge ── */}
       <div className="grid gap-5 lg:grid-cols-5">
-        {/* Production Pipeline — Balance card */}
+        {/* Pipeline de production */}
         <GlassCard className="lg:col-span-3">
-          <SectionTitle kicker="Production" title="Order pipeline" hint="Recent orders and their progress through the factory." />
+          <SectionTitle kicker="Production" title="Pipeline des commandes" hint="Commandes récentes et leur avancement dans l'usine." />
           {activeOrderList.length === 0 ? (
-            <Empty icon="📦" title="No active orders" hint="Create a production order to see the pipeline." />
+            <Empty icon="📦" title="Aucune commande active" hint="Créez un ordre de fabrication pour voir le pipeline." />
           ) : (
             <div className="space-y-3">
               {activeOrderList.map((o: any) => {
@@ -149,7 +149,7 @@ export default function DashboardClient({ kpi, orders, stocks, transfers }: Prop
                         <span className="font-bold text-[#1a1d23]">{o.order_number}</span>
                         <StatusPill status={o.status} />
                       </div>
-                      <p className="mt-0.5 text-[12px] text-[#7c8091]">{items.length} items · {new Date(o.created_at).toLocaleDateString("fr-FR")}</p>
+                      <p className="mt-0.5 text-[12px] text-[#7c8091]">{items.length} articles · {new Date(o.created_at).toLocaleDateString("fr-FR")}</p>
                     </div>
                     {/* Progress bar */}
                     <div className="flex items-center gap-3">
@@ -166,22 +166,22 @@ export default function DashboardClient({ kpi, orders, stocks, transfers }: Prop
           )}
         </GlassCard>
 
-        {/* Yield Performance — Earnings card */}
+        {/* Performance */}
         <GlassCard className="lg:col-span-2">
-          <SectionTitle kicker="Performance" title="Yield overview" />
+          <SectionTitle kicker="Performance" title="Aperçu du rendement" />
           <div className="flex flex-col items-center gap-6 pt-2">
-            <DonutGauge pct={yieldPct} color="#4a7c59" label="Completion rate" />
+            <DonutGauge pct={yieldPct} color="#4a7c59" label="Taux d'achèvement" />
             <div className="w-full space-y-3">
               <div className="flex items-center justify-between text-[13px]">
-                <span className="text-[#7c8091]">Steps overdue</span>
+                <span className="text-[#7c8091]">Étapes en retard</span>
                 <span className={cn("font-bold", kpi.overdueSteps > 0 ? "text-red-500" : "text-[#4a7c59]")}>{kpi.overdueSteps}</span>
               </div>
               <div className="flex items-center justify-between text-[13px]">
-                <span className="text-[#7c8091]">Transfers to MOBILIX</span>
+                <span className="text-[#7c8091]">Transferts vers l'Atelier 2</span>
                 <span className="font-bold text-[#2f6eb5]">{kpi.transfers}</span>
               </div>
               <div className="flex items-center justify-between text-[13px]">
-                <span className="text-[#7c8091]">Pending semi-finished</span>
+                <span className="text-[#7c8091]">Semi-finis en attente</span>
                 <span className="font-bold text-[#c24a08]">{kpi.pendingSemi}</span>
               </div>
             </div>
@@ -189,14 +189,14 @@ export default function DashboardClient({ kpi, orders, stocks, transfers }: Prop
         </GlassCard>
       </div>
 
-      {/* ── Row 3: Stock overview + Transfers ── */}
+      {/* ── Ligne 3 : Stocks + Transferts ── */}
       <div className="grid gap-5 lg:grid-cols-5">
-        {/* Stock Health */}
+        {/* Santé stock */}
         <GlassCard className="lg:col-span-3">
-          <SectionTitle kicker="Stocks" title="Materials overview" hint="Stock health at a glance."
-            right={<Link href="/admin/stocks" className="btn-outline text-[12px] px-3 py-1.5 inline-flex items-center gap-1">View all <ArrowUpRight size={12} /></Link>} />
+          <SectionTitle kicker="Stocks" title="Aperçu des matières" hint="Santé du stock en un coup d'œil."
+            right={<Link href="/admin/stocks" className="btn-outline text-[12px] px-3 py-1.5 inline-flex items-center gap-1">Tout voir <ArrowUpRight size={12} /></Link>} />
           {stocks.length === 0 ? (
-            <Empty icon="📦" title="No stock items" hint="Materials will appear here after setup." />
+            <Empty icon="📦" title="Aucun article en stock" hint="Les matières apparaîtront ici après configuration." />
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
               {stocks.slice(0, 8).map((s: any) => {
@@ -218,15 +218,15 @@ export default function DashboardClient({ kpi, orders, stocks, transfers }: Prop
           )}
         </GlassCard>
 
-        {/* Recent Transfers */}
+        {/* Transferts récents */}
         <GlassCard className="lg:col-span-2">
-          <SectionTitle kicker="Logistics" title="Recent transfers"
-            right={<Link href="/admin/incidents" className="text-[12px] font-semibold text-[#4a7c59] hover:underline">View all</Link>} />
+          <SectionTitle kicker="Logistique" title="Transferts récents"
+            right={<Link href="/admin/incidents" className="text-[12px] font-semibold text-[#4a7c59] hover:underline">Tout voir</Link>} />
           {recentTransfers.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-8 text-center">
               <div className="text-3xl">🚚</div>
-              <p className="text-[13px] font-semibold text-[#1a1d23]">No transfers yet</p>
-              <p className="text-[12px] text-[#7c8091]">Release items to send to MOBILIX.</p>
+              <p className="text-[13px] font-semibold text-[#1a1d23]">Aucun transfert</p>
+              <p className="text-[12px] text-[#7c8091]">Libérez des articles vers l'Atelier 2.</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -238,7 +238,7 @@ export default function DashboardClient({ kpi, orders, stocks, transfers }: Prop
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] font-semibold text-[#1a1d23] truncate">{t.manifest_qr}</p>
-                    <p className="text-[11px] text-[#7c8091]">{t.item_count} items · {new Date(t.created_at).toLocaleDateString("fr-FR")}</p>
+                    <p className="text-[11px] text-[#7c8091]">{t.item_count} articles · {new Date(t.created_at).toLocaleDateString("fr-FR")}</p>
                   </div>
                   <StatusPill status={t.status} />
                 </div>

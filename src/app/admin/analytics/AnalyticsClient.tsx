@@ -41,29 +41,29 @@ export default function AnalyticsClient({ items, logs, steps, orders }: { items:
   return (
     <div className="stagger space-y-5">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Completion" value={`${m.completionPct}%`} sub={`${m.stepsDone}/${m.stepsTotal} steps`} accent="ice" />
-        <Stat label="Overdue" value={String(m.overdue)} sub="Steps past target" accent={m.overdue > 0 ? "red" : "green"} />
-        <Stat label="Total items" value={String(items.length)} sub="Across all orders" />
-        <Stat label="Material logs" value={String(logs.length)} sub="Recorded entries" accent="fire" />
+        <Stat label="Avancement" value={`${m.completionPct}%`} sub={`${m.stepsDone}/${m.stepsTotal} étapes`} accent="ice" />
+        <Stat label="En retard" value={String(m.overdue)} sub="Étapes hors cible" accent={m.overdue > 0 ? "red" : "green"} />
+        <Stat label="Articles total" value={String(items.length)} sub="Toutes commandes" />
+        <Stat label="Matières suivies" value={String(logs.length)} sub="Entrées enregistrées" accent="fire" />
       </div>
       <div className="grid gap-5 lg:grid-cols-2">
         <GlassCard>
-          <SectionTitle title="Throughput by atelier" />
+          <SectionTitle title="Débit par atelier" />
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={m.byAtelier} barGap={3}><CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
                 <XAxis dataKey="name" tick={{ fill: "#a1a1aa", fontSize: 12 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: "#a1a1aa", fontSize: 12 }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={tip} /><Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="done" name="Done" fill={GREEN} radius={[4, 4, 0, 0]} />
-                <Bar dataKey="active" name="Active" fill={ICE} radius={[4, 4, 0, 0]} />
-                <Bar dataKey="pending" name="Pending" fill="#52525b" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="done" name="Terminées" fill={GREEN} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="active" name="Actives" fill={ICE} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="pending" name="En attente" fill="#52525b" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </GlassCard>
         <GlassCard>
-          <SectionTitle title="Status mix" />
+          <SectionTitle title="Répartition des statuts" />
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart><Pie data={m.statusDonut} dataKey="value" nameKey="name" innerRadius={62} outerRadius={95} paddingAngle={3} strokeWidth={0}>
@@ -73,28 +73,28 @@ export default function AnalyticsClient({ items, logs, steps, orders }: { items:
           </div>
         </GlassCard>
         <GlassCard>
-          <SectionTitle title="Yield trend per order" />
+          <SectionTitle title="Tendance du rendement par commande" />
           <div className="h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={m.trend}><CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
                 <XAxis dataKey="name" tick={{ fill: "#a1a1aa", fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: "#a1a1aa", fontSize: 12 }} axisLine={false} tickLine={false} domain={[0, 100]} />
                 <Tooltip contentStyle={tip} />
-                <Line type="monotone" dataKey="pct" name="% Ready" stroke={ICE_SOFT} strokeWidth={3} dot={{ fill: ICE, r: 3 }} />
+                <Line type="monotone" dataKey="pct" name="% Prêt" stroke={ICE_SOFT} strokeWidth={3} dot={{ fill: ICE, r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </GlassCard>
         <GlassCard>
-          <SectionTitle title="Materials used vs lost" />
+          <SectionTitle title="Matières utilisées vs perdues" />
           <div className="h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={m.materials} barGap={3}><CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
                 <XAxis dataKey="name" tick={{ fill: "#a1a1aa", fontSize: 10 }} axisLine={false} tickLine={false} interval={0} angle={-20} dy={10} height={50} />
                 <YAxis tick={{ fill: "#a1a1aa", fontSize: 12 }} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={tip} /><Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="used" name="Used" fill={ICE} radius={[4, 4, 0, 0]} />
-                <Bar dataKey="lost" name="Lost" fill={FIRE} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="used" name="Utilisées" fill={ICE} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="lost" name="Perdues" fill={FIRE} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

@@ -5,7 +5,7 @@ import { Truck, ChevronDown, ChevronRight } from "lucide-react";
 import { GlassCard, SectionTitle, StatusPill } from "@/components/admin/ui";
 import LivePipeline from "@/components/admin/LivePipeline";
 import GanttBoard from "@/components/admin/GanttBoard";
-import { releaseToMobilix } from "@/app/actions";
+import { libererVersAtelier2 } from "@/app/actions";
 
 export default function OrderDetailClient({ orderId, orderStatus, items, stepsByItem, transfers }: {
   orderId: string; orderStatus: string; items: any[]; stepsByItem: Record<string, any[]>; transfers: any[];
@@ -20,12 +20,12 @@ export default function OrderDetailClient({ orderId, orderStatus, items, stepsBy
     <div className="stagger space-y-5">
       {readyItems.length > 0 && (
         <GlassCard className="border-emerald-200 bg-emerald-50">
-          <SectionTitle kicker="Release" title={`${readyItems.length} item(s) ready for MOBILIX`}
-            hint="All semi-finished products are waiting for your confirmation."
+          <SectionTitle kicker="Libération" title={`${readyItems.length} article(s) prêt(s) pour l'Atelier 2`}
+            hint="Tous les produits semi-finis attendent votre confirmation."
             right={
-              <button disabled={busy} onClick={async () => { setBusy(true); await releaseToMobilix(orderId); setBusy(false); router.refresh(); }}
+              <button disabled={busy} onClick={async () => { setBusy(true); await libererVersAtelier2(orderId); setBusy(false); router.refresh(); }}
                 className="btn-fire inline-flex items-center gap-1.5 px-5 py-2.5 text-sm">
-                <Truck size={16} /> {busy ? "Releasing…" : `Release ${readyItems.length} item(s) to MOBILIX`}
+                <Truck size={16} /> {busy ? "Libération…" : `Libérer ${readyItems.length} article(s) vers l'Atelier 2`}
               </button>
             } />
         </GlassCard>
@@ -33,19 +33,19 @@ export default function OrderDetailClient({ orderId, orderStatus, items, stepsBy
 
       {transfers.length > 0 && (
         <GlassCard>
-          <SectionTitle kicker="Logistics" title="Transfers to MOBILIX" />
+          <SectionTitle kicker="Logistique" title="Transferts vers l'Atelier 2" />
           {transfers.map((t: any) => (
             <div key={t.id} className="card flex items-center gap-3 p-3">
               <StatusPill status={t.status} />
               <span className="font-mono text-sm font-bold text-[#c24a08]">{t.manifest_qr}</span>
-              <span className="text-xs text-[#7c8091]">{t.item_count} items · {new Date(t.created_at).toLocaleString("fr-FR")}</span>
+              <span className="text-xs text-[#7c8091]">{t.item_count} articles · {new Date(t.created_at).toLocaleString("fr-FR")}</span>
             </div>
           ))}
         </GlassCard>
       )}
 
       <GlassCard>
-        <SectionTitle kicker="Products" title="Order items & production progress" />
+        <SectionTitle kicker="Produits" title="Articles et avancement de production" />
         <div className="space-y-2">
           {items.map((item) => {
             const steps = stepsByItem[item.id] ?? [];
@@ -69,14 +69,14 @@ export default function OrderDetailClient({ orderId, orderStatus, items, stepsBy
                 </button>
                 {isExpanded && (
                   <div className="border-t border-[#e6e1d8] p-4 space-y-4">
-                    {item.design_notes && <p className="text-xs text-[#7c8091]">Design: {item.design_notes}</p>}
+                    {item.design_notes && <p className="text-xs text-[#7c8091]">Design : {item.design_notes}</p>}
                     <div className="grid gap-5 lg:grid-cols-2">
                       <div>
-                        <p className="text-[11px] font-bold uppercase tracking-widest text-[#7c8091] mb-2">Live pipeline</p>
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-[#7c8091] mb-2">Pipeline en direct</p>
                         <LivePipeline steps={steps} />
                       </div>
                       <div>
-                        <p className="text-[11px] font-bold uppercase tracking-widest text-[#7c8091] mb-2">Gantt</p>
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-[#7c8091] mb-2">Planning Gantt</p>
                         <GanttBoard steps={steps} />
                       </div>
                     </div>

@@ -6,6 +6,6 @@ export async function POST(req: NextRequest) {
   const code = String(manifest ?? "").replace("MES:MNF:", "").trim();
   const supabase = createServerSupabase();
   const { data, error } = await supabase.from("site_transfers").select("*, work_orders(order_number)").eq("manifest_qr", code).single();
-  if (error || !data) return NextResponse.json({ ok: false, error: "Manifest not found" }, { status: 404 });
+  if (error || !data) return NextResponse.json({ ok: false, error: "Bordereau introuvable" }, { status: 404 });
   return NextResponse.json({ ok: true, transfer: data });
 }
