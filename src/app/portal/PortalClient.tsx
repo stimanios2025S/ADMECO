@@ -22,9 +22,10 @@ type ActiveStep = {
 
 type MaterialRow = { stockItemId: string; stockItemName: string; unit: string; quantityUsed: number; quantityLost: number };
 
-export default function PortalClient({ mode = "factory", atelierId }: { mode?: "factory" | "warehouse"; atelierId?: 1 | 2 | null }) {
+export default function PortalClient({ mode = "factory", atelierId, etape }: { mode?: "factory" | "warehouse"; atelierId?: 1 | 2 | null; etape?: number | null }) {
   const { kiosk, flash, online } = useMes();
   const atelierCible = atelierId ?? kiosk?.atelierId ?? null;
+  const etapeCible = etape ?? kiosk?.stepOrder ?? null;
   const [step, setStep] = useState<ActiveStep | null>(null);
   const [msg, setMsg] = useState("");
   const [materials, setMaterials] = useState<MaterialRow[]>([]);
@@ -48,6 +49,9 @@ export default function PortalClient({ mode = "factory", atelierId }: { mode?: "
     }
     if (atelierId && data.atelier_id !== atelierId) {
       cueError(); setMsg(`❌ Cette étape appartient à l'Atelier ${data.atelier_id} — portail Atelier ${atelierId}`); return;
+    }
+    if (etapeCible && Number(data.step_order) !== Number(etapeCible)) {
+      cueError(); setMsg(`❌ Ce QR est l'Étape ${data.step_order} — ce portail est verrouillé sur l'Étape ${etapeCible}`); return;
     }
 
     const item = data.work_order_items;
@@ -77,7 +81,7 @@ export default function PortalClient({ mode = "factory", atelierId }: { mode?: "
     setBranchChoice(null);
     cueSuccess();
     flash({ kind: "success", message: `Étape ${data.step_order} : ${data.step_name}`, id: Date.now() });
-  }, [kiosk, flash, atelierId]);
+  }, [kiosk, flash, atelierId, etapeCible]);
 
   const handleStart = async () => {
     if (!step || !kiosk) return;
@@ -126,11 +130,11 @@ export default function PortalClient({ mode = "factory", atelierId }: { mode?: "
           </div>
         </div>
         <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-300">
-          {atelierCible === 1 ? "Atelier 1 — Bois & Découpe" : atelierCible === 2 ? "Atelier 2 — Assemblage & Finition" : mode === "warehouse" ? "Mode magasin" : "Mode usine"}
+          {atelierCible === 1 ? `Atelier 1 — Bois & Découpe${etapeCible ? ` · Étape ${etapeCible}` : ""}` : atelierCible === 2 ? `Atelier 2 — Assemblage & Finition${etapeCible ? ` · Étape ${etapeCible}` : ""}` : mode === "warehouse" ? "Mode magasin" : "Mode usine"}
         </div>
       </div>
 
-      <KioskLock atelierId={atelierId} />
+      <KioskLock atelierId={atelierId} etape={etape} />
 
       <div className="premium-card rounded-[26px] p-4 sm:p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
