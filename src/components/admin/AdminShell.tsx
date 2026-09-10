@@ -4,15 +4,26 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Package, Warehouse, Siren, Users, BarChart3,
-  Menu, X, TabletSmartphone, ChevronLeft, ChevronRight, Bell, Settings
+  Menu, X, TabletSmartphone, ChevronLeft, ChevronRight, Bell, Settings,
+  Boxes, Handshake, FileText, Factory, Cog, IdCard, BookOpen, ClipboardCheck, Building2, Layers
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import UserChip from "./UserChip";
 
 const TABS = [
   { href: "/admin", label: "Tableau de bord", icon: LayoutDashboard },
+  { href: "/admin/articles", label: "Articles", icon: Boxes },
+  { href: "/admin/tiers", label: "Tiers", icon: Handshake },
+  { href: "/admin/documents", label: "Documents", icon: FileText },
+  { href: "/admin/fabrication", label: "Fabrication", icon: Factory },
   { href: "/admin/orders", label: "Commandes", icon: Package },
   { href: "/admin/stocks", label: "Stocks", icon: Warehouse },
+  { href: "/admin/lots", label: "Lots", icon: Layers },
+  { href: "/admin/inventaires", label: "Inventaires", icon: ClipboardCheck },
+  { href: "/admin/machines", label: "Machines", icon: Cog },
+  { href: "/admin/employes", label: "Employés", icon: IdCard },
+  { href: "/admin/ecritures", label: "Comptabilité", icon: BookOpen },
+  { href: "/admin/depots", label: "Dépôts", icon: Building2 },
   { href: "/admin/incidents", label: "Incidents", icon: Siren },
   { href: "/admin/team", label: "Équipe", icon: Users },
   { href: "/admin/analytics", label: "Analyses", icon: BarChart3 },
