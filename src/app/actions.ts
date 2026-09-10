@@ -125,10 +125,12 @@ export async function completeStep(input: {
       const totalUsed = m.quantityUsed + m.quantityLost;
       const { data: cur } = await supabase.from("stock_items").select("quantity,depot_code").eq("id", m.stockItemId).maybeSingle();
       const curAny = (cur ?? {}) as any;
-      const fallback = cur
-        ? null
-        : await supabase.from("stock_items").select("quantity").eq("id", m.stockItemId).maybeSingle().then((r) => r.data);
-      const qty = Number((curAny.quantity ?? (fallback as any)?.quantity ?? 0));
+      let fallbackQty = 0;
+      if (!cur) {
+        const fb = await supabase.from("stock_items").select("quantity").eq("id", m.stockItemId).maybeSingle();
+        fallbackQty = Number((fb.data as any)?.quantity ?? 0);
+      }
+      const qty = Number(curAny.quantity ?? fallbackQty);
       const depot = curAny.depot_code ?? "DEP-MP";
       await supabase.from("stock_items").update({
         quantity: Math.max(0, qty - totalUsed)
