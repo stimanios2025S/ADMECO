@@ -70,14 +70,14 @@ const demoData: Record<string, any[]> = {
     { id: "log-1", step_id: "step-1", stock_item_id: "stock-1", quantity_used: 5, quantity_lost: 0, created_at: makeIso(1) }
   ],
   stock_items: [
-    { id: "stock-1", name: "Bois de planche", unit: "m²", quantity: 500, alert_threshold: 50, created_at: makeIso() },
-    { id: "stock-2", name: "Tôle acier", unit: "m", quantity: 300, alert_threshold: 30, created_at: makeIso() },
-    { id: "stock-3", name: "Vis inox", unit: "pcs", quantity: 10000, alert_threshold: 1000, created_at: makeIso() }
+    { id: "stock-1", name: "Bois de planche", unit: "m²", quantity: 500, alert_threshold: 50, depot_code: "DEP-MP", created_at: makeIso() },
+    { id: "stock-2", name: "Tôle acier", unit: "m", quantity: 300, alert_threshold: 30, depot_code: "DEP-MP", created_at: makeIso() },
+    { id: "stock-3", name: "Vis inox", unit: "pcs", quantity: 10000, alert_threshold: 1000, depot_code: "DEP-MP", created_at: makeIso() }
   ],
   v_stock_status: [
-    { id: "stock-1", name: "Bois de planche", unit: "m²", quantity: 500, alert_threshold: 50, reserved: 40, available: 460, low_stock: false },
-    { id: "stock-2", name: "Tôle acier", unit: "m", quantity: 300, alert_threshold: 30, reserved: 120, available: 180, low_stock: false },
-    { id: "stock-3", name: "Vis inox", unit: "pcs", quantity: 10000, alert_threshold: 1000, reserved: 1400, available: 8600, low_stock: false }
+    { id: "stock-1", name: "Bois de planche", unit: "m²", quantity: 500, alert_threshold: 50, reserved: 40, available: 460, low_stock: false, depot_code: "DEP-MP" },
+    { id: "stock-2", name: "Tôle acier", unit: "m", quantity: 300, alert_threshold: 30, reserved: 120, available: 180, low_stock: false, depot_code: "DEP-MP" },
+    { id: "stock-3", name: "Vis inox", unit: "pcs", quantity: 10000, alert_threshold: 1000, reserved: 1400, available: 8600, low_stock: false, depot_code: "DEP-MP" }
   ],
   semi_finished_stock: [
     { id: "semi-1", item_id: "item-1", atelier_id: 1, quantity: 24, status: "PENDING", released_at: null, released_by: null, created_at: makeIso(1) }

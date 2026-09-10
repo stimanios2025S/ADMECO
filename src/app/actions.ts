@@ -114,30 +114,45 @@ export async function completeStep(input: {
     if (e2) throw new Error(e2.message);
   }
 
-  // Log materials
+  // Log materials — consommation TOUJOURS depuis la centrale MP (alimente A1+A2)
   for (const m of input.materials) {
     if (m.quantityUsed > 0 || m.quantityLost > 0) {
       await supabase.from("material_logs").insert({
         step_id: input.stepId, stock_item_id: m.stockItemId,
         quantity_used: m.quantityUsed, quantity_lost: m.quantityLost
       });
-      // Consume from stock
+      // Consume from stock (DEP-MP centrale). Compatible avant/après migration 0010.
       const totalUsed = m.quantityUsed + m.quantityLost;
-      const { data: cur } = await supabase.from("stock_items").select("quantity").eq("id", m.stockItemId).single();
+      const { data: cur } = await supabase.from("stock_items").select("quantity,depot_code").eq("id", m.stockItemId).maybeSingle();
+      const curAny = (cur ?? {}) as any;
+      const fallback = cur
+        ? null
+        : await supabase.from("stock_items").select("quantity").eq("id", m.stockItemId).maybeSingle().then((r) => r.data);
+      const qty = Number((curAny.quantity ?? (fallback as any)?.quantity ?? 0));
+      const depot = curAny.depot_code ?? "DEP-MP";
       await supabase.from("stock_items").update({
-        quantity: Math.max(0, Number(cur?.quantity ?? 0) - totalUsed)
+        quantity: Math.max(0, qty - totalUsed)
       }).eq("id", m.stockItemId);
       // Mark reserved quantity as consumed so "available" stays correct
       const { data: res } = await supabase.from("order_item_reservations").select("id,consumed_qty").eq("order_item_id", step.item_id).eq("stock_item_id", m.stockItemId).maybeSingle();
       if (res) {
         await supabase.from("order_item_reservations").update({ consumed_qty: Number(res.consumed_qty ?? 0) + totalUsed }).eq("id", res.id);
       }
-      // Log movement
-      await supabase.from("stock_movements").insert({
+      // Log movement — traçabilité dépôt MP centrale (compatible avant/après 0010)
+      const movePayload: any = {
         stock_item_id: m.stockItemId, step_id: input.stepId,
         order_item_id: step.item_id, movement_type: "consume", quantity: totalUsed,
-        note: `Étape: ${step.step_name}`
-      });
+        depot_code: depot,
+        note: `Étape: ${step.step_name} (MP centrale)`
+      };
+      const mv = await supabase.from("stock_movements").insert(movePayload);
+      if (mv.error && /depot_code|column|schema/i.test(mv.error.message ?? "")) {
+        const { depot_code: _drop, ...legacy } = movePayload;
+        const retry = await supabase.from("stock_movements").insert(legacy);
+        if (retry.error) throw new Error(retry.error.message);
+      } else if (mv.error) {
+        throw new Error(mv.error.message);
+      }
     }
   }
   revalidatePath("/portal");
@@ -188,10 +203,17 @@ export async function adjustStock(stockItemId: string, newQuantity: number, note
 }
 
 // ─── ADMIN: ADD STOCK ITEM ───────────────────────────
-export async function addStockItem(name: string, unit: string, quantity: number, alertThreshold: number) {
+// Par défaut la matière première arrive dans la centrale DEP-MP (alimente A1+A2).
+// Compatible avant/après migration 0010 (colonne depot_code).
+export async function addStockItem(name: string, unit: string, quantity: number, alertThreshold: number, depotCode: string = "DEP-MP") {
   const supabase = createServerSupabase();
-  const { error } = await supabase.from("stock_items").insert({ name, unit, quantity, alert_threshold: alertThreshold });
-  if (error) throw new Error(error.message);
+  const attempt = await supabase.from("stock_items").insert({ name, unit, quantity, alert_threshold: alertThreshold, depot_code: depotCode });
+  if (attempt.error && /depot_code|column|schema/i.test(attempt.error.message ?? "")) {
+    const { error } = await supabase.from("stock_items").insert({ name, unit, quantity, alert_threshold: alertThreshold });
+    if (error) throw new Error(error.message);
+  } else if (attempt.error) {
+    throw new Error(attempt.error.message);
+  }
   revalidatePath("/admin/stocks");
 }
 

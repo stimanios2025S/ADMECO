@@ -16,7 +16,7 @@ export default async function StocksPage() {
   ]);
 
   return (
-    <AdminShell pageTitle="Stocks" pageHint="Inventaire ADMEDCO — matières premières, réservations, produits semi-finis.">
+    <AdminShell pageTitle="Stocks" pageHint="ADMEDCO — Matière Première centrale (alimente A1+A2), Stock Atelier 1 (produit par A1), Stock Atelier 2 (produit par A2).">
       <StocksClient
         stocks={(stocks ?? []) as any[]}
         movements={(movements ?? []) as any[]}
