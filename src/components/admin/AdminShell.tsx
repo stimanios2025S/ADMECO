@@ -114,11 +114,23 @@ export default function AdminShell({ children, pageTitle, pageHint }: { children
       {/* Bottom links */}
       <div className="border-t border-black/[0.04] px-3 py-3 space-y-0.5">
         {!collapsed && (
-          <Link href="/portal"
-            className="flex items-center gap-3 rounded-xl border border-[#4a7c59]/15 bg-[#4a7c59]/[0.04] px-3 py-2.5 text-[13px] font-medium text-[#4a7c59] hover:bg-[#4a7c59]/[0.08] transition-colors">
-            <TabletSmartphone size={16} /> Portail ateliers
-          </Link>
+          <>
+            <Link href="/portal"
+              className="flex items-center gap-3 rounded-xl border border-[#4a7c59]/15 bg-[#4a7c59]/[0.04] px-3 py-2.5 text-[13px] font-medium text-[#4a7c59] hover:bg-[#4a7c59]/[0.08] transition-colors">
+              <TabletSmartphone size={16} /> Portail ateliers
+            </Link>
+            <a href="/guide" target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-3 rounded-xl border border-black/[0.06] px-3 py-2.5 text-[13px] font-medium text-[#6b7280] hover:bg-black/[0.04] transition-colors">
+              <HelpCircle size={16} /> Guide d'utilisation
+            </a>
+          </>
         )}
+        <a href="/guide" target="_blank" rel="noopener noreferrer"
+          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#6b7280] hover:bg-black/[0.04] transition-colors"
+          title="Guide d'utilisation">
+          <HelpCircle size={17} />
+          {!collapsed && "Guide d'utilisation"}
+        </a>
         <div className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-[#9ca3af]">
           <span className="h-2 w-2 rounded-full bg-[#4a7c59] live-dot" />
           {!collapsed && "Système en ligne"}
