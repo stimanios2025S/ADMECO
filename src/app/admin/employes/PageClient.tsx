@@ -4,6 +4,7 @@ import { Plus, IdCard } from "lucide-react";
 import { GlassCard, SectionTitle, Empty } from "@/components/admin/ui";
 import { ajouterEmploye } from "@/app/actions-erp";
 import { atelierNom } from "@/lib/ateliers";
+import { cn } from "@/lib/utils";
 
 export default function PageClient({ employes }: { employes: any[] }) {
   const [open, setOpen] = useState(false);
@@ -26,7 +27,13 @@ export default function PageClient({ employes }: { employes: any[] }) {
               <div key={e.id} className="card flex items-center gap-3 p-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{e.nom} {e.prenom}</p>
-                  <p className="text-xs text-[#7c8091]">{e.matricule} · {e.poste || "—"} · {atelierNom(e.atelier_id)}</p>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-[#7c8091]">{e.matricule} · {e.poste || "—"}</span>
+                    <span className={cn("rounded-md px-1.5 py-0.5 text-[10px] font-bold",
+                      e.atelier_id === 1 ? "bg-[#c24a08]/10 text-[#c24a08]" : "bg-[#4a7c59]/10 text-[#4a7c59]")}>
+                      {atelierNom(e.atelier_id)}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}

@@ -51,8 +51,9 @@ export default function PageClient({ depots }: { depots: any[] }) {
           <form onClick={(e) => e.stopPropagation()} action={async (fd) => { await ajouterDepot(fd); setOpen(false); }} className="card w-full max-w-lg space-y-3 p-5">
             <h3 className="text-lg font-extrabold">Nouveau dépôt</h3>
             <div className="grid grid-cols-2 gap-2">
-              <input name="code" placeholder="Code" className="input" required />
-              <select name="atelier_id" className="input" defaultValue="1">
+              <input name="code" placeholder="Code (ex: DEP-MP)" className="input" required />
+              <select name="atelier_id" className="input" defaultValue="">
+                <option value="">Commun A1 + A2 (centrale)</option>
                 <option value="1">Atelier 1 — Bois & Découpe</option>
                 <option value="2">Atelier 2 — Assemblage & Finition</option>
               </select>

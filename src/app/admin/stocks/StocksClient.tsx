@@ -198,7 +198,7 @@ function AddItemModal({ onClose }: { onClose: () => void }) {
       </select>
       <div className="grid grid-cols-3 gap-2">
         <select value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} className="input px-2 py-2.5 text-sm">
-          {["pcs", "m", "m²", "kg", "L", "pcs"].map((u) => <option key={u} value={u} className="bg-white">{u}</option>)}
+          {["pcs", "m", "m²", "kg", "L", "t", "barre", "feuille", "rouleau"].map((u) => <option key={u} value={u} className="bg-white">{u}</option>)}
         </select>
         <input type="number" step="any" min={0} value={f.quantity} onChange={(e) => setF({ ...f, quantity: Number(e.target.value) })}
           className="input px-2 py-2.5 text-sm" placeholder="Qté" />

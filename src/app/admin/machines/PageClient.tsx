@@ -28,7 +28,13 @@ export default function PageClient({ machines }: { machines: any[] }) {
               <div key={m.id} className="card flex items-center gap-3 p-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{m.code} — {m.nom}</p>
-                  <p className="text-xs text-[#7c8091]">{m.famille || "—"} · {atelierNom(m.atelier_id)}</p>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-[#7c8091]">{m.famille || "—"}</span>
+                    <span className={cn("rounded-md px-1.5 py-0.5 text-[10px] font-bold",
+                      m.atelier_id === 1 ? "bg-[#c24a08]/10 text-[#c24a08]" : "bg-[#4a7c59]/10 text-[#4a7c59]")}>
+                      {atelierNom(m.atelier_id)}
+                    </span>
+                  </div>
                 </div>
                 <span className={cn("rounded-lg px-2 py-1 text-[11px] font-bold", m.statut === "active" ? "bg-[#4a7c59]/10 text-[#4a7c59]" : "bg-red-50 text-red-500")}>{m.statut}</span>
               </div>

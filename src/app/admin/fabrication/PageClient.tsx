@@ -54,7 +54,13 @@ export default function PageClient({ ordres, articles }: { ordres: any[]; articl
               <div key={o.id} className="card flex items-center gap-3 p-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold">{o.numero} — {(o as any).erp_articles?.designation ?? "—"}</p>
-                  <p className="text-xs text-[#7c8091]">{atelierNom(o.atelier_id)} · {o.date_debut}{o.date_fin ? ` → ${o.date_fin}` : ""} · {o.statut}</p>
+                  <div className="flex items-center gap-1.5">
+                    <span className={cn("rounded-md px-1.5 py-0.5 text-[10px] font-bold",
+                      o.atelier_id === 1 ? "bg-[#c24a08]/10 text-[#c24a08]" : "bg-[#4a7c59]/10 text-[#4a7c59]")}>
+                      {atelierNom(o.atelier_id)}
+                    </span>
+                    <span className="text-xs text-[#7c8091]">{o.date_debut}{o.date_fin ? ` → ${o.date_fin}` : ""}</span>
+                  </div>
                 </div>
                 <div className="text-right text-xs">
                   <p className="font-black">Prévu {Number(o.quantite_prevue ?? 0).toLocaleString()}</p>
