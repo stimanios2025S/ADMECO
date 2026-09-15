@@ -10,12 +10,19 @@ export default function CueOverlay() {
     return () => clearTimeout(t);
   }, [cue, clearCue]);
   if (!cue) return null;
-  const bg = cue.kind === "success" ? "bg-emerald-500" : cue.kind === "scrap" ? "bg-orange-500" : "bg-red-600";
+
+  const styles: Record<string, { bg: string; icon: string }> = {
+    success: { bg: "bg-[#4a7c59]", icon: "✅" },
+    scrap: { bg: "bg-[#c24a08]", icon: "⚠️" },
+    error: { bg: "bg-red-600", icon: "❌" },
+  };
+  const s = styles[cue.kind] ?? styles.error;
+
   return (
-    <div className={`fixed inset-0 z-[100] ${bg} flex items-center justify-center animate-pulse`}>
+    <div className={`fixed inset-0 z-[100] ${s.bg} flex items-center justify-center animate-pulse`}>
       <div className="text-center text-white">
-        <div className="text-7xl">{cue.kind === "success" ? "✅" : "⚠️"}</div>
-        <div className="text-3xl font-black mt-2">{cue.message}</div>
+        <div className="text-7xl">{s.icon}</div>
+        <div className="mt-2 text-3xl font-black">{cue.message}</div>
       </div>
     </div>
   );

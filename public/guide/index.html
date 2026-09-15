@@ -3,602 +3,409 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ADMEDCO MES — Guide d'utilisation</title>
+  <title>ADMEDCO — Guide simple</title>
   <style>
-    :root {
-      --green: #4a7c59;
-      --green-light: #6fa67d;
-      --green-pale: #f0f7f2;
-      --orange: #c24a08;
-      --blue: #2f6eb5;
-      --bg: #fafbf9;
-      --card: #ffffff;
-      --text: #1a1d23;
-      --muted: #6b7280;
-      --border: rgba(0,0,0,0.06);
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+    :root { --g:#4a7c59; --gp:#f0f7f2; --or:#c24a08; --bl:#2f6eb5; --bg:#fafbf9; --card:#fff; --t:#1a1d23; --m:#6b7280; --b:rgba(0,0,0,.06); }
+    *{margin:0;padding:0;box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--t);line-height:1.7}
 
-    /* ── Sidebar ── */
-    .sidebar {
-      position: fixed; top: 0; left: 0; width: 280px; height: 100vh;
-      background: var(--card); border-right: 1px solid var(--border);
-      overflow-y: auto; z-index: 40; padding: 32px 0;
-      transition: transform .3s;
-    }
-    .sidebar-logo { padding: 0 28px; margin-bottom: 28px; display: flex; align-items: center; gap: 12px; }
-    .sidebar-logo .icon { width: 42px; height: 42px; border-radius: 14px; background: var(--green); display: grid; place-items: center; font-size: 20px; color: #fff; font-weight: 800; box-shadow: 0 4px 12px rgba(74,124,89,.2); }
-    .sidebar-logo h1 { font-size: 17px; font-weight: 800; letter-spacing: -.02em; }
-    .sidebar-logo h1 span { color: var(--green); }
-    .sidebar-logo p { font-size: 10px; color: var(--muted); font-weight: 500; letter-spacing: .1em; text-transform: uppercase; }
+    .sidebar{position:fixed;top:0;left:0;width:270px;height:100vh;background:var(--card);border-right:1px solid var(--b);overflow-y:auto;z-index:40;padding:28px 0;transition:transform .3s}
+    .logo{padding:0 24px;margin-bottom:24px;display:flex;align-items:center;gap:12px}
+    .logo .ic{width:40px;height:40px;border-radius:12px;background:var(--g);display:grid;place-items:center;font-size:18px;color:#fff;font-weight:800}
+    .logo h1{font-size:16px;font-weight:800}.logo h1 span{color:var(--g)}
+    .logo small{font-size:10px;color:var(--m);display:block;margin-top:1px}
+    .nav{padding:0 14px}
+    .nav h3{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:#b0b5bf;padding:0 12px;margin:16px 0 4px}
+    .nav a{display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:9px;font-size:13px;font-weight:500;color:var(--m);text-decoration:none;transition:.15s}
+    .nav a:hover{background:rgba(74,124,89,.06);color:var(--t)}
+    .nav a.on{background:var(--g);color:#fff;font-weight:600}
 
-    .sidebar-section { padding: 0 16px; margin-bottom: 20px; }
-    .sidebar-section h3 { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .18em; color: #b0b5bf; padding: 0 12px; margin-bottom: 6px; }
-    .sidebar-section a {
-      display: flex; align-items: center; gap: 10px; padding: 9px 12px;
-      border-radius: 10px; font-size: 13px; font-weight: 500; color: var(--muted);
-      text-decoration: none; transition: all .15s;
-    }
-    .sidebar-section a:hover { background: rgba(74,124,89,.06); color: var(--text); }
-    .sidebar-section a.active { background: var(--green); color: #fff; font-weight: 600; }
-    .sidebar-section a .emoji { width: 20px; text-align: center; font-size: 14px; }
+    .main{margin-left:270px;padding:40px 44px 80px;max-width:880px}
 
-    /* ── Main ── */
-    .main { margin-left: 280px; padding: 48px 48px 80px; max-width: 920px; }
+    .hero{margin-bottom:40px}
+    .hero .pill{display:inline-flex;align-items:center;gap:6px;background:var(--gp);color:var(--g);padding:4px 12px;border-radius:16px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px}
+    .hero .pill i{width:5px;height:5px;border-radius:50%;background:var(--g)}
+    .hero h1{font-size:32px;font-weight:800;letter-spacing:-.03em;line-height:1.15}
+    .hero h1 b{color:var(--g)}
+    .hero p{font-size:15px;color:var(--m);margin-top:8px;max-width:580px}
 
-    /* ── Hero ── */
-    .hero { margin-bottom: 48px; }
-    .hero-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--green-pale); color: var(--green); padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 16px; }
-    .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
-    .hero h1 { font-size: 36px; font-weight: 800; letter-spacing: -.03em; line-height: 1.2; }
-    .hero h1 span { color: var(--green); }
-    .hero p { font-size: 16px; color: var(--muted); margin-top: 10px; max-width: 600px; }
+    .c{background:var(--card);border:1px solid var(--b);border-radius:14px;padding:26px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.03)}
+    .c h2{font-size:19px;font-weight:800;margin-bottom:4px;letter-spacing:-.02em}
+    .c h3{font-size:14px;font-weight:700;margin:18px 0 6px}
+    .c p,.c li{font-size:14px;color:#4b5563}
+    .c ul{padding-left:18px;margin:6px 0}.c li{margin-bottom:3px}
+    .k{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:var(--g);margin-bottom:2px}
 
-    /* ── Cards ── */
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.03); }
-    .card h2 { font-size: 20px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 4px; }
-    .card h3 { font-size: 15px; font-weight: 700; margin: 20px 0 8px; color: var(--text); }
-    .card p, .card li { font-size: 14px; color: #4b5563; }
-    .card ul { padding-left: 20px; margin: 8px 0; }
-    .card li { margin-bottom: 4px; }
+    .steps{display:flex;flex-direction:column;gap:10px;margin:14px 0}
+    .st{display:flex;gap:12px;align-items:flex-start}
+    .sn{width:30px;height:30px;border-radius:9px;background:var(--g);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800;flex-shrink:0}
+    .sc h4{font-size:13px;font-weight:700}.sc p{font-size:13px;color:var(--m)}
 
-    .kicker { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .18em; color: var(--green); margin-bottom: 2px; }
+    .tip{background:var(--gp);border-left:3px solid var(--g);padding:12px 16px;border-radius:0 8px 8px 0;margin:12px 0;font-size:13px}
+    .tip b{color:var(--g)}
+    .warn{background:#fef3cd;border-left:3px solid #f59e0b;padding:12px 16px;border-radius:0 8px 8px 0;margin:12px 0;font-size:13px}
+    .warn b{color:#92400e}
 
-    /* ── Feature grid ── */
-    .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 16px 0; }
-    .feature-item { background: var(--green-pale); border-radius: 12px; padding: 16px; }
-    .feature-item .icon { font-size: 24px; margin-bottom: 8px; }
-    .feature-item h4 { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
-    .feature-item p { font-size: 12px; color: var(--muted); }
+    .flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:12px 0;font-size:12px;font-weight:600}
+    .fb{padding:7px 12px;border-radius:8px;background:var(--gp);color:var(--g)}
+    .fa{color:var(--m);font-size:15px}
 
-    /* ── Steps ── */
-    .steps { display: flex; flex-direction: column; gap: 12px; margin: 16px 0; }
-    .step { display: flex; gap: 14px; align-items: flex-start; }
-    .step-num { width: 32px; height: 32px; border-radius: 10px; background: var(--green); color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 800; flex-shrink: 0; }
-    .step-content h4 { font-size: 14px; font-weight: 700; }
-    .step-content p { font-size: 13px; color: var(--muted); }
+    table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+    th{text-align:left;padding:8px 10px;background:var(--gp);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--g)}
+    td{padding:8px 10px;border-bottom:1px solid var(--b)}
+    tr:last-child td{border-bottom:none}
 
-    /* ── Table ── */
-    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
-    th { text-align: left; padding: 10px 12px; background: var(--green-pale); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--green); border-radius: 8px 8px 0 0; }
-    td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
-    tr:last-child td { border-bottom: none; }
+    .badge{display:inline-flex;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:700}
+    .b-g{background:rgba(74,124,89,.1);color:var(--g)}
+    .b-o{background:rgba(194,74,8,.1);color:var(--or)}
+    .b-b{background:rgba(47,110,181,.1);color:var(--bl)}
+    .b-r{background:rgba(239,68,68,.1);color:#ef4444}
 
-    /* ── Badge ── */
-    .badge { display: inline-flex; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
-    .badge-green { background: rgba(74,124,89,.1); color: var(--green); }
-    .badge-orange { background: rgba(194,74,8,.1); color: var(--orange); }
-    .badge-blue { background: rgba(47,110,181,.1); color: var(--blue); }
-    .badge-red { background: rgba(239,68,68,.1); color: #ef4444; }
+    .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:14px 0}
+    .gi{background:var(--gp);border-radius:10px;padding:14px}
+    .gi .em{font-size:22px;margin-bottom:6px}
+    .gi h4{font-size:13px;font-weight:700;margin-bottom:3px}
+    .gi p{font-size:12px;color:var(--m)}
 
-    /* ── Flow diagram ── */
-    .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 14px 0; font-size: 13px; font-weight: 600; }
-    .flow-box { padding: 8px 14px; border-radius: 10px; background: var(--green-pale); color: var(--green); }
-    .flow-arrow { color: var(--muted); font-size: 16px; }
+    code{background:#f3f4f6;padding:1px 5px;border-radius:4px;font-size:12px}
 
-    /* ── Code ── */
-    code { background: #f3f4f6; padding: 2px 6px; border-radius: 5px; font-size: 12px; font-family: "JetBrains Mono", monospace; }
-
-    /* ── Tip ── */
-    .tip { background: var(--green-pale); border-left: 3px solid var(--green); padding: 14px 18px; border-radius: 0 10px 10px 0; margin: 14px 0; }
-    .tip strong { color: var(--green); }
-    .warn { background: #fef3cd; border-left: 3px solid #f59e0b; padding: 14px 18px; border-radius: 0 10px 10px 0; margin: 14px 0; }
-    .warn strong { color: #92400e; }
-
-    /* ── Mobile ── */
-    .menu-toggle { display: none; position: fixed; top: 16px; left: 16px; z-index: 50; width: 42px; height: 42px; border-radius: 12px; background: var(--green); color: #fff; border: none; font-size: 18px; cursor: pointer; box-shadow: 0 4px 12px rgba(74,124,89,.3); }
-    @media (max-width: 860px) {
-      .sidebar { transform: translateX(-100%); }
-      .sidebar.open { transform: translateX(0); box-shadow: 8px 0 40px rgba(0,0,0,.15); }
-      .main { margin-left: 0; padding: 80px 20px 60px; }
-      .menu-toggle { display: grid; place-items: center; }
-    }
-
-    /* ── Print ── */
-    @media print {
-      .sidebar, .menu-toggle { display: none; }
-      .main { margin-left: 0; padding: 20px; }
-    }
+    .menub{display:none;position:fixed;top:14px;left:14px;z-index:50;width:40px;height:40px;border-radius:10px;background:var(--g);color:#fff;border:none;font-size:17px;cursor:pointer}
+    @media(max-width:860px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0);box-shadow:6px 0 30px rgba(0,0,0,.12)}.main{margin-left:0;padding:72px 18px 50px}.menub{display:grid;place-items:center}}
+    @media print{.sidebar,.menub{display:none}.main{margin-left:0;padding:16px}}
   </style>
 </head>
 <body>
 
-<button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+<button class="menub" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
 
-<!-- ═══════ SIDEBAR ═══════ -->
 <aside class="sidebar">
-  <div class="sidebar-logo">
-    <div class="icon">🪑</div>
-    <div>
-      <h1>ADMEDCO <span>MES</span></h1>
-      <p>Guide d'utilisation v2.0</p>
-    </div>
+  <div class="logo">
+    <div class="ic">🪑</div>
+    <div><h1>ADMEDCO <span>MES</span></h1><small>Guide d'utilisation</small></div>
   </div>
+  <nav class="nav">
+    <h3>Commencer</h3>
+    <a href="#bonjour" class="on">👋 Bienvenue</a>
+    <a href="#connexion">🔑 Se connecter</a>
+    <a href="#dashboard">🏠 Mon bureau</a>
 
-  <div class="sidebar-section">
-    <h3>Démarrage</h3>
-    <a href="#intro" class="active"><span class="emoji">📖</span> Introduction</a>
-    <a href="#login"><span class="emoji">🔑</span> Connexion</a>
-    <a href="#dashboard"><span class="emoji">📊</span> Tableau de bord</a>
-  </div>
+    <h3>Travailler</h3>
+    <a href="#commande">📦 Créer une commande</a>
+    <a href="#suivi">📍 Suivre une commande</a>
+    <a href="#atelier1">🪚 Atelier 1 (Bois)</a>
+    <a href="#atelier2">🔧 Atelier 2 (Assemblage)</a>
+    <a href="#transfert">🚚 Transfert A1 → A2</a>
 
-  <div class="sidebar-section">
-    <h3>Production</h3>
-    <a href="#commandes"><span class="emoji">📦</span> Commandes</a>
-    <a href="#etapes"><span class="emoji">🔄</span> Étapes de production</a>
-    <a href="#portails"><span class="emoji">🖥️</span> Portails ateliers</a>
-    <a href="#stocks"><span class="emoji">🏭</span> Stocks (3 dépôts)</a>
-  </div>
-
-  <div class="sidebar-section">
-    <h3>ERP & Référentiels</h3>
-    <a href="#articles"><span class="emoji">📋</span> Articles</a>
-    <a href="#tiers"><span class="emoji">🤝</span> Tiers</a>
-    <a href="#documents"><span class="emoji">🧾</span> Documents</a>
-    <a href="#fabrication"><span class="emoji">⚙️</span> Fabrication</a>
-    <a href="#lots"><span class="emoji">🏷️</span> Lots & Inventaires</a>
-    <a href="#machines"><span class="emoji">🔧</span> Machines & Employés</a>
-    <a href="#ecritures"><span class="emoji">📒</span> Comptabilité</a>
-    <a href="#depots"><span class="emoji">🏬</span> Dépôts</a>
-  </div>
-
-  <div class="sidebar-section">
-    <h3>Suivi</h3>
-    <a href="#equipe"><span class="emoji">👥</span> Équipe</a>
-    <a href="#incidents"><span class="emoji">🚨</span> Incidents</a>
-    <a href="#analyses"><span class="emoji">📈</span> Analyses</a>
-  </div>
-
-  <div class="sidebar-section">
-    <h3>Référence</h3>
-    <a href="#workflow"><span class="emoji">🔄</span> Workflow complet</a>
-    <a href="#comptes"><span class="emoji">👤</span> Comptes démo</a>
-    <a href="#config"><span class="emoji">⚙️</span> Configuration</a>
-  </div>
+    <h3>Gérer</h3>
+    <a href="#stocks">📦 Mes stocks</a>
+    <a href="#equipe">👥 Mon équipe</a>
+    <a href="#outils">🛠️ Les autres pages</a>
+    <a href="#aide">❓ Aide & contact</a>
+  </nav>
 </aside>
 
-<!-- ═══════ MAIN ═══════ -->
 <main class="main">
 
-  <!-- ── HERO ── -->
-  <div class="hero" id="intro">
-    <div class="hero-badge"><span class="dot"></span> Guide officiel v2.0</div>
-    <h1>ADMEDCO <span>MES</span><br>Guide d'utilisation</h1>
-    <p>Système d'exécution de production (MES) pour la fabrication de meubles — 2 ateliers, stocks, traçabilité temps réel.</p>
+  <!-- ═══════ BIENVENUE ═══════ -->
+  <div class="hero" id="bonjour">
+    <div class="pill"><i></i> Guide simple</div>
+    <h1>Bienvenue sur <b>ADMEDCO</b> 🪑</h1>
+    <p>Ce guide explique tout simplement comment utiliser le système. Pas de jargon technique — juste ce que vous devez faire au quotidien.</p>
   </div>
 
-  <!-- ═══════ PRESENTATION ═══════ -->
-  <div class="card">
-    <p class="kicker">Présentation</p>
-    <h2>Qu'est-ce qu'ADMEDCO MES ?</h2>
-    <p>ADMEDCO MES est un système de gestion de production qui suit chaque meuble depuis la matière première brute jusqu'à l'expédition finale. Il connecte deux ateliers de production, gère les stocks en temps réel, et fournit à chaque opérateur son propre portail de travail.</p>
-
-    <div class="feature-grid">
-      <div class="feature-item">
-        <div class="icon">🪚</div>
-        <h4>Atelier 1 — Bois & Découpe</h4>
-        <p>Arrivée MP → Découpe → Usinage → Préparation → Contrôle. 5 étapes dédiées.</p>
-      </div>
-      <div class="feature-item">
-        <div class="icon">🔧</div>
-        <h4>Atelier 2 — Assemblage & Finition</h4>
-        <p>Réception A1 → Assemblage → Soudage → Poudrage → Montage → Contrôle. 6 étapes.</p>
-      </div>
-      <div class="feature-item">
-        <div class="icon">📦</div>
-        <h4>3 Stocks traceés</h4>
-        <p>DEP-MP centrale → DEP-A1 (produit A1) → DEP-A2 (produit A2) → Expédition.</p>
-      </div>
-      <div class="feature-item">
-        <div class="icon">📊</div>
-        <h4>ERP intégré</h4>
-        <p>Articles, Tiers, Documents, Fabrication, Lots, Machines, Employés, Comptabilité.</p>
-      </div>
+  <div class="c">
+    <p class="k">En 30 secondes</p>
+    <h2>C'est quoi ADMEDCO ?</h2>
+    <p>C'est un outil qui remplace les feuilles Excel et le carnet pour suivre <strong>tout</strong> ce qui se passe dans vos ateliers :</p>
+    <div class="grid3">
+      <div class="gi"><div class="em">📦</div><h4>Les commandes</h4><p>Vous savez toujours ce qu'il y a à fabriquer et où ça en est.</p></div>
+      <div class="gi"><div class="em">🪚</div><h4>Les ateliers</h4><p>Chaque ouvrier déclare ce qu'il fait en temps réel sur une tablette.</p></div>
+      <div class="gi"><div class="em">📊</div><h4>Les stocks</h4><p>Vous voyez combien de bois il reste, sans compter manuellement.</p></div>
     </div>
+    <div class="tip"><b>💡 En résumé :</b> Vous créez la commande → les ouvriers travaillent → les stocks se mettent à jour tout seul → le meuble est prêt.</div>
   </div>
 
-  <!-- ═══════ LOGIN ═══════ -->
-  <div class="card" id="login">
-    <p class="kicker">Accès</p>
-    <h2>🔑 Connexion</h2>
-    <p>La page de connexion offre un design split-screen avec branding ADMEDCO à gauche et le formulaire à droite.</p>
+  <!-- ═══════ CONNEXION ═══════ -->
+  <div class="c" id="connexion">
+    <p class="k">Étape 1</p>
+    <h2>🔑 Comment se connecter</h2>
 
     <div class="steps">
-      <div class="step"><div class="step-num">1</div><div class="step-content"><h4>Rendez-vous sur /login</h4><p>Le système vous redirige automatiquement vers /login si vous n'êtes pas connecté.</p></div></div>
-      <div class="step"><div class="step-num">2</div><div class="step-content"><h4>Entrez vos identifiants</h4><p>Email et mot de passe. En mode démo, des comptes pré-remplis sont disponibles en bas du formulaire.</p></div></div>
-      <div class="step"><div class="step-num">3</div><div class="step-content"><h4>Choisissez votre portail</h4><p>Après connexion, sélectionnez l'espace : <strong>Administration</strong>, <strong>Atelier 1</strong>, ou <strong>Atelier 2</strong>. Le portail recommandé est mis en surbrillance selon votre rôle.</p></div></div>
+      <div class="st"><div class="sn">1</div><div class="sc"><h4>Ouvrez le site</h4><p>Allez sur l'adresse du site ADMEDCO dans votre navigateur (Chrome, Safari...).</p></div></div>
+      <div class="st"><div class="sn">2</div><div class="sc"><h4>Cliquez sur "Connexion"</h4><p>Vous voyez un écran avec le logo ADMEDCO à gauche et le formulaire à droite.</p></div></div>
+      <div class="st"><div class="sn">3</div><div class="sc"><h4>Entrez votre email et mot de passe</h4><p>Exemple : <code>admin@admedco.ma</code> et <code>Admin123!</code></p></div></div>
+      <div class="st"><div class="sn">4</div><div class="sc"><h4>Choisissez votre espace</h4><p>Vous voyez 3 cartes :</p>
+        <ul>
+          <li><strong>Administration</strong> → pour vous (le directeur)</li>
+          <li><strong>Atelier 1</strong> → pour les ouvriers du bois</li>
+          <li><strong>Atelier 2</strong> → pour les ouvriers de l'assemblage</li>
+        </ul>
+      </div></div>
     </div>
 
-    <div class="tip"><strong>💡 Astuce :</strong> En mode démo (sans Supabase), les comptes admin et atelier fonctionnent directement.</div>
+    <table>
+      <tr><th>Qui ?</th><th>Email</th><th>Mot de passe</th><th>Où aller ?</th></tr>
+      <tr><td><span class="badge b-g">Vous (directeur)</span></td><td><code>admin@admedco.ma</code></td><td><code>Admin123!</code></td><td>Administration</td></tr>
+      <tr><td><span class="badge b-o">Ouvrier A1</span></td><td><code>atelier1@admedco.ma</code></td><td><code>Atelier123!</code></td><td>Atelier 1</td></tr>
+      <tr><td><span class="badge b-b">Ouvrier A2</span></td><td><code>atelier2@admedco.ma</code></td><td><code>Atelier123!</code></td><td>Atelier 2</td></tr>
+    </table>
+
+    <div class="tip"><b>💡 Astuce :</b> Sur le formulaire de connexion, il y a des boutons rapides en bas — cliquez dessus pour remplir automatiquement.</div>
   </div>
 
   <!-- ═══════ DASHBOARD ═══════ -->
-  <div class="card" id="dashboard">
-    <p class="kicker">Admin</p>
-    <h2>📊 Tableau de bord</h2>
-    <p>Le dashboard est le centre de contrôle de l'usine. Il affiche en un coup d'œil l'état de toute la production.</p>
+  <div class="c" id="dashboard">
+    <p class="k">Votre bureau</p>
+    <h2>🏠 Mon tableau de bord</h2>
+    <p>C'est la première page que vous voyez après la connexion. C'est votre <strong>tableau de bord du directeur</strong>. Tout est là d'un coup d'œil.</p>
 
-    <table>
-      <tr><th>Widget</th><th>Description</th></tr>
-      <tr><td><strong>KPI Commandes actives</strong></td><td>Nombre de commandes en cours de traitement (carte verte).</td></tr>
-      <tr><td><strong>KPI Articles en stock</strong></td><td>Total des articles dans tous les dépôts.</td></tr>
-      <tr><td><strong>KPI Alertes stock bas</strong></td><td>Articles sous le seuil minimum — nécessite réapprovisionnement.</td></tr>
-      <tr><td><strong>KPI Étapes en retard</strong></td><td>Étapes dont le temps réel dépasse le temps estimé.</td></tr>
-      <tr><td><strong>Activité de la semaine</strong></td><td>Graphique en barres de la production des 7 derniers jours.</td></tr>
-      <tr><td><strong>Rappels</strong></td><td>Alertes prioritaires : retards, stock bas, transferts en attente.</td></tr>
-      <tr><td><strong>Commandes récentes</strong></td><td>Liste des commandes actives avec barres de progression.</td></tr>
-      <tr><td><strong>Aperçu stocks</strong></td><td>Santé des matières premières avec barres visuelles.</td></tr>
-      <tr><td><strong>Équipe en action</strong></td><td>Ateliers 1 et 2 avec statut de connexion en temps réel.</td></tr>
-      <tr><td><strong>Timer production</strong></td><td>Chronomètre de production avec boutons pause/stop.</td></tr>
-      <tr><td><strong>Progression</strong></td><td>Cercle pourcentage du taux d'achèvement global.</td></tr>
-    </table>
-  </div>
-
-  <!-- ═══════ COMMANDES ═══════ -->
-  <div class="card" id="commandes">
-    <p class="kicker">Production</p>
-    <h2>📦 Commandes</h2>
-    <p>Les commandes orchestrent tout le processus de fabrication. Chaque commande contient un ou plusieurs articles, chacun avec sa gamme de production (étapes template).</p>
-
-    <h3>Créer une commande</h3>
     <div class="steps">
-      <div class="step"><div class="step-num">1</div><div class="step-content"><h4>Aller dans Commandes → + Nouvelle commande</h4><p>Un numéro auto-généré est proposé (ex: WO-2026-042).</p></div></div>
-      <div class="step"><div class="step-num">2</div><div class="step-content"><h4>Ajouter les articles</h4><p>Pour chaque article : nom du produit, catégorie (Chaise, Table…), quantité, dimensions, notes design.</p></div></div>
-      <div class="step"><div class="step-num">3</div><div class="step-content"><h4>Réservation automatique</h4><p>À la création, les matières premières nécessaires sont <strong>automatiquement réservées</strong> du stock DEP-MP (sans les retirer physiquement).</p></div></div>
-      <div class="step"><div class="step-num">4</div><div class="step-content"><h4>Les étapes se créent</h4><p>Les étapes de production sont générées automatiquement depuis les templates (gamme) de chaque catégorie.</p></div></div>
+      <div class="st"><div class="sn">1</div><div class="sc"><h4>Les 4 grandes cases en haut</h4><p>
+        <strong>🟢 Commandes actives</strong> → combien de commandes sont en cours<br>
+        <strong>📦 Articles en stock</strong> → total de vos matières<br>
+        <strong>⚠️ Alertes stock bas</strong> → il faut réapprovisionner<br>
+        <strong>⏱️ Étapes en retard</strong> → des ouvriers ont pris du retard
+      </p></div></div>
+      <div class="st"><div class="sn">2</div><div class="sc"><h4>Le graphique de la semaine</h4><p>Les barres vertes montrent combien d'étapes ont été terminées chaque jour. Plus c'est grand, mieux c'est !</p></div></div>
+      <div class="st"><div class="sn">3</div><div class="sc"><h4>Les commandes récentes</h4><p>La liste des commandes en cours avec une barre de progression. Vous voyez directement le pourcentage.</p></div></div>
+      <div class="st"><div class="sn">4</div><div class="sc"><h4>L'équipe en action</h4><p>Vous voyez si les ateliers sont connectés en temps réel. Le petit point vert signifie "en ligne".</p></div></div>
     </div>
 
-    <h3>Suivre une commande</h3>
-    <p>Cliquez sur une commande pour voir le détail : chaque article avec son pipeline en direct, un planning Gantt, et les transferts logistiques.</p>
-
-    <h3>Libérer vers l'Atelier 2</h3>
-    <p>Quand tous les articles d'une commande ont terminé l'Atelier 1, un bouton <span class="badge badge-green">Libérer vers l'Atelier 2</span> crée un bordereau de transfert (MNF-) et notifie l'Atelier 2.</p>
+    <div class="tip"><b>💡 Le plus important :</b> Si vous voyez <span class="badge b-r">Alertes stock bas</span>, c'est qu'il faut commander de la matière première. Si vous voyez <span class="badge b-r">Étapes en retard</span>, il faut vérifier avec les ouvriers.</div>
   </div>
 
-  <!-- ═══════ ÉTAPES ═══════ -->
-  <div class="card" id="etapes">
-    <p class="kicker">Production</p>
-    <h2>🔄 Étapes de production</h2>
-    <p>Chaque article suit une séquence d'étapes prédéfinies. Chaque étape a un portail dédié avec scan QR, timer et déclaration de matière.</p>
+  <!-- ═══════ CRÉER COMMANDE ═══════ -->
+  <div class="c" id="commande">
+    <p class="k">Travail quotidien</p>
+    <h2>📦 Créer une commande</h2>
+    <p>C'est ce que vous faites <strong>le plus souvent</strong>. Un client veut 10 chaises ? Vous créez la commande ici.</p>
 
-    <h3>Atelier 1 — Bois & Découpe <span class="badge badge-orange">5 étapes</span></h3>
-    <table>
-      <tr><th>#</th><th>Code</th><th>Étape</th><th>Description</th></tr>
-      <tr><td>1</td><td><code>A1-ARR</code></td><td>Arrivée matière première</td><td>Réception depuis DEP-MP centrale</td></tr>
-      <tr><td>2</td><td><code>A1-COU</code></td><td>Découpe</td><td>Découpe panneaux, débit bois</td></tr>
-      <tr><td>3</td><td><code>A1-USI</code></td><td>Usinage</td><td>CNC, perçage, profilage</td></tr>
-      <tr><td>4</td><td><code>A1-PRE</code></td><td>Préparation</td><td>Ponçage, préparation assemblage</td></tr>
-      <tr><td>5</td><td><code>A1-CTL</code></td><td>Contrôle + Stock A1</td><td>QC puis entrée Stock Atelier 1</td></tr>
-    </table>
-
-    <h3>Atelier 2 — Assemblage & Finition <span class="badge badge-blue">6 étapes</span></h3>
-    <table>
-      <tr><th>#</th><th>Code</th><th>Étape</th><th>Description</th></tr>
-      <tr><td>1</td><td><code>A2-REC</code></td><td>Réception Atelier 1</td><td>Scanner bordereau MNF-</td></tr>
-      <tr><td>2</td><td><code>A2-ASM</code></td><td>Assemblage</td><td>Assemblage bois + métal</td></tr>
-      <tr><td>3</td><td><code>A2-SOU</code></td><td>Soudage</td><td>Soudure MIG des structures</td></tr>
-      <tr><td>4</td><td><code>A2-POU</code></td><td>Poudrage</td><td>Thermolaquage, peinture poudre</td></tr>
-      <tr><td>5</td><td><code>A2-MON</code></td><td>Montage & finition</td><td>Montage final, quincaillerie</td></tr>
-      <tr><td>6</td><td><code>A2-CTL</code></td><td>Contrôle final + Stock A2</td><td>QC puis entrée Stock A2</td></tr>
-    </table>
-
-    <div class="tip"><strong>💡 Chaque étape = un portail.</strong> L'opérateur扫描 un QR pour ouvrir l'étape, déclare les quantités utilisées/perties, et termine. Le timer suit automatiquement le temps.</div>
-  </div>
-
-  <!-- ═══════ PORTAILS ═══════ -->
-  <div class="card" id="portails">
-    <p class="kicker">Production</p>
-    <h2>🖥️ Portails ateliers</h2>
-    <p>Chaque atelier a son propre portail tablette, verrouillé sur une étape spécifique. Conçu pour les écrans tactiles en atelier.</p>
-
-    <h3>Navigation</h3>
-    <div class="flow">
-      <span class="flow-box">/portal</span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-box">Choix atelier</span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-box">/portal?atelier=1</span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-box">Choix étape</span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-box">/portal?atelier=1&etape=2</span>
+    <div class="steps">
+      <div class="st"><div class="sn">1</div><div class="sc"><h4>Dans le menu à gauche, cliquez sur "Commandes"</h4><p>Vous voyez la liste de toutes les commandes.</p></div></div>
+      <div class="st"><div class="sn">2</div><div class="sc"><h4>Cliquez sur "+ Nouvelle commande"</h4><p>Un formulaire s'ouvre avec un numéro auto-généré (ex: WO-2026-042).</p></div></div>
+      <div class="st"><div class="sn">3</div><div class="sc"><h4>Remplissez les informations</h4><p>
+        <strong>Client</strong> → choisissez le client (ou tapez un nom)<br>
+        <strong>Date de livraison</strong> → quand le client veut recevoir<br>
+        <strong>Notes</strong> → tout commentaire important
+      </p></div></div>
+      <div class="st"><div class="sn">4</div><div class="sc"><h4>Ajoutez les articles à fabriquer</h4><p>Pour chaque meuble, cliquez "Ajouter un article" et remplissez :</p>
+        <ul>
+          <li><strong>Nom</strong> → ex: "Chaise Bordeaux" ou "Table rectangulaire"</li>
+          <li><strong>Catégorie</strong> → Chaise, Table, Étagère, Buffet...</li>
+          <li><strong>Quantité</strong> → combien le client veut</li>
+          <li><strong>Dimensions</strong> → H×L×P en cm</li>
+        </ul>
+      </div></div>
+      <div class="st"><div class="sn">5</div><div class="sc"><h4>Cliquez "Enregistrer"</h4><p>✅ C'est fait ! Le système fait tout seul :</p>
+        <ul>
+          <li>Il réserve automatiquement le bois nécessaire dans le stock</li>
+          <li>Il crée toutes les étapes de travail pour chaque meuble</li>
+          <li>Les ouvriers voient immédiatement la commande dans leur portail</li>
+        </ul>
+      </div></div>
     </div>
 
-    <h3>Fonctionnalités du portail étape</h3>
-    <ul>
-      <li><strong>🔒 Kiosk Lock :</strong> Le poste est verrouillé sur l'atelier + étape. L'opérateur identifie son nom.</li>
-      <li><strong>📷 Scan QR :</strong> Scanner le QR code de l'étape pour démarrer (caméra ou saisie manuelle).</li>
-      <li><strong>⏱️ Timer :</strong> Chronomètre automatique depuis le démarrage. Affiche le retard en temps réel.</li>
-      <li><strong>📦 Déclaration matière :</strong> Pour chaque étape, l'opérateur déclare la quantité utilisée et perdue.</li>
-      <li><strong>⚠️ Garde QR :</strong> Si le QR scanné ne correspond pas à l'étape du portail, un message d'erreur s'affiche.</li>
-      <li><strong>🔀 Branchement :</strong> Si l'étape a un chemin indirect (ex: Perçage), l'opérateur choisit le chemin.</li>
-      <li><strong>✅ Terminer :</strong> La consommation est décrémentée du stock DEP-MP, l'étape passe à DONE.</li>
-    </ul>
+    <div class="warn"><b>⚠️ Important :</b> Vous n'avez PAS besoin de réserver le bois manuellement. Le système le fait automatiquement quand vous créez la commande. Le bois est "mis de côté" virtuellement — les ouvriers le consommeront réellement étape par étape.</div>
+  </div>
 
-    <div class="warn"><strong>⚠️ Important :</strong> Seule la quantité <strong>déclarée</strong> est consommée. Le reste reste réservé dans le stock pour les étapes suivantes.</div>
+  <!-- ═══════ SUIVRE COMMANDE ═══════ -->
+  <div class="c" id="suivi">
+    <p class="k">Travail quotidien</p>
+    <h2>📍 Suivre une commande</h2>
+    <p>Vous voulez savoir où en est la commande WO-2026-038 ? Cliquez dessus dans la liste.</p>
+
+    <div class="steps">
+      <div class="st"><div class="sn">1</div><div class="sc"><h4>Cliquez sur une commande</h4><p>Vous voyez le détail : les articles, les étapes, et les transferts.</p></div></div>
+      <div class="st"><div class="sn">2</div><div class="sc"><h4>Regardez les couleurs</h4><p>
+        <span class="badge b-g">DONE</span> = Terminé ✅<br>
+        <span class="badge b-b">ACTIVE</span> = En cours 🔵<br>
+        <span class="badge" style="background:#f3f4f6;color:#6b7280">PENDING</span> = Pas encore commencé ⬜
+      </p></div></div>
+      <div class="st"><div class="sn">3</div><div class="sc"><h4>Regardez la barre de progression</h4><p>Si c'est à 60%, ça veut dire que 6 étapes sur 10 sont terminées.</p></div></div>
+    </div>
+  </div>
+
+  <!-- ═══════ ATELIER 1 ═══════ -->
+  <div class="c" id="atelier1">
+    <p class="k">Production</p>
+    <h2>🪚 Atelier 1 — Bois & Découpe</h2>
+    <p>C'est ici que tout commence. Les ouvriers transforment les planches de bois en pièces prêtes à assembler.</p>
+
+    <h3>Les 5 étapes (dans l'ordre)</h3>
+    <table>
+      <tr><th>#</th><th>Étape</th><th>C'est quoi ?</th></tr>
+      <tr><td>1</td><td><strong>Réception</strong></td><td>L'ouvrier prend le bois dans le stock central</td></tr>
+      <tr><td>2</td><td><strong>Découpe</strong></td><td>Il découpe les planches aux bonnes tailles</td></tr>
+      <tr><td>3</td><td><strong>Usinage</strong></td><td>Il fait les trous, les rainures, les formes</td></tr>
+      <tr><td>4</td><td><strong>Préparation</strong></td><td>Il ponce et prépare pour l'assemblage</td></tr>
+      <tr><td>5</td><td><strong>Contrôle</strong></td><td>Il vérifie que tout est bien → le produit entre en stock</td></tr>
+    </table>
+
+    <div class="tip"><b>💡 Comment ça marche pour un ouvrier :</b> Il va sur la tablette → choisit Atelier 1 → choisit l'étape → scanne le QR code → travaille → déclare ce qu'il a utilisé → clique "Terminé". C'est tout !</div>
+  </div>
+
+  <!-- ═══════ ATELIER 2 ═══════ -->
+  <div class="c" id="atelier2">
+    <p class="k">Production</p>
+    <h2>🔧 Atelier 2 — Assemblage & Finition</h2>
+    <p>Ici, les pièces venant de l'Atelier 1 sont assemblées en meubles finis, prêts pour le client.</p>
+
+    <h3>Les 6 étapes (dans l'ordre)</h3>
+    <table>
+      <tr><th>#</th><th>Étape</th><th>C'est quoi ?</th></tr>
+      <tr><td>1</td><td><strong>Réception A1</strong></td><td>L'ouvrier scanne le bordereau de transfert</td></tr>
+      <tr><td>2</td><td><strong>Assemblage</strong></td><td>Il assemble les pièces de bois et métal</td></tr>
+      <tr><td>3</td><td><strong>Soudage</strong></td><td>Il soude les structures métalliques</td></tr>
+      <tr><td>4</td><td><strong>Poudrage</strong></td><td>Il applique la peinture/laquage</td></tr>
+      <tr><td>5</td><td><strong>Montage</strong></td><td>Il assemble le meuble final avec la quincaillerie</td></tr>
+      <tr><td>6</td><td><strong>Contrôle final</strong></td><td>Vérification qualité → le meuble est prêt ! 🎉</td></tr>
+    </table>
+  </div>
+
+  <!-- ═══════ TRANSFERT ═══════ -->
+  <div class="c" id="transfert">
+    <p class="k">Travail quotidien</p>
+    <h2>🚚 Transfert d'un atelier à l'autre</h2>
+    <p>Quand l'Atelier 1 a fini tout le bois pour une commande, il faut le transférer à l'Atelier 2 pour l'assemblage.</p>
+
+    <div class="steps">
+      <div class="st"><div class="sn">1</div><div class="sc"><h4>Allez dans la commande</h4><p>Ouvrez la commande concernée dans l'admin.</p></div></div>
+      <div class="st"><div class="sn">2</div><div class="sc"><h4>Regardez si tout est vert dans A1</h4><p>Si toutes les étapes de l'Atelier 1 sont <span class="badge b-g">DONE</span>, le bouton apparaît.</p></div></div>
+      <div class="st"><div class="sn">3</div><div class="sc"><h4>Cliquez "Libérer vers l'Atelier 2"</h4><p>Le système crée automatiquement un bordereau (numéro MNF-...) et notifie l'Atelier 2.</p></div></div>
+      <div class="st"><div class="sn">4</div><div class="sc"><h4>L'Atelier 2 voit le transfert</h4><p>Les ouvriers de A2 voient la commande apparaître dans leur portail. Ils scannent le bordereau pour commencer.</p></div></div>
+    </div>
   </div>
 
   <!-- ═══════ STOCKS ═══════ -->
-  <div class="card" id="stocks">
-    <p class="kicker">Production</p>
-    <h2>🏭 Stocks — Modèle 3 dépôts</h2>
-    <p>ADMEDCO utilise un modèle de 3 stocks séparés pour une traçabilité maximale.</p>
+  <div class="c" id="stocks">
+    <p class="k">Gestion</p>
+    <h2>📦 Gérer mes stocks</h2>
+    <p>ADMEDCO gère 3 stocks séparés. Voici comment les comprendre :</p>
 
-    <div class="feature-grid">
-      <div class="feature-item" style="background: rgba(74,124,89,.08);">
-        <div class="icon">📦</div>
-        <h4>DEP-MP — Matière Première Centrale</h4>
-        <p>Alimente les 2 ateliers au début. Réservée à la création commande, retirée uniquement au déclaré de chaque étape.</p>
-      </div>
-      <div class="feature-item" style="background: rgba(194,74,8,.08);">
-        <div class="icon">🪵</div>
-        <h4>DEP-A1 — Stock Atelier 1</h4>
-        <p>Ce que l'Atelier 1 a produit (semi-finis). Transféré vers Atelier 2 via bordereau MNF-.</p>
-      </div>
-      <div class="feature-item" style="background: rgba(47,110,181,.08);">
-        <div class="icon">🪑</div>
-        <h4>DEP-A2 — Stock Atelier 2</h4>
-        <p>Ce que l'Atelier 2 a produit (finis). Prêt pour l'expédition au client.</p>
-      </div>
+    <div class="grid3">
+      <div class="gi"><div class="em">📦</div><h4>Stock Matière Première</h4><p>Votre réserve de bois, vis, peinture... C'est là que tout commence. Les ouvriers en piochent au fur et à mesure.</p></div>
+      <div class="gi"><div class="em">🪵</div><h4>Stock Atelier 1</h4><p>Ce que l'Atelier 1 a fabriqué (pièces découpées, usinées...). En attente de transfert vers A2.</p></div>
+      <div class="gi"><div class="em">🪑</div><h4>Stock Atelier 2</h4><p>Les meubles finis, prêts à livrer au client !</p></div>
     </div>
 
-    <h3>Flux de matière</h3>
+    <h3>Comment ça se passe concrètement ?</h3>
     <div class="flow">
-      <span class="flow-box">DEP-MP</span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-box" style="background:rgba(194,74,8,.1);color:var(--orange)">Atelier 1</span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-box" style="background:rgba(194,74,8,.1);color:var(--orange)">DEP-A1</span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-box" style="background:rgba(47,110,181,.1);color:var(--blue)">Atelier 2</span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-box" style="background:rgba(47,110,181,.1);color:var(--blue)">DEP-A2</span>
-      <span class="flow-arrow">→</span>
-      <span class="flow-box">🚚 Expédition</span>
+      <span class="fb">Bois brut</span>
+      <span class="fa">→</span>
+      <span class="fb" style="background:rgba(194,74,8,.1);color:var(--or)">Atelier 1 découpe</span>
+      <span class="fa">→</span>
+      <span class="fb" style="background:rgba(194,74,8,.1);color:var(--or)">Pièces prêtes</span>
+      <span class="fa">→</span>
+      <span class="fb" style="background:rgba(47,110,181,.1);color:var(--bl)">Atelier 2 assemble</span>
+      <span class="fa">→</span>
+      <span class="fb" style="background:rgba(47,110,181,.1);color:var(--bl)">Meuble fini</span>
+      <span class="fa">→</span>
+      <span class="fb">🚚 Livraison</span>
     </div>
 
-    <h3>Gestion dans l'admin</h3>
-    <ul>
-      <li><strong>Onglet Matière Première :</strong> Liste des articles DEP-MP avec quantité, réservé, disponible, santé (OK/Bas/Critique).</li>
-      <li><strong>Onglet Mouvements :</strong> Historique complet : réserve, consomme, ajuste, libère — chaque mouvement tracé.</li>
-      <li><strong>Onglet Stocks Ateliers :</strong> Semi-finis en attente ou libérés (A1→A2).</li>
-      <li><strong>Ajouter un article :</strong> Nom, unité, quantité, seuil d'alerte, dépôt cible.</li>
-      <li><strong>Ajuster :</strong> Modifier la quantité d'un article (inventaire physique).</li>
-    </ul>
-  </div>
+    <h3>Consulter les stocks</h3>
+    <div class="steps">
+      <div class="st"><div class="sn">1</div><div class="sc"><h4>Cliquez "Stocks" dans le menu</h4><p>Vous voyez 3 onglets : Matière Première / Mouvements / Stocks Ateliers.</p></div></div>
+      <div class="st"><div class="sn">2</div><div class="sc"><h4>ONGLET "Matière Première"</h4><p>La liste de tout ce que vous avez. Regardez la colonne <strong>Santé</strong> :<br>
+        <span class="badge b-g">OK</span> = tout va bien<br>
+        <span class="badge b-o">Bas</span> = il faudra bientôt commander<br>
+        <span class="badge b-r">Critique</span> = il faut commander MAINTENANT
+      </p></div></div>
+      <div class="st"><div class="sn">3</div><div class="sc"><h4>ONGLET "Mouvements"</h4><p>L'historique de tout ce qui a bougé. Chaque fois qu'un ouvrier consomme du bois, c'est écrit ici.</p></div></div>
+    </div>
 
-  <!-- ═══════ ARTICLES ═══════ -->
-  <div class="card" id="articles">
-    <p class="kicker">ERP</p>
-    <h2>📋 Articles</h2>
-    <p>Référentiel complet des articles ADMEDCO — miroir de COM_Item Silwane.</p>
-    <table>
-      <tr><th>Champ</th><th>Description</th></tr>
-      <tr><td><strong>Code</strong></td><td>Identifiant unique de l'article</td></tr>
-      <tr><td><strong>Désignation</strong></td><td>Nom descriptif</td></tr>
-      <tr><td><strong>Famille</strong></td><td>Catégorie (Bois, Quincaillerie, Finition…)</td></tr>
-      <tr><td><strong>Unité</strong></td><td>pcs, m, m², kg, L, barre, feuille, rouleau</td></tr>
-      <tr><td><strong>Prix achat / vente</strong></td><td>Prix unitaires</td></tr>
-      <tr><td><strong>Stock logique / réservé / min / max</td></td><td>Quantités et seuils</td></tr>
-      <tr><td><strong>Bloqué</strong></td><td>Article indisponible</td></tr>
-    </table>
-  </div>
+    <h3>Ajouter un nouvel article en stock</h3>
+    <div class="steps">
+      <div class="st"><div class="sn">1</div><div class="sc"><h4>Cliquez "+ Nouvel article"</h4><p>Remplissez le nom, l'unité (mètres, kilos, pièces...), la quantité, et le seuil d'alerte.</p></div></div>
+      <div class="st"><div class="sn">2</div><div class="sc"><h4>Cliquez "Enregistrer"</h4><p>L'article apparaît dans la liste.</p></div></div>
+    </div>
 
-  <!-- ═══════ TIERS ═══════ -->
-  <div class="card" id="tiers">
-    <p class="kicker">ERP</p>
-    <h2>🤝 Tiers</h2>
-    <p>Clients, fournisseurs, salariés. Filtres par type, recherche par nom/code.</p>
-    <ul>
-      <li><strong>Champs :</strong> Raison sociale, code, type, téléphone, adresse, wilaya, NIF.</li>
-      <li><strong>Types :</strong> Client, Fournisseur, Salarié, Autre.</li>
-    </ul>
-  </div>
-
-  <!-- ═══════ DOCUMENTS ═══════ -->
-  <div class="card" id="documents">
-    <p class="kicker">ERP</p>
-    <h2>🧾 Documents</h2>
-    <p>Documents commerciaux liés aux tiers — Devis, Commandes, Factures, Bons de livraison, Avoirs.</p>
-    <ul>
-      <li><strong>Champs :</strong> Numéro, type, tiers, date, total HT/TTC, statut (brouillon/valide).</li>
-      <li><strong>Calcul :</strong> Total TTC filtré affiché en temps réel dans les KPI.</li>
-    </ul>
-  </div>
-
-  <!-- ═══════ FABRICATION ═══════ -->
-  <div class="card" id="fabrication">
-    <p class="kicker">ERP</p>
-    <h2>⚙️ Fabrication</h2>
-    <p>Ordres de fabrication Silwane — numéro, article, quantités prévue/bonne/rebut, atelier, dates.</p>
-    <ul>
-      <li><strong>Filtres :</strong> Tous, En cours, Terminés, Suspendus, Annulés.</li>
-      <li><strong>Stats :</strong> Nombre total, en cours, atelier 1, atelier 2.</li>
-    </ul>
-  </div>
-
-  <!-- ═══════ LOTS ═══════ -->
-  <div class="card" id="lots">
-    <p class="kicker">ERP</p>
-    <h2>🏷️ Lots & Inventaires</h2>
-
-    <h3>Lots (COM_Batch)</h3>
-    <p>Traçabilité par lot : numéro de lot, article, dépôt, quantité, date d'expiration.</p>
-
-    <h3>Inventaires (COM_Inventory)</h3>
-    <p>Comptage physique vs théorique. L'écart est calculé et affiché en rouge/vert.</p>
-  </div>
-
-  <!-- ═══════ MACHINES ═══════ -->
-  <div class="card" id="machines">
-    <p class="kicker">ERP</p>
-    <h2>🔧 Machines & Employés</h2>
-
-    <h3>Machines (Prod_Machine)</h3>
-    <p>Code, nom, famille, atelier, statut (active/Inactive). Badge coloré par atelier.</p>
-
-    <h3>Employés (HRM_Employee)</h3>
-    <p>Matricule, nom, prénom, poste, atelier, date d'embauche. Badge atelier coloré.</p>
-  </div>
-
-  <!-- ═══════ COMPTABILITÉ ═══════ -->
-  <div class="card" id="ecritures">
-    <p class="kicker">ERP</p>
-    <h2>📒 Comptabilité</h2>
-    <p>Écritures comptables (ACC_Operation) — journal, date, compte, libellé, débit, crédit.</p>
-    <p>KPI : total débit et total crédit filtrés.</p>
-  </div>
-
-  <!-- ═══════ DÉPÔTS ═══════ -->
-  <div class="card" id="depots">
-    <p class="kicker">ERP</p>
-    <h2>🏬 Dépôts</h2>
-    <p>Les 3 dépôts ADMEDCO sont affichés avec leur rôle :</p>
-    <table>
-      <tr><th>Code</th><th>Nom</th><th>Rôle</th></tr>
-      <tr><td><code>DEP-MP</code></td><td>Matière Première</td><td>Centrale — alimente A1 + A2</td></tr>
-      <tr><td><code>DEP-A1</code></td><td>Stock Atelier 1</td><td>Produit par A1 — transfert vers A2</td></tr>
-      <tr><td><code>DEP-A2</code></td><td>Stock Atelier 2</td><td>Produit par A2 — expédition</td></tr>
-    </table>
+    <div class="tip"><b>💡 Le stock se met à jour tout seul :</b> Quand un ouvrier termine une étape et déclare "j'ai utilisé 3 mètres de bois", le stock baisse automatiquement. Vous n'avez rien à faire !</div>
   </div>
 
   <!-- ═══════ ÉQUIPE ═══════ -->
-  <div class="card" id="equipe">
-    <p class="kicker">Suivi</p>
-    <h2>👥 Équipe</h2>
-    <p>Gestion des membres de l'équipe : invitation par e-mail, modification de rôle, suppression.</p>
-    <ul>
-      <li><strong>Roles :</strong> Admin (accès complet), Opérateur (portail atelier uniquement).</li>
-      <li><strong>Atelier :</strong> Chaque membre est assigné à un atelier ou aucun.</li>
-      <li><strong>Stats :</strong> Nombre d'étapes terminées et en cours par membre.</li>
-    </ul>
-  </div>
-
-  <!-- ═══════ INCIDENTS ═══════ -->
-  <div class="card" id="incidents">
-    <p class="kicker">Suivi</p>
-    <h2>🚨 Incidents</h2>
-    <p>Vue centralisée de tous les problèmes : retards de production, alertes stock bas, et transferts vérifiés.</p>
-    <ul>
-      <li><strong>Étapes en retard :</strong> Temps réel dépassant le temps cible. Possibilité d'acknowledge.</li>
-      <li><strong>Stock bas :</strong> Articles sous seuil avec lien direct vers réapprovisionnement.</li>
-      <li><strong>Transferts :</strong> Bordereaux MNF- et leur statut (En attente / Vérifié).</li>
-    </ul>
-  </div>
-
-  <!-- ═══════ ANALYSES ═══════ -->
-  <div class="card" id="analyses">
-    <p class="kicker">Suivi</p>
-    <h2>📈 Analyses</h2>
-    <p>Tableaux de bord analytiques avec Recharts — données en temps réel.</p>
-    <div class="feature-grid">
-      <div class="feature-item"><div class="icon">📊</div><h4>Débit par atelier</h4><p>Bar chart : étapes terminées, actives, en attente par atelier.</p></div>
-      <div class="feature-item"><div class="icon">🍩</div><h4>Répartition statuts</h4><p>Pie chart : DONE, ACTIVE, PENDING, SKIPPED.</p></div>
-      <div class="feature-item"><div class="icon">📈</div><h4>Tendance rendement</h4><p>Line chart : % prêt par commande (évolution).</p></div>
-      <div class="feature-item"><div class="icon">📦</div><h4>Matières utilisées vs perdues</h4><p>Bar chart : consommation réelle vs perte par matière.</p></div>
-    </div>
-  </div>
-
-  <!-- ═══════ WORKFLOW ═══════ -->
-  <div class="card" id="workflow">
-    <p class="kicker">Référence</p>
-    <h2>🔄 Workflow complet — Cycle de vie d'une commande</h2>
+  <div class="c" id="equipe">
+    <p class="k">Gestion</p>
+    <h2>👥 Mon équipe</h2>
+    <p>Gérez les personnes qui ont accès au système.</p>
 
     <div class="steps">
-      <div class="step"><div class="step-num">1</div><div class="step-content"><h4>Création commande</h4><p>L'admin crée une commande → les étapes sont générées automatiquement → les matières sont réservées du stock DEP-MP.</p></div></div>
-      <div class="step"><div class="step-num">2</div><div class="step-content"><h4>Atelier 1 — Production</h4><p>L'opérateur de A1 scanne le QR de chaque étape → déclare quantités utilisées/perdues → le stock DEP-MP est décrémenté de la quantité déclarée.</p></div></div>
-      <div class="step"><div class="step-num">3</div><div class="step-content"><h4>Contrôle + Stock A1</h4><p>À la dernière étape de A1, le produit est marqué SEMI_READY et entre dans le stock DEP-A1.</p></div></div>
-      <div class="step"><div class="step-num">4</div><div class="step-content"><h4>Libération vers A2</h4><p>L'admin clique "Libérer" → un bordereau MNF- est créé → statut RELEASED.</p></div></div>
-      <div class="step"><div class="step-num">5</div><div class="step-content"><h4>Atelier 2 — Assemblage</h4><p>L'opérateur de A2 scanne le bordereau MNF- → suit les étapes d'assemblage → consomme les matières restantes.</p></div></div>
-      <div class="step"><div class="step-num">6</div><div class="step-content"><h4>Contrôle final + Stock A2</h4><p>Le produit fini entre dans le stock DEP-A2 → prêt pour l'expédition.</p></div></div>
+      <div class="st"><div class="sn">1</div><div class="sc"><h4>Cliquez "Équipe" dans le menu</h4><p>Vous voyez la liste de tous les membres.</p></div></div>
+      <div class="st"><div class="sn">2</div><div class="sc"><h4>Pour ajouter quelqu'un</h4><p>Cliquez "Inviter" → entrez son email → choisissez son rôle (Admin ou Opérateur) → choisissez son atelier.</p></div></div>
+      <div class="st"><div class="sn">3</div><div class="sc"><h4>Pour modifier</h4><p>Cliquez sur le nom → changez ce qui faut → enregistrez.</p></div></div>
     </div>
-  </div>
 
-  <!-- ═══════ COMPTES ═══════ -->
-  <div class="card" id="comptes">
-    <p class="kicker">Référence</p>
-    <h2>👤 Comptes de démonstration</h2>
     <table>
-      <tr><th>Email</th><th>Mot de passe</th><th>Rôle</th><th>Portail</th></tr>
-      <tr><td><code>admin@admedco.ma</code></td><td><code>Admin123!</code></td><td><span class="badge badge-green">Directeur</span></td><td>Administration</td></tr>
-      <tr><td><code>atelier1@admedco.ma</code></td><td><code>Atelier123!</code></td><td><span class="badge badge-orange">Chef A1</span></td><td>Atelier 1 — 5 étapes</td></tr>
-      <tr><td><code>atelier2@admedco.ma</code></td><td><code>Atelier123!</code></td><td><span class="badge badge-blue">Chef A2</span></td><td>Atelier 2 — 6 étapes</td></tr>
+      <tr><th>Rôle</th><th>Accès</th><th>Exemple</th></tr>
+      <tr><td><span class="badge b-g">Admin</span></td><td>Tout voir et tout faire</td><td>Vous, le directeur</td></tr>
+      <tr><td><span class="badge b-b">Opérateur</span></td><td>Portail atelier seulement</td><td>Les ouvriers</td></tr>
     </table>
   </div>
 
-  <!-- ═══════ CONFIG ═══════ -->
-  <div class="card" id="config">
-    <p class="kicker">Référence</p>
-    <h2>⚙️ Configuration</h2>
+  <!-- ═══════ OUTILS ═══════ -->
+  <div class="c" id="outils">
+    <p class="k">Autres pages</p>
+    <h2>🛠️ Les autres pages du menu</h2>
+    <p>Ces pages sont là si vous en avez besoin. Vous n'êtes pas obligé de les utiliser tous les jours.</p>
 
-    <h3>Variables d'environnement (Vercel Production)</h3>
     <table>
-      <tr><th>Variable</th><th>Description</th></tr>
-      <tr><td><code>NEXT_PUBLIC_SUPABASE_URL</code></td><td>URL du projet Supabase</td></tr>
-      <tr><td><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td><td>Clé publique Supabase</td></tr>
-      <tr><td><code>SUPABASE_SERVICE_ROLE_KEY</code></td><td>Clé service-role (admin auth) — Vercel Production uniquement</td></tr>
+      <tr><th>Page</th><th>C'est pour quoi ?</th><th>Quand l'utiliser ?</th></tr>
+      <tr><td><strong>Articles</strong></td><td>Liste de tout ce que vous vendez/achetez</td><td>Quand vous ajoutez un nouveau produit</td></tr>
+      <tr><td><strong>Tiers</strong></td><td>Clients et fournisseurs</td><td>Quand un nouveau client arrive</td></tr>
+      <tr><td><strong>Documents</strong></td><td>Devis, factures, bons de livraison</td><td>Quand vous faites une facture</td></tr>
+      <tr><td><strong>Fabrication</strong></td><td>Les ordres de fabrication</td><td>Pour voir l'historique de production</td></tr>
+      <tr><td><strong>Lots</strong></td><td>Traçabilité par lot</td><td>Si vous suivez les lots de bois</td></tr>
+      <tr><td><strong>Machines</strong></td><td>CNC, perceuses, etc.</td><td>Quand vous ajoutez une machine</td></tr>
+      <tr><td><strong>Employés</strong></td><td>Fiches des ouvriers</td><td>Quand un nouvel ouvrier arrive</td></tr>
+      <tr><td><strong>Comptabilité</strong></td><td>Écritures comptables</td><td>Pour la comptabilité mensuelle</td></tr>
+      <tr><td><strong>Dépôts</strong></td><td>Lieux de stockage</td><td>Si vous ajoutez un nouveau dépôt</td></tr>
+      <tr><td><strong>Inventaires</strong></td><td>Comptage physique</td><td>Pour l'inventaire annuel</td></tr>
+      <tr><td><strong>Incidents</strong></td><td>Problèmes et retards</td><td>Pour voir ce qui ne va pas</td></tr>
+      <tr><td><strong>Analyses</strong></td><td>Graphiques de performance</td><td>Pour les réunions et décisions</td></tr>
     </table>
 
-    <h3>Migrations Supabase (dans l'ordre)</h3>
-    <table>
-      <tr><th>Migration</th><th>Contenu</th></tr>
-      <tr><td><code>0001</code> → <code>0004</code></td><td>Tables MES de base (work_orders, steps, stock, templates)</td></tr>
-      <tr><td><code>0005</code> → <code>0008</code></td><td>Modèle 3 stocks, réservations, transferts, triggers</td></tr>
-      <tr><td><code>0009</code></td><td>ERP Silwane : 13 tables erp_* + seeds</td></tr>
-      <tr><td><code>0010</code></td><td>3 stocks : DEP-MP centrale + DEP-A1 + DEP-A2</td></tr>
-    </table>
-
-    <div class="tip"><strong>💡 En mode démo :</strong> Sans variables Supabase, le système utilise un mock complet en mémoire. Aucune migration n'est nécessaire pour tester.</div>
+    <div class="tip"><b>💡 Pas de panique :</strong> Les pages les plus importantes au quotidien sont <strong>Dashboard</strong>, <strong>Commandes</strong>, et <strong>Stocks</strong>. Les autres, vous les utiliserez quand ce sera nécessaire.</div>
   </div>
 
-  <div style="text-align:center; padding: 40px 0 20px; color: var(--muted); font-size: 13px;">
-    <p>ADMEDCO MES v2.0 — Système de fabrication de meubles</p>
-    <p>Développé par le Xiaomi LLM Core Team</p>
+  <!-- ═══════ AIDE ═══════ -->
+  <div class="c" id="aide">
+    <p class="k">Aide</p>
+    <h2>❓ Questions fréquentes</h2>
+
+    <h3>J'ai oublié mon mot de passe</h3>
+    <p>Contactez l'administrateur du système. Il peut créer un nouveau mot de passe pour vous.</p>
+
+    <h3>Je ne vois pas la bonne page</h3>
+    <p>Regardez le menu à gauche. Si le menu est fermé (sur mobile), cliquez sur le bouton ☰ en haut à gauche.</p>
+
+    <h3>Un ouvrier ne sait pas comment utiliser la tablette</h3>
+    <p>Envoyez-le sur <code>/portal</code> → il choisit son atelier → il choisit l'étape → il suit les instructions à l'écran.</p>
+
+    <h3>Le stock affiche un chiffre bizarre</h3>
+    <p>Allez dans <strong>Stocks → Mouvements</strong> pour voir l'historique. Si c'est une erreur, vous pouvez <strong>ajuster</strong> la quantité manuellement.</p>
+
+    <h3>Comment je fais pour voir si une commande est en retard ?</h3>
+    <p>Sur le <strong>Dashboard</strong>, regardez la case <strong>"Étapes en retard"</strong>. Si c'est 0, tout va bien ! Si c'est plus, cliquez dessus pour voir les détails.</p>
+
+    <h3>Est-ce que je peux utiliser mon téléphone ?</h3>
+    <p>Oui ! Le site s'adapte à tous les écrans — téléphone, tablette, ordinateur.</p>
+  </div>
+
+  <div style="text-align:center;padding:36px 0 16px;color:var(--m);font-size:12px">
+    <p style="font-size:28px;margin-bottom:8px">🪑</p>
+    <p><strong>ADMEDCO MES</strong> — Guide d'utilisation</p>
+    <p>Pour toute aide, contactez l'administrateur du système</p>
   </div>
 
 </main>
 
 <script>
-// Active sidebar link on scroll
-const sections = document.querySelectorAll('.card[id], .hero[id]');
-const links = document.querySelectorAll('.sidebar-section a');
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      links.forEach(l => l.classList.remove('active'));
-      const target = document.querySelector(`.sidebar-section a[href="#${e.target.id}"]`);
-      if (target) target.classList.add('active');
-    }
-  });
-}, { rootMargin: '-20% 0px -60% 0px' });
-sections.forEach(s => observer.observe(s));
-
-// Close mobile sidebar on link click
-links.forEach(l => l.addEventListener('click', () => {
-  document.querySelector('.sidebar').classList.remove('open');
-}));
+const secs=document.querySelectorAll('.c[id],.hero[id]');
+const links=document.querySelectorAll('.nav a');
+const obs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('on'));const t=document.querySelector(`.nav a[href="#${e.target.id}"]`);if(t)t.classList.add('on')}})},{rootMargin:'-20% 0px -60% 0px'});
+secs.forEach(s=>obs.observe(s));
+links.forEach(l=>l.addEventListener('click',()=>{document.querySelector('.sidebar').classList.remove('open')}));
 </script>
 </body>
 </html>

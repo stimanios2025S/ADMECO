@@ -9,7 +9,7 @@ import Scanner from "@/components/qr/Scanner";
 import KioskLock from "@/components/worker/KioskLock";
 import CueOverlay from "@/components/worker/CueOverlay";
 import { startStep, completeStep } from "@/app/actions";
-import { Wifi, WifiOff, Play, CheckCircle2, ChevronRight } from "lucide-react";
+import { Wifi, WifiOff, Play, CheckCircle2, Plus, X } from "lucide-react";
 
 type ActiveStep = {
   id: string; step_order: number; step_name: string; atelier_id: number;
@@ -22,10 +22,14 @@ type ActiveStep = {
 
 type MaterialRow = { stockItemId: string; stockItemName: string; unit: string; quantityUsed: number; quantityLost: number };
 
+const A1 = "#c24a08";
+const A2 = "#2f6eb5";
+
 export default function PortalClient({ mode = "factory", atelierId, etape }: { mode?: "factory" | "warehouse"; atelierId?: 1 | 2 | null; etape?: number | null }) {
   const { kiosk, flash, online } = useMes();
   const atelierCible = atelierId ?? kiosk?.atelierId ?? null;
   const etapeCible = etape ?? kiosk?.stepOrder ?? null;
+  const accent = atelierCible === 1 ? A1 : atelierCible === 2 ? A2 : "#4a7c59";
   const [step, setStep] = useState<ActiveStep | null>(null);
   const [msg, setMsg] = useState("");
   const [materials, setMaterials] = useState<MaterialRow[]>([]);
@@ -56,7 +60,6 @@ export default function PortalClient({ mode = "factory", atelierId, etape }: { m
 
     const item = data.work_order_items;
 
-    // Fetch branch template data for indirect path
     let branchName: string | null = null;
     let branchMinutes = 20;
     if (data.has_branch) {
@@ -116,62 +119,79 @@ export default function PortalClient({ mode = "factory", atelierId, etape }: { m
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <CueOverlay />
 
-      <div className="glass flex items-center justify-between gap-3 rounded-2xl p-3.5">
+      {/* ── Connection status ── */}
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-black/[0.04] bg-white p-3.5 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className={`grid h-10 w-10 place-items-center rounded-xl ${online ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"}`}>
+          <span className={`grid h-10 w-10 place-items-center rounded-xl ${online ? "bg-[#4a7c59]/10 text-[#4a7c59]" : "bg-red-50 text-red-400"}`}>
             {online ? <Wifi size={18} /> : <WifiOff size={18} />}
-          </div>
+          </span>
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-500">Connexion</p>
-            <p className="text-sm font-bold text-white">{online ? "En ligne et synchronisé" : "Hors ligne — file de synchro"}</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#9ca3af]">Connexion</p>
+            <p className="text-sm font-bold text-[#1a1d23]">{online ? "En ligne et synchronisé" : "Hors ligne"}</p>
           </div>
         </div>
-        <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-300">
-          {atelierCible === 1 ? `Atelier 1 — Bois & Découpe${etapeCible ? ` · Étape ${etapeCible}` : ""}` : atelierCible === 2 ? `Atelier 2 — Assemblage & Finition${etapeCible ? ` · Étape ${etapeCible}` : ""}` : mode === "warehouse" ? "Mode magasin" : "Mode usine"}
-        </div>
+        <span className="rounded-full border border-black/[0.04] bg-black/[0.02] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#9ca3af]">
+          {atelierCible === 1 ? `Atelier 1${etapeCible ? ` · Étape ${etapeCible}` : ""}` : atelierCible === 2 ? `Atelier 2${etapeCible ? ` · Étape ${etapeCible}` : ""}` : "Mode usine"}
+        </span>
       </div>
 
+      {/* ── Kiosk lock ── */}
       <KioskLock atelierId={atelierId} etape={etape} />
 
-      <div className="premium-card rounded-[26px] p-4 sm:p-5">
+      {/* ── QR Scanner ── */}
+      <div className="rounded-2xl border border-black/[0.04] bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-zinc-500">Prise d'étape</p>
-            <div className="mt-1 text-xl font-black tracking-tight">Scanner le QR de production</div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#9ca3af]">Prise d'étape</p>
+            <div className="mt-1 text-xl font-black tracking-tight text-[#1a1d23]">Scanner le QR de production</div>
           </div>
-          <div className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
-            Tablette prête
-          </div>
+          <span className="rounded-full bg-[#4a7c59]/10 px-2.5 py-1 text-[10px] font-bold text-[#4a7c59]">Tablette prête</span>
         </div>
         <Scanner onScan={handleScan} />
-        {msg && <p className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-bold text-zinc-100">{msg}</p>}
+        {msg && (
+          <div className="mt-3 rounded-xl border border-black/[0.04] bg-black/[0.02] px-3 py-2.5 text-sm font-bold text-[#1a1d23]">
+            {msg}
+          </div>
+        )}
       </div>
 
+      {/* ── Active step detail ── */}
       {step && (
-        <div className="premium-card space-y-4 rounded-[26px] border border-fire/30 p-5">
+        <div className="rounded-2xl border bg-white p-5 shadow-sm" style={{ borderColor: `${accent}25` }}>
+          {/* Step header */}
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-500">Article {step.item_name} ×{step.item_quantity}</div>
-              <div className="mt-1 text-2xl font-black tracking-tight">#{step.step_order} {step.step_name}</div>
-              {step.design_notes && <div className="mt-1 text-xs text-zinc-400">Design : {step.design_notes}</div>}
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#9ca3af]">
+                Article {step.item_name} ×{step.item_quantity}
+              </p>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-black text-white" style={{ background: accent }}>
+                  {step.step_order}
+                </span>
+                <h3 className="text-xl font-black tracking-tight text-[#1a1d23]">{step.step_name}</h3>
+              </div>
+              {step.design_notes && <p className="mt-1 text-xs text-[#9ca3af]">Design : {step.design_notes}</p>}
             </div>
-            <div className={`min-w-[130px] rounded-2xl px-3 py-2 text-center ${timer.overdue ? "bg-red-500/15 text-red-200" : "bg-white/5 text-zinc-100"}`}>
+            <div className="shrink-0 rounded-2xl px-3 py-2 text-center" style={timer.overdue ? { background: "rgba(239,68,68,.08)", color: "#dc2626" } : { background: "rgba(0,0,0,.03)", color: "#1a1d23" }}>
               <div className="font-mono text-xl font-black">{timer.label}</div>
-              {timer.overdue && <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-300">En retard</div>}
+              {timer.overdue && <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-500">En retard</div>}
             </div>
           </div>
 
+          {/* Branch choice */}
           {step.has_branch && step.status === "ACTIVE" && !branchChoice && (
-            <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4">
-              <p className="mb-3 text-sm font-black text-amber-200">Choisir le chemin :</p>
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <p className="mb-3 text-sm font-black text-amber-800">Choisir le chemin :</p>
               <div className="flex flex-col gap-2 sm:flex-row">
-                <button onClick={() => setBranchChoice("direct")} className="btn-fire flex-1 px-4 py-3 text-sm">
+                <button onClick={() => setBranchChoice("direct")}
+                  className="flex-1 rounded-xl border border-amber-300 bg-white px-4 py-3 text-sm font-bold text-amber-800 hover:bg-amber-50 transition-colors">
                   ⚡ Chemin direct
                 </button>
-                <button onClick={() => setBranchChoice("indirect")} className="btn-ice flex-1 px-4 py-3 text-sm">
+                <button onClick={() => setBranchChoice("indirect")}
+                  className="flex-1 rounded-xl border border-blue-300 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-800 hover:bg-blue-100 transition-colors">
                   🔄 Chemin indirect
                 </button>
               </div>
@@ -179,41 +199,57 @@ export default function PortalClient({ mode = "factory", atelierId, etape }: { m
           )}
 
           {branchChoice && (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-sm">
-              <span className="font-bold text-zinc-200">Chemin choisi : </span>
-              {branchChoice === "direct" ? "⚡ Direct" : "🔄 Via étape intermédiaire"}
-              <button onClick={() => setBranchChoice(null)} className="ml-2 text-xs text-zinc-400 hover:text-white">(modifier)</button>
+            <div className="mt-3 rounded-xl bg-black/[0.02] px-3 py-2 text-sm">
+              <span className="font-bold text-[#1a1d23]">Chemin choisi : </span>
+              <span className="text-[#6b7280]">{branchChoice === "direct" ? "⚡ Direct" : "🔄 Via étape intermédiaire"}</span>
+              <button onClick={() => setBranchChoice(null)} className="ml-2 text-xs text-[#9ca3af] hover:text-[#1a1d23] underline">(modifier)</button>
             </div>
           )}
 
+          {/* Material declaration */}
           {step.status === "ACTIVE" && (
-            <div className="space-y-2.5">
-              <p className="text-sm font-black text-zinc-200">Consommation matière</p>
-              <MaterialInput label="Matière principale" unit="unit" onAdd={(m) => setMaterials((prev) => [...prev, m])} />
-              {materials.map((m, i) => (
-                <div key={i} className="glass-soft flex items-center gap-2 p-2.5 text-sm">
-                  <span className="min-w-0 flex-1 font-bold text-white">{m.stockItemName}</span>
-                  <input type="number" min={0} step="any" value={m.quantityUsed}
-                    onChange={(e) => setMaterials((prev) => prev.map((x, idx) => idx === i ? { ...x, quantityUsed: Number(e.target.value) } : x))}
-                    className="w-20 rounded-lg border border-white/10 bg-zinc-900 px-2 py-1 text-center text-white" placeholder="Utilisé" title="Utilisé" />
-                  <input type="number" min={0} step="any" value={m.quantityLost}
-                    onChange={(e) => setMaterials((prev) => prev.map((x, idx) => idx === i ? { ...x, quantityLost: Number(e.target.value) } : x))}
-                    className="w-20 rounded-lg border border-white/10 bg-zinc-900 px-2 py-1 text-center text-white" placeholder="Perdu" title="Perdu" />
-                  <span className="text-xs text-zinc-500">{m.unit}</span>
+            <div className="mt-4 space-y-2.5">
+              <p className="text-sm font-black text-[#1a1d23]">Consommation matière</p>
+              <MaterialInput onAdd={(m) => setMaterials((prev) => [...prev, m])} />
+              {materials.length > 0 && (
+                <div className="space-y-1.5">
+                  {materials.map((m, i) => (
+                    <div key={i} className="flex items-center gap-2 rounded-xl bg-black/[0.02] p-2.5 text-sm">
+                      <span className="min-w-0 flex-1 font-bold text-[#1a1d23]">{m.stockItemName}</span>
+                      <input type="number" min={0} step="any" value={m.quantityUsed}
+                        onChange={(e) => setMaterials((prev) => prev.map((x, idx) => idx === i ? { ...x, quantityUsed: Number(e.target.value) } : x))}
+                        className="w-20 rounded-lg border border-black/[0.08] bg-white px-2 py-1.5 text-center text-sm text-[#1a1d23] focus:outline-none focus:ring-2 focus:ring-[#4a7c59]/20"
+                        placeholder="Utilisé" title="Utilisé" />
+                      <input type="number" min={0} step="any" value={m.quantityLost}
+                        onChange={(e) => setMaterials((prev) => prev.map((x, idx) => idx === i ? { ...x, quantityLost: Number(e.target.value) } : x))}
+                        className="w-20 rounded-lg border border-black/[0.08] bg-white px-2 py-1.5 text-center text-sm text-[#1a1d23] focus:outline-none focus:ring-2 focus:ring-red-200"
+                        placeholder="Perdu" title="Perdu" />
+                      <span className="text-xs text-[#9ca3af]">{m.unit}</span>
+                      <button onClick={() => setMaterials((prev) => prev.filter((_, idx) => idx !== i))}
+                        className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[#9ca3af] hover:text-red-500 hover:bg-red-50 transition-colors">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
 
-          <div className="flex gap-2">
+          {/* Action buttons */}
+          <div className="mt-5 flex gap-2">
             {step.status === "PENDING" && (
-              <button disabled={busy} onClick={handleStart} className="btn-fire flex-1 px-6 py-3">
-                <span className="flex items-center justify-center gap-2"><Play size={18} /> {busy ? "Démarrage…" : "Démarrer l'étape"}</span>
+              <button disabled={busy} onClick={handleStart}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-[15px] font-bold text-white transition-all disabled:opacity-40"
+                style={{ background: accent }}>
+                {busy ? "Démarrage…" : <><Play size={18} /> Démarrer l'étape</>}
               </button>
             )}
             {step.status === "ACTIVE" && (
-              <button disabled={busy} onClick={handleComplete} className="btn-fire flex-1 px-6 py-3">
-                <span className="flex items-center justify-center gap-2"><CheckCircle2 size={18} /> {busy ? "Enregistrement…" : "Terminer l'étape"}</span>
+              <button disabled={busy} onClick={handleComplete}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-[15px] font-bold text-white transition-all disabled:opacity-40"
+                style={{ background: "#4a7c59" }}>
+                {busy ? "Enregistrement…" : <><CheckCircle2 size={18} /> Terminer l'étape</>}
               </button>
             )}
           </div>
@@ -223,22 +259,25 @@ export default function PortalClient({ mode = "factory", atelierId, etape }: { m
   );
 }
 
-function MaterialInput({ label, unit, onAdd }: { label: string; unit: string; onAdd: (m: MaterialRow) => void }) {
+/* ── Material input sub-component ── */
+function MaterialInput({ onAdd }: { onAdd: (m: MaterialRow) => void }) {
   const [name, setName] = useState("");
   const [qty, setQty] = useState(1);
   return (
     <form className="flex gap-2" onSubmit={(e) => {
       e.preventDefault();
       if (name.trim()) {
-        onAdd({ stockItemId: crypto.randomUUID(), stockItemName: name.trim(), unit, quantityUsed: qty, quantityLost: 0 });
+        onAdd({ stockItemId: crypto.randomUUID(), stockItemName: name.trim(), unit: "unit", quantityUsed: qty, quantityLost: 0 });
         setName(""); setQty(1);
       }
     }}>
       <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom du matériau"
-        className="glass-input flex-1 px-3 py-2 text-sm" />
+        className="flex-1 rounded-xl border border-black/[0.08] bg-white px-3 py-2.5 text-sm text-[#1a1d23] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#4a7c59]/20" />
       <input type="number" min={0} step="any" value={qty} onChange={(e) => setQty(Number(e.target.value))}
-        className="glass-input w-24 px-2 py-2 text-sm text-center" />
-      <button className="btn-ghost px-3 py-2 text-sm font-bold">+ Ajouter</button>
+        className="w-24 rounded-xl border border-black/[0.08] bg-white px-2 py-2.5 text-center text-sm text-[#1a1d23] focus:outline-none focus:ring-2 focus:ring-[#4a7c59]/20" />
+      <button className="flex items-center gap-1 rounded-xl border border-black/[0.06] bg-black/[0.02] px-3 py-2.5 text-sm font-bold text-[#6b7280] hover:bg-black/[0.04] transition-colors">
+        <Plus size={14} /> Ajouter
+      </button>
     </form>
   );
 }

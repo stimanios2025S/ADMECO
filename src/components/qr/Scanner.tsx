@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { cueScan } from "@/lib/audio/cues";
+import { Camera, Keyboard } from "lucide-react";
 
 export default function Scanner({ onScan, paused }: { onScan: (text: string) => void; paused?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -43,19 +44,30 @@ export default function Scanner({ onScan, paused }: { onScan: (text: string) => 
 
   return (
     <div className="space-y-3">
-      <div ref={ref} className="overflow-hidden rounded-2xl bg-black min-h-[280px]" />
-      {err && <p className="text-amber-300 text-sm">{err}</p>}
+      <div ref={ref} className="overflow-hidden rounded-2xl bg-[#1a1d23] min-h-[280px]">
+        {/* Scanner mounts here */}
+      </div>
+      {err && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-700">
+          <Camera size={16} className="shrink-0" />
+          {err}
+        </div>
+      )}
       <form
         className="flex gap-2"
-        onSubmit={(e) => { e.preventDefault(); if (manual.trim()) onScan(manual.trim()); setManual(""); }}
-      >
-        <input
-          value={manual}
-          onChange={(e) => setManual(e.target.value)}
-          placeholder="Saisie manuelle (ex. MNF-AB12CD)"
-          className="flex-1 rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-lg text-white"
-        />
-        <button className="rounded-xl bg-yellow-400 px-5 font-bold text-black text-lg">OK</button>
+        onSubmit={(e) => { e.preventDefault(); if (manual.trim()) onScan(manual.trim()); setManual(""); }}>
+        <div className="relative flex-1">
+          <Keyboard size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]" />
+          <input
+            value={manual}
+            onChange={(e) => setManual(e.target.value)}
+            placeholder="Saisie manuelle (ex. MNF-AB12CD)"
+            className="w-full rounded-xl border border-black/[0.08] bg-white pl-9 pr-4 py-3 text-[15px] text-[#1a1d23] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#4a7c59]/20 transition-shadow"
+          />
+        </div>
+        <button className="rounded-xl bg-[#4a7c59] px-5 py-3 text-[15px] font-bold text-white hover:bg-[#3d6a4a] transition-colors">
+          OK
+        </button>
       </form>
     </div>
   );
