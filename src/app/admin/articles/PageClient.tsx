@@ -25,6 +25,7 @@ export default function PageClient({ articles, familles }: { articles: any[]; fa
           <div><p className="text-2xl font-black">{articles.length}</p><p className="text-[11px] font-bold uppercase tracking-widest text-[#7c8091]">Articles</p></div>
         </div>
         <div className="card p-4"><p className="text-2xl font-black">{familles.length}</p><p className="text-[11px] font-bold uppercase tracking-widest text-[#7c8091]">Familles</p></div>
+        <div className="card p-4"><p className="text-2xl font-black">{articles.filter((a) => a.est_fabrique).length}</p><p className="text-[11px] font-bold uppercase tracking-widest text-[#7c8091]">Fabriqués</p></div>
         <div className="card p-4"><p className="text-2xl font-black">{articles.filter((a) => a.stock_logique <= a.stock_min).length}</p><p className="text-[11px] font-bold uppercase tracking-widest text-[#7c8091]">Sous le seuil</p></div>
         <div className="card p-4"><p className="text-2xl font-black">{articles.filter((a) => a.bloque).length}</p><p className="text-[11px] font-bold uppercase tracking-widest text-[#7c8091]">Bloqués</p></div>
       </div>
@@ -47,7 +48,7 @@ export default function PageClient({ articles, familles }: { articles: any[]; fa
             {rows.map((a) => (
               <div key={a.id} className={cn("card flex items-center gap-3 p-3", a.bloque && "opacity-60")}>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold">{a.designation} {a.bloque && <span className="ml-1 inline-flex items-center gap-1 text-xs text-red-500"><Ban size={12} /> Bloqué</span>}</p>
+                  <p className="truncate text-sm font-bold">{a.designation} {a.est_fabrique && <span className="ml-1 rounded-md bg-[#4a7c59]/10 px-1.5 py-0.5 text-[10px] font-bold text-[#4a7c59]">Fabriqué</span>}{a.bloque && <span className="ml-1 inline-flex items-center gap-1 text-xs text-red-500"><Ban size={12} /> Bloqué</span>}</p>
                   <p className="text-xs text-[#7c8091]">{a.code || "—"} · {nomFam(a.famille_id)} · {a.unite} · Achat {Number(a.prix_achat ?? 0).toLocaleString()} · Vente {Number(a.prix_vente ?? 0).toLocaleString()}</p>
                 </div>
                 <div className="text-right text-xs">

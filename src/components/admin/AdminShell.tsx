@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Package, Warehouse, Siren, Users, BarChart3,
   Menu, X, TabletSmartphone, ChevronLeft, ChevronRight, Bell, Settings,
-  Boxes, Handshake, FileText, Factory, Cog, IdCard, BookOpen, ClipboardCheck, Building2, Layers, LogOut, HelpCircle
+  Boxes, Handshake, FileText, Factory, ListTree, Cog, IdCard, BookOpen, ClipboardCheck, Building2, Layers, LogOut, HelpCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import UserChip from "./UserChip";
@@ -20,6 +20,7 @@ const SECTIONS: Section[] = [
       { href: "/admin/orders", label: "Commandes", icon: Package },
       { href: "/admin/stocks", label: "Stocks", icon: Warehouse },
       { href: "/admin/articles", label: "Articles", icon: Boxes },
+      { href: "/admin/nomenclatures", label: "Nomenclatures", icon: ListTree },
       { href: "/admin/fabrication", label: "Fabrication", icon: Factory },
     ]
   },
