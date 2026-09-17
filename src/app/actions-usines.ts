@@ -654,6 +654,18 @@ export async function lancerSuiviMobilix(input: {
   }
 }
 
+async function categorieMobilixId(supabase: any, modele: ModeleMobilix): Promise<string | null> {
+  const nom = modele === "CANADA" ? "Chaise CANADA" : "Chaise G21";
+  try {
+    const { data } = await supabase.from("product_categories").select("id").eq("name", nom).maybeSingle();
+    if ((data as any)?.id) return (data as any).id as string;
+    const { data: created } = await supabase.from("product_categories").insert({ name: nom }).select("id").maybeSingle();
+    return ((created as any)?.id as string) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function creerLignesMobilix(
   supabase: any,
   orderId: string,
@@ -666,7 +678,7 @@ async function creerLignesMobilix(
     .insert({
       order_id: orderId,
       product_name: `${productName} ×${qty}`,
-      category_id: null,
+      category_id: await categorieMobilixId(supabase, modele),
       quantity: qty,
       status: "CREATED",
       design_notes: `Suivi MOBILIX — modèle ${modele} — process 12 postes / 19 QR`

@@ -118,6 +118,12 @@ ON CONFLICT (code) DO NOTHING;
 -- 9d. Tout le stock existant appartient à l'usine ADMEDCO
 UPDATE stock_items SET usine_code = 'ADMEDCO' WHERE usine_code IS NULL OR usine_code = '';
 
+-- 9e. Catégories MOBILIX (work_order_items.category_id est NOT NULL)
+INSERT INTO product_categories(name, description) VALUES
+('Chaise G21', 'Chaise G21 MOBILIX — 8 inserts, piètement G21 (suivi 19 QR)'),
+('Chaise CANADA', 'Chaise Canada MOBILIX — 12 inserts, accoudoirs (suivi 19 QR)')
+ON CONFLICT DO NOTHING;
+
 -- ═══════════════════════════════════════════
 -- RLS : lecture authentifiée, écriture admin (même règle que 0009)
 -- ═══════════════════════════════════════════
