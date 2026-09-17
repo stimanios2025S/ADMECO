@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { statutFr } from "@/lib/fr";
 import { ETAPES_A2 } from "@/lib/etapes";
 import { verifyTransfer } from "@/app/actions";
+import { signalerSync } from "./PortalSync";
 import Link from "next/link";
 import { Package, Clock, CheckCircle2, Loader2, Truck } from "lucide-react";
 
@@ -33,7 +34,8 @@ export default function Atelier2Tools({ etape }: { etape?: number | null }) {
   const [charge, setCharge] = useState(true);
 
   useEffect(() => {
-    (async () => {
+    let actif = true;
+    const charger = async () => {
       const supabase = createClient();
 
       let q = supabase.from("work_order_steps")
@@ -42,7 +44,7 @@ export default function Atelier2Tools({ etape }: { etape?: number | null }) {
       if (etape) q = q.eq("step_order", etape);
       q = q.order("step_order").limit(20);
       const { data } = await q;
-      if (data) setLignes(data as any);
+      if (actif && data) setLignes(data as any);
 
       let sq = supabase.from("work_order_steps").select("status", { count: "exact" }).eq("atelier_id", 2);
       if (etape) sq = sq.eq("step_order", etape);
@@ -53,14 +55,18 @@ export default function Atelier2Tools({ etape }: { etape?: number | null }) {
       let sq3 = supabase.from("work_order_steps").select("status", { count: "exact" }).eq("atelier_id", 2).eq("status", "ACTIVE");
       if (etape) sq3 = sq3.eq("step_order", etape);
       const { count: active } = await sq3;
-      setStats({ pending: (total ?? 0) - (done ?? 0) - (active ?? 0), active: active ?? 0, done: done ?? 0 });
+      if (actif) setStats({ pending: (total ?? 0) - (done ?? 0) - (active ?? 0), active: active ?? 0, done: done ?? 0 });
 
       const { data: bData } = await supabase.from("site_transfers")
         .select("id,manifest_qr,item_count,status,created_at,work_orders(order_number)")
         .order("created_at", { ascending: false }).limit(10);
-      if (bData) setBordereaux(bData as any);
-      setCharge(false);
-    })();
+      if (actif && bData) setBordereaux(bData as any);
+      if (actif) setCharge(false);
+    };
+    void charger();
+    // Recharger à chaque signal de synchronisation (temps réel / bouton Synchroniser)
+    window.addEventListener("mes-sync", charger);
+    return () => { actif = false; window.removeEventListener("mes-sync", charger); };
   }, [etape]);
 
   const total = stats.done + stats.active + stats.pending;
@@ -71,6 +77,7 @@ export default function Atelier2Tools({ etape }: { etape?: number | null }) {
     try {
       await verifyTransfer(id, true);
       setMsg("✅ Bordereau vérifié — articles réceptionnés en Atelier 2");
+      signalerSync();
     } catch (e: any) {
       setMsg(`❌ ${e.message}`);
     }

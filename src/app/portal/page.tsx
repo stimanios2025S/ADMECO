@@ -5,6 +5,7 @@ import Atelier2Tools from "./Atelier2Tools";
 import MobilixTools from "./MobilixTools";
 import EtapePortail from "./EtapePortail";
 import PortalAutoRoute from "./PortalAutoRoute";
+import PortalSync from "./PortalSync";
 import type { AtelierId } from "@/lib/ateliers";
 
 export const dynamic = "force-dynamic";
@@ -65,6 +66,10 @@ export default function PortalPage({
     <div className="min-h-screen bg-[#f5f6f2] text-[#1a1d23]">
       <Suspense fallback={null}>
         <PortalAutoRoute atelierDemande={atelierParam} />
+      </Suspense>
+      {/* Socle synchronisation : file hors-ligne + temps réel + bouton Synchroniser */}
+      <Suspense fallback={null}>
+        <PortalSync />
       </Suspense>
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Header */}

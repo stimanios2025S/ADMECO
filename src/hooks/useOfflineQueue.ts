@@ -8,8 +8,10 @@ async function flushOne(supabase: any, op: QueuedOp): Promise<boolean> {
   try {
     switch (op.type) {
       case "STEP_SCAN": {
+        // Note : worker_id du kiosque = UUID de session aléatoire, pas un profiles.id —
+        // on ne le persiste pas (violerait la FK worker_id). L'identité reste côté tablette.
         const { error } = await supabase.from("work_order_steps").update({
-          status: "ACTIVE", started_at: new Date().toISOString(), worker_id: op.payload.workerId
+          status: "ACTIVE", started_at: new Date().toISOString()
         }).eq("id", op.payload.stepId);
         return !error;
       }

@@ -11,6 +11,8 @@ import KioskLock from "@/components/worker/KioskLock";
 import CueOverlay from "@/components/worker/CueOverlay";
 import { startStep } from "@/app/actions";
 import { declarerProduction } from "@/app/actions-portail";
+import { useOfflineQueue } from "@/hooks/useOfflineQueue";
+import { signalerSync } from "./PortalSync";
 import { Wifi, WifiOff, Play, CheckCircle2, Plus, X } from "lucide-react";
 
 type ActiveStep = {
@@ -29,7 +31,8 @@ const A2 = "#2f6eb5";
 const M1 = "#7c3aed";
 
 export default function PortalClient({ mode = "factory", atelierId, etape }: { mode?: "factory" | "warehouse"; atelierId?: AtelierId | null; etape?: number | null }) {
-  const { kiosk, flash, online } = useMes();
+  const { kiosk, flash, online, queueCount } = useMes();
+  const { submit } = useOfflineQueue();
   const atelierCible = atelierId ?? kiosk?.atelierId ?? null;
   const etapeCible = etape ?? kiosk?.stepOrder ?? null;
   const accent = atelierCible === 1 ? A1 : atelierCible === 2 ? A2 : atelierCible === 3 ? M1 : "#4a7c59";
@@ -98,9 +101,22 @@ export default function PortalClient({ mode = "factory", atelierId, etape }: { m
   const handleStart = async () => {
     if (!step || !kiosk) return;
     setBusy(true);
-    await startStep(step.id, kiosk.workerId);
-    setStep((s) => s ? { ...s, status: "ACTIVE", started_at: new Date().toISOString() } : s);
-    cueSuccess();
+    try {
+      await startStep(step.id, kiosk.workerId);
+      setStep((s) => s ? { ...s, status: "ACTIVE", started_at: new Date().toISOString() } : s);
+      cueSuccess();
+      signalerSync();
+    } catch (e: any) {
+      // Hors ligne : mettre en file, la synchro la rejouera au retour réseau
+      const r = await submit({ type: "STEP_SCAN", payload: { stepId: step.id } });
+      if (r.queued) {
+        setStep((s) => s ? { ...s, status: "ACTIVE", started_at: new Date().toISOString() } : s);
+        cueSuccess();
+        setMsg("📥 Hors ligne — démarrage enregistré, sera synchronisé.");
+      } else {
+        cueError(); setMsg(`❌ ${e.message}`);
+      }
+    }
     setBusy(false);
   };
 
@@ -125,6 +141,7 @@ export default function PortalClient({ mode = "factory", atelierId, etape }: { m
       flash({ kind: "success", message: "Étape terminée ✅", id: Date.now() });
       setMsg(`✅ ${res.message}`);
       setStep(null); setMaterials([]); setBranchChoice(null);
+      signalerSync();
     } catch (e: any) {
       cueError(); setMsg(`❌ ${e.message}`);
     }
@@ -143,7 +160,7 @@ export default function PortalClient({ mode = "factory", atelierId, etape }: { m
           </span>
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#9ca3af]">Connexion</p>
-            <p className="text-sm font-bold text-[#1a1d23]">{online ? "En ligne et synchronisé" : "Hors ligne"}</p>
+            <p className="text-sm font-bold text-[#1a1d23]">{online ? (queueCount > 0 ? `En ligne — ${queueCount} en attente` : "En ligne et synchronisé") : "Hors ligne"}</p>
           </div>
         </div>
         <span className="rounded-full border border-black/[0.04] bg-black/[0.02] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#9ca3af]">
