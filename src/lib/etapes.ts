@@ -1,6 +1,9 @@
-// ── Étapes officielles ADMEDCO — 1 étape = 1 portail ──
+// ── Étapes officielles ADMEDCO + MOBILIX — 1 étape = 1 portail ──
 // Atelier 1 (Bois & Découpe) : alimenté par DEP-MP, produit vers Stock A1.
 // Atelier 2 (Assemblage & Finition) : réceptionne A1, alimenté par DEP-MP, produit vers Stock A2.
+// Atelier MOBILIX M1 (Réception & Finition) : réceptionne ADMEDCO, alimenté par DEP-MP-MBX, produit vers Stock M1.
+
+import type { AtelierId } from "./ateliers";
 
 export type EtapeDef = {
   ordre: number;
@@ -28,8 +31,17 @@ export const ETAPES_A2: EtapeDef[] = [
   { ordre: 6, code: "A2-CTL", nom: "Contrôle final + stock", icone: "✅", description: "QC puis entrée Stock Atelier 2", consigne: "Conforme → Stock A2 → expédition." },
 ];
 
-export const etapesAtelier = (atelier: 1 | 2): EtapeDef[] =>
-  atelier === 1 ? ETAPES_A1 : ETAPES_A2;
+// ── Atelier MOBILIX M1 : process officiel 12 postes / 19 QR (G21 + CANADA) ──
+// Source de vérité : src/lib/process-mobilix.ts (schémas de production officiels).
+// La couture A→H (ordres 5.1→5.8) est scannée QR par QR.
+import { ETAPES_MOBILIX } from "./process-mobilix";
 
-export const etapeNom = (atelier: 1 | 2, ordre: number): string =>
+export const ETAPES_M1: EtapeDef[] = ETAPES_MOBILIX;
+
+export const etapesAtelierMobilix = (): EtapeDef[] => ETAPES_M1;
+
+export const etapesAtelier = (atelier: AtelierId): EtapeDef[] =>
+  atelier === 1 ? ETAPES_A1 : atelier === 2 ? ETAPES_A2 : ETAPES_M1;
+
+export const etapeNom = (atelier: AtelierId, ordre: number): string =>
   etapesAtelier(atelier).find((e) => e.ordre === ordre)?.nom ?? `Étape ${ordre}`;

@@ -17,7 +17,7 @@ export default function PageClient({ lignes, couts }: { lignes: any[]; couts: an
       m.get(k)!.lignes.push(l);
     }
     const needle = q.trim().toLowerCase();
-    return [...m.values()].filter((g) =>
+    return Array.from(m.values()).filter((g) =>
       !needle || `${g.pf_code} ${g.pf_designation} ${g.code_formule}`.toLowerCase().includes(needle));
   }, [lignes, q]);
 

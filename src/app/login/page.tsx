@@ -1,14 +1,8 @@
 "use client";
 import { useState } from "react";
-import { LogIn, Loader2, Eye, EyeOff, ArrowRight, Shield, Factory, TabletSmartphone, ChevronRight } from "lucide-react";
+import { LogIn, Loader2, Eye, EyeOff, Shield, Factory, TabletSmartphone } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-
-const PORTAILS = [
-  { role: "ADMIN", href: "/admin", icon: "📊", label: "Administration", desc: "Tableau de bord, commandes, stocks, analytique", color: "#4a7c59" },
-  { role: "WORKSHOP", href: "/portal?atelier=1", icon: "🪚", label: "Atelier 1 — Bois & Découpe", desc: "Portail opérateur · 5 étapes · DEP-MP → Stock A1", color: "#c24a08" },
-  { role: "WAREHOUSE", href: "/portal?atelier=2", icon: "🔧", label: "Atelier 2 — Assemblage & Finition", desc: "Portail opérateur · 6 étapes · A1 + DEP-MP → Stock A2", color: "#2f6eb5" },
-] as const;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,29 +11,26 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const [step, setStep] = useState<"login" | "choose">("login");
-  const [userRole, setUserRole] = useState<string>("");
-  const [userName, setUserName] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError("");
-    const supabase = createClient();
-    const { data, error: authErr } = await supabase.auth.signInWithPassword({ email, password });
-    if (authErr) { setError(authErr.message); setBusy(false); return; }
-    const user = data?.user as any;
-    const role = user?.role ?? "ADMIN";
-    const name = user?.full_name ?? user?.email ?? "";
-    setUserRole(role);
-    setUserName(name);
-    setStep("choose");
-    setBusy(false);
-  };
-
-  const handlePortalChoice = (href: string) => {
-    router.push(href);
-    router.refresh();
+    try {
+      const supabase = createClient();
+      const { error: authErr } = await supabase.auth.signInWithPassword({ email, password });
+      if (authErr) { setError(authErr.message); setBusy(false); return; }
+      const res = await fetch("/api/mon-profil");
+      if (!res.ok) { setError("Impossible de charger votre profil. Veuillez réessayer."); setBusy(false); return; }
+      const profil = await res.json();
+      if (profil.role === "ADMIN") router.push("/admin");
+      else if (profil.role === "MAGASINIER") router.push("/admin/reception");
+      else router.push(`/portal?usine=${profil.usine_code ?? "ADMEDCO"}`);
+      router.refresh();
+    } catch {
+      setError("Erreur de connexion. Veuillez réessayer.");
+      setBusy(false);
+    }
   };
 
   return (
@@ -63,7 +54,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <p className="text-xl font-extrabold tracking-tight text-white">ADMEDCO <span className="text-[#6fa67d]">MES</span></p>
-                <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/40">Manufacturing Execution System</p>
+                <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/40">Système de gestion de production</p>
               </div>
             </div>
           </div>
@@ -112,138 +103,61 @@ export default function LoginPage() {
             <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#4a7c59] text-xl font-black text-white shadow-lg">🪑</div>
             <div>
               <p className="text-lg font-extrabold tracking-tight text-[#1a1d23]">ADMEDCO <span className="text-[#4a7c59]">MES</span></p>
-              <p className="text-[11px] text-[#7c8091]">Manufacturing Execution System</p>
+              <p className="text-[11px] text-[#7c8091]">Système de gestion de production</p>
             </div>
           </div>
 
-          {step === "login" ? (
-            /* ── Étape 1 : Formulaire de connexion ── */
-            <div className="animate-fade-up">
-              <div className="mb-6">
-                <div className="mb-3 flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-[#4a7c59] live-dot" />
-                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#4a7c59]">Système en ligne</span>
-                </div>
-                <h1 className="text-3xl font-extrabold tracking-tight text-[#1a1d23]">Connexion</h1>
-                <p className="mt-1.5 text-[14px] text-[#7c8091]">Accédez à votre portail ADMEDCO</p>
+          <div className="animate-fade-up">
+            <div className="mb-6">
+              <div className="mb-3 flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[#4a7c59] live-dot" />
+                <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#4a7c59]">Système en ligne</span>
               </div>
-
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-[12px] font-semibold text-[#7c8091]">Adresse e-mail</label>
-                  <div className="relative">
-                    <input
-                      type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                      placeholder="vous@admedco.ma"
-                      className="input w-full px-4 py-3.5 text-[15px]"
-                      autoComplete="email" autoFocus
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[12px] font-semibold text-[#7c8091]">Mot de passe</label>
-                  <div className="relative">
-                    <input
-                      type={showPw ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="input w-full px-4 py-3.5 pr-11 text-[15px]"
-                      autoComplete="current-password"
-                    />
-                    <button type="button" onClick={() => setShowPw(!showPw)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 grid h-7 w-7 place-items-center rounded-lg text-[#7c8091] hover:text-[#1a1d23] transition-colors">
-                      {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                </div>
-
-                {error && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-600">
-                    {error}
-                  </div>
-                )}
-
-                <button disabled={busy} className="btn-accent flex w-full items-center justify-center gap-2.5 px-4 py-4 text-[15px]">
-                  {busy ? <Loader2 size={18} className="animate-spin" /> : <LogIn size={18} />}
-                  {busy ? "Connexion en cours…" : "Se connecter"}
-                </button>
-              </form>
-
-              <div className="mt-6 rounded-2xl border border-black/5 bg-white/60 p-4">
-                <p className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.18em] text-[#7c8091]">Comptes de démonstration</p>
-                <div className="space-y-2">
-                  {[
-                    { email: "admin@admedco.ma", pw: "Admin123!", role: "Directeur", icon: "📊" },
-                    { email: "atelier1@admedco.ma", pw: "Atelier123!", role: "Chef Atelier 1", icon: "🪚" },
-                    { email: "atelier2@admedco.ma", pw: "Atelier123!", role: "Chef Atelier 2", icon: "🔧" },
-                  ].map((u) => (
-                    <button key={u.email} type="button"
-                      onClick={() => { setEmail(u.email); setPassword(u.pw); }}
-                      className="flex w-full items-center gap-3 rounded-xl border border-black/5 bg-white px-3.5 py-2.5 text-left transition hover:border-[#4a7c59]/20 hover:bg-[#4a7c59]/[0.02] group">
-                      <span className="text-lg">{u.icon}</span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-bold text-[#1a1d23]">{u.email}</p>
-                        <p className="text-[11px] text-[#7c8091]">{u.role} · {u.pw}</p>
-                      </div>
-                      <ChevronRight size={14} className="text-[#7c8091] group-hover:text-[#4a7c59] transition-colors" />
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <h1 className="text-3xl font-extrabold tracking-tight text-[#1a1d23]">Connexion</h1>
+              <p className="mt-1.5 text-[14px] text-[#7c8091]">Accédez à votre espace de travail</p>
             </div>
-          ) : (
-            /* ── Étape 2 : Choix du portail ── */
-            <div className="animate-fade-up">
-              <div className="mb-6">
-                <div className="mb-3 flex items-center gap-2">
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#4a7c59] text-sm font-bold text-white">
-                    {userName.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-[#1a1d23]">{userName}</p>
-                    <p className="text-[11px] text-[#7c8091]">Connecté · choisissez votre portail</p>
-                  </div>
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-semibold text-[#7c8091]">Adresse e-mail</label>
+                <div className="relative">
+                  <input
+                    type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+                    placeholder="nom@usine.com"
+                    className="input w-full px-4 py-3.5 text-[15px]"
+                    autoComplete="email" autoFocus
+                  />
                 </div>
-                <h1 className="text-3xl font-extrabold tracking-tight text-[#1a1d23]">Votre portail</h1>
-                <p className="mt-1.5 text-[14px] text-[#7c8091]">Sélectionnez l'espace auquel vous souhaitez accéder</p>
               </div>
 
-              <div className="space-y-3">
-                {PORTAILS.map((p) => {
-                  const recommended = p.role === userRole;
-                  return (
-                    <button key={p.role} onClick={() => handlePortalChoice(p.href)}
-                      className={`w-full text-left rounded-2xl border p-5 transition-all group ${
-                        recommended
-                          ? "border-[#4a7c59]/30 bg-[#4a7c59]/[0.04] hover:border-[#4a7c59]/50 hover:bg-[#4a7c59]/[0.08]"
-                          : "border-black/6 bg-white hover:border-black/12 hover:shadow-md"
-                      }`}>
-                      <div className="flex items-start gap-4">
-                        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-2xl" style={{ backgroundColor: `${p.color}10` }}>
-                          {p.icon}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="text-[15px] font-bold text-[#1a1d23]">{p.label}</p>
-                            {recommended && (
-                              <span className="rounded-full bg-[#4a7c59]/10 px-2 py-0.5 text-[10px] font-bold text-[#4a7c59]">RECOMMANDÉ</span>
-                            )}
-                          </div>
-                          <p className="mt-0.5 text-[13px] text-[#7c8091]">{p.desc}</p>
-                        </div>
-                        <ArrowRight size={18} className="mt-1 shrink-0 text-[#7c8091] group-hover:text-[#4a7c59] group-hover:translate-x-0.5 transition-all" />
-                      </div>
-                    </button>
-                  );
-                })}
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-semibold text-[#7c8091]">Mot de passe</label>
+                <div className="relative">
+                  <input
+                    type={showPw ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="input w-full px-4 py-3.5 pr-11 text-[15px]"
+                    autoComplete="current-password"
+                  />
+                  <button type="button" onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 grid h-7 w-7 place-items-center rounded-lg text-[#7c8091] hover:text-[#1a1d23] transition-colors">
+                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
-              <button onClick={() => { setStep("login"); setError(""); }}
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-black/8 bg-transparent px-4 py-3 text-[13px] font-semibold text-[#7c8091] hover:bg-black/3 transition">
-                ← Retour à la connexion
+              {error && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-600">
+                  {error}
+                </div>
+              )}
+
+              <button disabled={busy} className="btn-accent flex w-full items-center justify-center gap-2.5 px-4 py-4 text-[15px]">
+                {busy ? <Loader2 size={18} className="animate-spin" /> : <LogIn size={18} />}
+                {busy ? "Connexion en cours…" : "Se connecter"}
               </button>
-            </div>
-          )}
+            </form>
+          </div>
         </div>
       </div>
     </div>

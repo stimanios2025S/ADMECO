@@ -1,7 +1,11 @@
+import { Suspense } from "react";
 import PortalClient from "./PortalClient";
 import Atelier1Tools from "./Atelier1Tools";
 import Atelier2Tools from "./Atelier2Tools";
+import MobilixTools from "./MobilixTools";
 import EtapePortail from "./EtapePortail";
+import PortalAutoRoute from "./PortalAutoRoute";
+import type { AtelierId } from "@/lib/ateliers";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +15,8 @@ export default function PortalPage({
   searchParams?: { mode?: string; atelier?: string; etape?: string };
 }) {
   const mode = searchParams?.mode === "warehouse" ? "warehouse" : "factory";
-  const atelierParam = searchParams?.atelier === "1" ? 1 : searchParams?.atelier === "2" ? 2 : null;
+  const atelierParam: AtelierId | null =
+    searchParams?.atelier === "1" ? 1 : searchParams?.atelier === "2" ? 2 : searchParams?.atelier === "3" ? 3 : null;
   const etapeParam = searchParams?.etape ? Number(searchParams.etape) : null;
   const etape = etapeParam && etapeParam >= 1 && etapeParam <= 30 ? etapeParam : null;
 
@@ -36,6 +41,16 @@ export default function PortalPage({
             border: "border-[#2f6eb5]/20",
             slogan: "Assemblage & Finition — A1 → Stock A2",
           }
+        : atelierParam === 3
+          ? {
+              label: etape ? `Atelier MOBILIX — Étape ${etape}` : "Portail Atelier MOBILIX",
+              title: "Atelier MOBILIX",
+              accent: "text-[#7c3aed]",
+              bg: "bg-[#7c3aed]",
+              bgSoft: "bg-[#7c3aed]/[0.06]",
+              border: "border-[#7c3aed]/20",
+              slogan: "G21 & Canada — 12 postes · 19 QR par chaise",
+            }
         : {
             label: "Portail ateliers",
             title: "ADMEDCO Ateliers",
@@ -48,6 +63,9 @@ export default function PortalPage({
 
   return (
     <div className="min-h-screen bg-[#f5f6f2] text-[#1a1d23]">
+      <Suspense fallback={null}>
+        <PortalAutoRoute atelierDemande={atelierParam} />
+      </Suspense>
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Header */}
         <header className="mb-6 rounded-2xl border border-black/[0.04] bg-white p-5 shadow-sm sm:p-6">
@@ -91,7 +109,7 @@ export default function PortalPage({
 
         {/* Atelier chooser — no atelier selected */}
         {!atelierParam && (
-          <div className="mb-6 grid gap-4 sm:grid-cols-2">
+          <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <a href="/portal?atelier=1" className="group rounded-2xl border border-[#c24a08]/10 bg-white p-6 shadow-sm transition hover:shadow-md hover:border-[#c24a08]/30">
               <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#9ca3af]">Atelier 1 · 5 étapes</p>
               <p className="mt-3 text-2xl font-black tracking-tight text-[#1a1d23]">🪚 Bois &amp; Découpe</p>
@@ -105,6 +123,14 @@ export default function PortalPage({
               <p className="mt-3 text-2xl font-black tracking-tight text-[#1a1d23]">🔧 Assemblage &amp; Finition</p>
               <p className="mt-2 text-sm text-[#6b7280]">Réception A1 → Assemblage → Soudage → Poudrage → Montage → Contrôle + Stock A2.</p>
               <p className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[#2f6eb5] group-hover:translate-x-0.5 transition-transform">
+                Choisir mon étape <span className="text-lg">→</span>
+              </p>
+            </a>
+            <a href="/portal?atelier=3" className="group rounded-2xl border border-[#7c3aed]/10 bg-white p-6 shadow-sm transition hover:shadow-md hover:border-[#7c3aed]/30">
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#9ca3af]">Atelier MOBILIX · 12 postes · 19 QR</p>
+              <p className="mt-3 text-2xl font-black tracking-tight text-[#1a1d23]">📦 G21 &amp; Canada</p>
+              <p className="mt-2 text-sm text-[#6b7280]">Coupe → Traçage → Couture A→H → Contrôle → Bois → Inserts → Rembourrage → Piètement → Assemblage → Emballage.</p>
+              <p className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[#7c3aed] group-hover:translate-x-0.5 transition-transform">
                 Choisir mon étape <span className="text-lg">→</span>
               </p>
             </a>
@@ -127,6 +153,11 @@ export default function PortalPage({
         {atelierParam === 2 && etape && (
           <div className="mb-6">
             <Atelier2Tools etape={etape} />
+          </div>
+        )}
+        {atelierParam === 3 && etape && (
+          <div className="mb-6">
+            <MobilixTools etape={etape} />
           </div>
         )}
 

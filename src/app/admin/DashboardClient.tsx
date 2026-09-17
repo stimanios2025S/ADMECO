@@ -1,17 +1,18 @@
 "use client";
 import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
-import { Package, CheckCircle2, Truck, AlertTriangle, Warehouse, ArrowUpRight, Clock, ArrowRight, TrendingUp, TrendingDown, Activity, Users, Timer, Pause, Square, Play } from "lucide-react";
+import { Package, CheckCircle2, AlertTriangle, Warehouse, ArrowRight, Clock, Bell, Truck, Boxes, ArrowLeftRight } from "lucide-react";
 import { GlassCard, SectionTitle, StatusPill, Empty } from "@/components/admin/ui";
 import { cn } from "@/lib/utils";
 import { statutFr } from "@/lib/fr";
 
 type Props = {
-  kpi: { activeOrders: number; totalItems: number; readyItems: number; lowStock: number; pendingSemi: number; overdueSteps: number; transfers: number; totalStock: number };
-  orders: any[]; stocks: any[]; transfers: any[];
+  usine: string;
+  kpi: { activeOrders: number; totalItems: number; readyItems: number; lowStock: number; pendingSemi: number; overdueSteps: number; transfers: number; totalStock: number; alertes: number; reservations: number };
+  orders: any[]; stocks: any[]; transfers: any[]; alertes: any[]; reservations: any[];
 };
 
-// ── Production Timer (matches screenshot bottom-right) ──
+// ── Production Timer ──
 function ProductionTimer() {
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(true);
@@ -28,23 +29,21 @@ function ProductionTimer() {
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a2e1f] via-[#0f1a12] to-[#1a2420] p-5 text-white">
-      {/* Background texture */}
       <div className="absolute inset-0 opacity-[0.08]" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M20 0L40 20L20 40L0 20z' fill-opacity='0.06'/%3E%3C/g%3E%3C/svg%3E")`,
       }} />
       <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-[#4a7c59]/15 blur-3xl" />
-
       <div className="relative z-10">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 mb-1">⏱ Production en cours</p>
         <p className="font-mono text-[42px] font-black tracking-tight leading-none">{h}:{m}:{s}</p>
         <div className="mt-3 flex gap-2">
           <button onClick={() => setRunning(!running)}
             className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-white hover:bg-white/20 transition-colors">
-            {running ? <Pause size={15} /> : <Play size={15} />}
+            {running ? "⏸" : "▶"}
           </button>
           <button onClick={() => { setRunning(false); setElapsed(0); }}
             className="grid h-9 w-9 place-items-center rounded-xl bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-colors">
-            <Square size={15} />
+            ⏹
           </button>
         </div>
       </div>
@@ -52,7 +51,7 @@ function ProductionTimer() {
   );
 }
 
-// ── Weekly Activity Chart (screenshot: bar chart S M T W T F S) ──
+// ── Weekly Activity Chart ──
 function WeeklyActivity({ data }: { data: number[] }) {
   const days = ["L", "M", "M", "J", "V", "S", "D"];
   const max = Math.max(1, ...data);
@@ -63,10 +62,8 @@ function WeeklyActivity({ data }: { data: number[] }) {
           <div className="w-full relative" style={{ height: `${Math.max(8, (v / max) * 100)}%` }}>
             <div className={cn(
               "absolute inset-0 rounded-xl transition-all duration-700",
-              i === Math.max(...data.map((val, idx) => val === max ? idx : 0))
-                ? "bg-gradient-to-t from-[#3a6b48] to-[#4a7c59]"
-                : "bg-[#4a7c59]/25"
-            )} style={{ opacity: i === Math.max(...data.map((val, idx) => val === max ? idx : 0)) ? 1 : 0.4 + (v / max) * 0.6 }} />
+              v === max ? "bg-gradient-to-t from-[#3a6b48] to-[#4a7c59]" : "bg-[#4a7c59]/25"
+            )} style={{ opacity: v === max ? 1 : 0.4 + (v / max) * 0.6 }} />
           </div>
           <span className="text-[11px] font-semibold text-[#9ca3af]">{days[i]}</span>
         </div>
@@ -75,7 +72,7 @@ function WeeklyActivity({ data }: { data: number[] }) {
   );
 }
 
-// ── Circular Progress (screenshot: 41% ring) ──
+// ── Circular Progress ──
 function CircularProgress({ pct, color, label }: { pct: number; color: string; label: string }) {
   const r = 52, c = 2 * Math.PI * r;
   const filled = (pct / 100) * c;
@@ -97,57 +94,82 @@ function CircularProgress({ pct, color, label }: { pct: number; color: string; l
   );
 }
 
-export default function DashboardClient({ kpi, orders, stocks, transfers }: Props) {
+export default function DashboardClient({ usine, kpi, orders, stocks, transfers, alertes, reservations }: Props) {
+  const isMobilix = usine === "MOBILIX";
+  const accent = isMobilix ? "#7c3aed" : "#4a7c59";
   const yieldPct = kpi.totalItems > 0 ? Math.round((kpi.readyItems / kpi.totalItems) * 100) : 0;
   const activeOrderList = orders.filter((o) => !["RELEASED", "CANCELLED"].includes(o.status)).slice(0, 5);
   const recentTransfers = transfers.slice(0, 4);
-  const mpStocks = stocks.filter((s) => (s.depot_code ?? "DEP-MP") === "DEP-MP").slice(0, 5);
+  const mpDepot = isMobilix ? "DEP-MP-MBX" : "DEP-MP";
+  const mpStocks = stocks.filter((s) => (s.depot_code ?? mpDepot) === mpDepot).slice(0, 5);
 
-  // Weekly data from real orders
   const weeklyData = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
       const dayOrders = orders.filter((o) => {
+        if (!o.created_at) return false;
         const d = new Date(o.created_at);
         return d.getDay() === ((i + 1) % 7);
       });
-      return Math.max(1, dayOrders.length + Math.floor(Math.random() * 3));
+      return dayOrders.length;
     });
   }, [orders]);
 
-  const totalTransferred = recentTransfers.filter((t) => t.status === "VERIFIED").length;
+  // Réserves agrégées par matière : réservé vs consommé
+  const reservesParMatiere = useMemo(() => {
+    const map = new Map<string, { material: string; unit: string; reserve: number; consomme: number; emprunts: number }>();
+    for (const r of reservations ?? []) {
+      const name = r.stock_items?.name ?? "Matière";
+      const unit = r.stock_items?.unit ?? "pcs";
+      const prev = map.get(name) ?? { material: name, unit, reserve: 0, consomme: 0, emprunts: 0 };
+      prev.reserve += Number(r.estimated_qty ?? 0);
+      prev.consomme += Number(r.consumed_qty ?? 0);
+      map.set(name, prev);
+    }
+    return Array.from(map.values()).slice(0, 6);
+  }, [reservations]);
 
   return (
     <div className="stagger space-y-5">
+      {/* Bandeau usine */}
+      <div className={cn("flex items-center gap-3 rounded-2xl border p-4",
+        isMobilix ? "border-[#7c3aed]/20 bg-[#7c3aed]/[0.05]" : "border-[#4a7c59]/20 bg-[#4a7c59]/[0.05]")}>
+        <span className={cn("grid h-11 w-11 place-items-center rounded-xl text-white text-lg font-black",
+          isMobilix ? "bg-[#7c3aed]" : "bg-[#4a7c59]")}>{isMobilix ? "M" : "A"}</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-extrabold text-[#1a1d23]">Usine {isMobilix ? "MOBILIX" : "ADMEDCO"}</p>
+          <p className="text-[12px] text-[#7c8091]">Vue scopée — seules les données de cette usine sont affichées.</p>
+        </div>
+        {alertes.length > 0 && (
+          <Link href="/admin/incidents" className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-red-500 px-3 py-2 text-[12px] font-bold text-white">
+            <Bell size={14} /> {alertes.length} alerte(s)
+          </Link>
+        )}
+      </div>
+
       {/* ── Row 1: 4 KPI Cards ── */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {/* Commandes actives (green card like screenshot) */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#4a7c59] to-[#3a6b48] p-5 text-white shadow-lg shadow-[#4a7c59]/15">
+        <div className={cn("relative overflow-hidden rounded-2xl p-5 text-white shadow-lg",
+          isMobilix ? "bg-gradient-to-br from-[#7c3aed] to-[#5b21b6] shadow-[#7c3aed]/15" : "bg-gradient-to-br from-[#4a7c59] to-[#3a6b48] shadow-[#4a7c59]/15")}>
           <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-white/[0.06]" />
           <div className="relative z-10">
             <div className="flex items-start justify-between">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/15">
-                <Package size={18} />
-              </span>
-              <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold">↑ 12%</span>
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/15"><Package size={18} /></span>
+              <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold">{usine}</span>
             </div>
             <p className="mt-4 text-[32px] font-black leading-none tracking-tight">{kpi.activeOrders}</p>
             <p className="mt-1 text-[12px] font-medium text-white/70">Commandes actives</p>
           </div>
         </div>
 
-        {/* Articles stock */}
         <div className="rounded-2xl border border-black/[0.04] bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#4a7c59]/10 text-[#4a7c59]">
-              <Warehouse size={18} />
-            </span>
-            <span className="rounded-full bg-[#4a7c59]/10 px-2 py-0.5 text-[10px] font-bold text-[#4a7c59]">↑ 8%</span>
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#4a7c59]/10 text-[#4a7c59]"><Warehouse size={18} /></span>
+            <span className="rounded-full bg-[#4a7c59]/10 px-2 py-0.5 text-[10px] font-bold text-[#4a7c59]">{kpi.totalStock} réf.</span>
           </div>
-          <p className="mt-4 text-[32px] font-black leading-none tracking-tight text-[#1a1d23]">{kpi.totalStock}</p>
-          <p className="mt-1 text-[12px] font-medium text-[#9ca3af]">Articles en stock</p>
+          <p className="mt-4 text-[32px] font-black leading-none tracking-tight text-[#1a1d23]">{kpi.reservations}</p>
+          <p className="mt-1 text-[12px] font-medium text-[#9ca3af]">Réserves actives</p>
         </div>
 
-        {/* Alertes stock */}
         <div className="rounded-2xl border border-black/[0.04] bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between">
             <span className={cn("grid h-10 w-10 place-items-center rounded-xl", kpi.lowStock > 0 ? "bg-red-50 text-red-500" : "bg-[#4a7c59]/10 text-[#4a7c59]")}>
@@ -155,48 +177,103 @@ export default function DashboardClient({ kpi, orders, stocks, transfers }: Prop
             </span>
           </div>
           <p className="mt-4 text-[32px] font-black leading-none tracking-tight text-[#1a1d23]">{kpi.lowStock}</p>
-          <p className="mt-1 text-[12px] font-medium text-[#9ca3af]">{kpi.lowStock > 0 ? "Alertes stock bas" : "Stock sain"}</p>
+          <p className="mt-1 text-[12px] font-medium text-[#9ca3af]">{kpi.lowStock > 0 ? "Stock bas MP" : "Stock sain"}</p>
         </div>
 
-        {/* Étapes en retard */}
         <div className="rounded-2xl border border-black/[0.04] bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between">
-            <span className={cn("grid h-10 w-10 place-items-center rounded-xl", kpi.overdueSteps > 0 ? "bg-[#c24a08]/10 text-[#c24a08]" : "bg-[#4a7c59]/10 text-[#4a7c59]")}>
-              <Clock size={18} />
+            <span className={cn("grid h-10 w-10 place-items-center rounded-xl", kpi.alertes > 0 ? "bg-red-50 text-red-500" : "bg-[#4a7c59]/10 text-[#4a7c59]")}>
+              <Bell size={18} />
             </span>
           </div>
-          <p className="mt-4 text-[32px] font-black leading-none tracking-tight text-[#1a1d23]">{kpi.overdueSteps}</p>
-          <p className="mt-1 text-[12px] font-medium text-[#9ca3af]">Étapes en retard</p>
+          <p className="mt-4 text-[32px] font-black leading-none tracking-tight text-[#1a1d23]">{kpi.alertes}</p>
+          <p className="mt-1 text-[12px] font-medium text-[#9ca3af]">Alertes non lues</p>
         </div>
       </div>
 
-      {/* ── Row 2: Activity Chart + Reminders + Commandes ── */}
+      {/* ── Réserves & emprunts + Destinations en attente ── */}
       <div className="grid gap-5 lg:grid-cols-5">
-        {/* Activité de production — bar chart */}
+        <GlassCard className="lg:col-span-3">
+          <SectionTitle kicker="Matières" title="Réserves & emprunts"
+            hint="Réservé vs consommé par matière (commandes de l'usine)."
+            right={<Link href="/admin/stocks" className="text-[12px] font-semibold hover:underline" style={{ color: accent }}>Stocks →</Link>} />
+          {reservesParMatiere.length === 0 ? (
+            <Empty icon="📦" title="Aucune réserve active" hint="Les réserves MP apparaîtront à la création des commandes." />
+          ) : (
+            <div className="space-y-2.5">
+              {reservesParMatiere.map((r) => {
+                const pct = r.reserve > 0 ? Math.min(100, Math.round((r.consomme / r.reserve) * 100)) : 0;
+                const reste = Math.max(0, +(r.reserve - r.consomme).toFixed(2));
+                return (
+                  <div key={r.material} className="rounded-xl border border-black/[0.04] bg-[#fafbf9] p-3">
+                    <div className="flex items-center gap-2">
+                      <Boxes size={14} className="text-[#7c8091]" />
+                      <p className="min-w-0 flex-1 truncate text-[13px] font-bold text-[#1a1d23]">{r.material}</p>
+                      {r.emprunts > 0 && (
+                        <span className="rounded-full bg-[#c24a08]/10 px-2 py-0.5 text-[10px] font-black text-[#c24a08]">EMPRUNT</span>
+                      )}
+                      <span className="text-[11px] font-bold text-[#7c8091]">{r.consomme}/{r.reserve} {r.unit}</span>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-black/[0.05]">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: accent }} />
+                    </div>
+                    <p className="mt-1 text-[11px] text-[#9ca3af]">Reste à consommer : <b className="text-[#1a1d23]">{reste} {r.unit}</b> · {pct}% consommé</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </GlassCard>
+
+        <GlassCard className="lg:col-span-2">
+          <SectionTitle kicker="Logistique" title="Destinations en attente"
+            hint="Lots semi-finis sans décision."
+            right={<Link href="/admin/destinations" className="text-[12px] font-semibold hover:underline" style={{ color: accent }}>Décider →</Link>} />
+          <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-center">
+            <Truck size={22} className="mx-auto text-amber-600" />
+            <p className="mt-2 text-[26px] font-black text-[#1a1d23]">{kpi.pendingSemi}</p>
+            <p className="text-[12px] font-medium text-[#7c8091]">lot(s) en attente de décision</p>
+            <Link href="/admin/destinations"
+              className={cn("mt-3 inline-flex items-center gap-1 rounded-xl px-4 py-2 text-[12px] font-bold text-white",
+                isMobilix ? "bg-[#7c3aed] hover:bg-[#6d28d9]" : "bg-[#4a7c59] hover:bg-[#3a6b48]")}>
+              Ouvrir les destinations <ArrowRight size={13} />
+            </Link>
+          </div>
+          <div className="mt-3 space-y-1.5 text-[12px]">
+            <div className="flex items-center justify-between">
+              <span className="text-[#9ca3af]">Transferts ({usine})</span>
+              <span className="font-bold" style={{ color: accent }}>{kpi.transfers}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[#9ca3af]">Articles suivis</span>
+              <span className="font-bold text-[#1a1d23]">{kpi.totalItems}</span>
+            </div>
+          </div>
+        </GlassCard>
+      </div>
+
+      {/* ── Row 2: Activity Chart + Rappels + Commandes ── */}
+      <div className="grid gap-5 lg:grid-cols-5">
         <GlassCard className="lg:col-span-2">
           <SectionTitle kicker="Production" title="Activité de la semaine" />
           <WeeklyActivity data={weeklyData} />
           <div className="mt-4 flex items-center gap-4 text-[11px] font-semibold text-[#9ca3af]">
             <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-md bg-[#4a7c59]" /> Production
+              <span className="h-2.5 w-2.5 rounded-md" style={{ backgroundColor: accent }} /> Production
             </span>
-            <span>{kpi.activeOrders} commandes actives</span>
+            <span>{kpi.activeOrders} commandes actives ({usine})</span>
           </div>
         </GlassCard>
 
-        {/* Rappels — production reminders */}
         <GlassCard className="lg:col-span-1">
           <SectionTitle kicker="Alertes" title="Rappels" />
           <div className="space-y-3">
-            {kpi.overdueSteps > 0 && (
-              <div className="rounded-xl border border-[#c24a08]/20 bg-[#c24a08]/[0.04] p-3">
-                <p className="text-[13px] font-bold text-[#c24a08]">Étapes en retard</p>
-                <p className="text-[11px] text-[#9ca3af] mt-0.5">{kpi.overdueSteps} étape(s) dépassent le temps cible</p>
-                <Link href="/admin/incidents" className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-[#c24a08] hover:underline">
-                  Voir <ArrowRight size={11} />
-                </Link>
+            {alertes.slice(0, 3).map((a: any) => (
+              <div key={a.id} className="rounded-xl border border-red-200 bg-red-50/50 p-3">
+                <p className="text-[13px] font-bold text-red-600">{a.type ?? "Alerte"}</p>
+                <p className="text-[11px] text-[#9ca3af] mt-0.5 line-clamp-2">{a.message}</p>
               </div>
-            )}
+            ))}
             {kpi.lowStock > 0 && (
               <div className="rounded-xl border border-red-200 bg-red-50/50 p-3">
                 <p className="text-[13px] font-bold text-red-600">Stock bas</p>
@@ -208,26 +285,31 @@ export default function DashboardClient({ kpi, orders, stocks, transfers }: Prop
             )}
             {kpi.pendingSemi > 0 && (
               <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-3">
-                <p className="text-[13px] font-bold text-amber-700">Transfert en attente</p>
-                <p className="text-[11px] text-[#9ca3af] mt-0.5">{kpi.pendingSemi} lot(s) à libérer vers A2</p>
-                <Link href="/admin/orders" className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:underline">
-                  Gérer <ArrowRight size={11} />
+                <p className="text-[13px] font-bold text-amber-700">Destination à décider</p>
+                <p className="text-[11px] text-[#9ca3af] mt-0.5">{kpi.pendingSemi} lot(s) en attente</p>
+                <Link href="/admin/destinations" className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:underline">
+                  Décider <ArrowRight size={11} />
                 </Link>
               </div>
             )}
-            {kpi.overdueSteps === 0 && kpi.lowStock === 0 && kpi.pendingSemi === 0 && (
+            {alertes.length === 0 && kpi.lowStock === 0 && kpi.pendingSemi === 0 && (
               <div className="rounded-xl border border-[#4a7c59]/20 bg-[#4a7c59]/[0.04] p-3">
                 <p className="text-[13px] font-bold text-[#4a7c59]">✅ Tout est en ordre</p>
                 <p className="text-[11px] text-[#9ca3af] mt-0.5">Aucune alerte active</p>
               </div>
             )}
+            {(alertes.length > 3 || kpi.alertes > 0) && (
+              <Link href="/admin/incidents" className="inline-flex items-center gap-1 text-[11px] font-bold text-red-600 hover:underline">
+                <Bell size={11} /> Toutes les alertes ({kpi.alertes})
+              </Link>
+            )}
           </div>
         </GlassCard>
 
-        {/* Commandes récentes */}
         <GlassCard className="lg:col-span-2">
           <SectionTitle kicker="Production" title="Commandes récentes"
-            right={<Link href="/admin/orders" className="rounded-lg bg-[#4a7c59] px-3 py-1.5 text-[11px] font-bold text-white hover:bg-[#3a6b48] transition-colors">+ Nouveau</Link>} />
+            right={<Link href="/admin/orders/new" className="rounded-lg px-3 py-1.5 text-[11px] font-bold text-white transition-colors"
+              style={{ backgroundColor: accent }}>+ Nouveau</Link>} />
           {activeOrderList.length === 0 ? (
             <Empty icon="📦" title="Aucune commande active" hint="Créez un ordre de fabrication." />
           ) : (
@@ -238,13 +320,13 @@ export default function DashboardClient({ kpi, orders, stocks, transfers }: Prop
                 const pct = items.length > 0 ? Math.round((done / items.length) * 100) : 0;
                 return (
                   <Link key={o.id} href={`/admin/orders/${o.id}`}
-                    className="group flex items-center gap-3 rounded-xl border border-black/[0.04] bg-[#fafbf9] p-3 hover:border-[#4a7c59]/20 hover:bg-white transition-all">
+                    className="group flex items-center gap-3 rounded-xl border border-black/[0.04] bg-[#fafbf9] p-3 hover:bg-white transition-all">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-[13px] font-bold text-[#1a1d23]">{o.order_number}</span>
                         <StatusPill status={o.status} />
                       </div>
-                      <p className="text-[11px] text-[#9ca3af] mt-0.5">{items.length} articles · {new Date(o.created_at).toLocaleDateString("fr-FR")}</p>
+                      <p className="text-[11px] text-[#9ca3af] mt-0.5">{items.length} articles · {o.created_at ? new Date(o.created_at).toLocaleDateString("fr-FR") : "—"}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-16 h-1.5 rounded-full bg-black/[0.06] overflow-hidden">
@@ -261,12 +343,11 @@ export default function DashboardClient({ kpi, orders, stocks, transfers }: Prop
         </GlassCard>
       </div>
 
-      {/* ── Row 3: Stocks + Équipe + Timer ── */}
+      {/* ── Row 3: Stocks + Transferts + Timer ── */}
       <div className="grid gap-5 lg:grid-cols-5">
-        {/* Santé stock */}
         <GlassCard className="lg:col-span-2">
-          <SectionTitle kicker="Stocks" title="Aperçu des matières"
-            right={<Link href="/admin/stocks" className="text-[12px] font-semibold text-[#4a7c59] hover:underline">Tout voir</Link>} />
+          <SectionTitle kicker="Stocks" title={`Matières — ${mpDepot}`}
+            right={<Link href="/admin/stocks" className="text-[12px] font-semibold hover:underline" style={{ color: accent }}>Tout voir</Link>} />
           {mpStocks.length === 0 ? (
             <Empty icon="📦" title="Aucun article en stock" hint="Ajoutez des matières premières." />
           ) : (
@@ -290,45 +371,46 @@ export default function DashboardClient({ kpi, orders, stocks, transfers }: Prop
           )}
         </GlassCard>
 
-        {/* Équipe en action */}
         <GlassCard className="lg:col-span-2">
-          <SectionTitle kicker="Équipe" title="Équipe en action"
-            right={<Link href="/admin/team" className="rounded-lg border border-black/10 px-3 py-1.5 text-[11px] font-bold text-[#6b7280] hover:bg-black/[0.03] transition-colors">Gérer</Link>} />
-          <div className="space-y-3">
-            {[
-              { name: "Atelier 1", task: "Bois & Découpe", status: "active", color: "#c24a08" },
-              { name: "Atelier 2", task: "Assemblage & Finition", status: "active", color: "#2f6eb5" },
-            ].map((w) => (
-              <div key={w.name} className="flex items-center gap-3 rounded-xl border border-black/[0.04] bg-[#fafbf9] p-3">
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-sm font-bold text-white" style={{ backgroundColor: w.color }}>
-                  {w.name.charAt(w.name.length - 1)}
+          <SectionTitle kicker="Logistique" title="Transferts récents"
+            right={<Link href="/admin/destinations" className="text-[12px] font-semibold hover:underline" style={{ color: accent }}>Destinations</Link>} />
+          {recentTransfers.length === 0 ? (
+            <Empty icon="🚚" title="Aucun transfert" hint="Les transferts MOBILIX apparaîtront ici." />
+          ) : (
+            <div className="space-y-2">
+              {recentTransfers.map((t: any) => (
+                <div key={t.id} className="flex items-center gap-3 rounded-xl border border-black/[0.04] bg-[#fafbf9] p-3">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#7c3aed]/10 text-[#7c3aed]">
+                    <ArrowLeftRight size={16} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-mono text-[13px] font-bold text-[#1a1d23]">{t.manifest_qr ?? t.id?.slice(0, 8)}</p>
+                    <p className="text-[11px] text-[#9ca3af]">{t.destination ?? "—"} · {t.created_at ? new Date(t.created_at).toLocaleDateString("fr-FR") : "—"}</p>
+                  </div>
+                  <StatusPill status={t.status ?? "PENDING"} />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-semibold text-[#1a1d23]">{w.name}</p>
-                  <p className="text-[11px] text-[#9ca3af]">{w.task}</p>
-                </div>
-                <span className="flex items-center gap-1.5 rounded-full bg-[#4a7c59]/10 px-2 py-0.5 text-[10px] font-bold text-[#4a7c59]">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#4a7c59] live-dot" /> En ligne
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </GlassCard>
 
-        {/* Production Timer + Progress */}
         <div className="lg:col-span-1 space-y-4">
           <ProductionTimer />
           <div className="rounded-2xl border border-black/[0.04] bg-white p-5 shadow-sm">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#9ca3af] mb-3">Progression</p>
-            <CircularProgress pct={yieldPct} color="#4a7c59" label="Taux d'achèvement" />
+            <CircularProgress pct={yieldPct} color={accent} label="Taux d'achèvement" />
             <div className="mt-3 space-y-1.5 text-[12px]">
               <div className="flex items-center justify-between">
-                <span className="text-[#9ca3af]">Transferts A2</span>
-                <span className="font-bold text-[#4a7c59]">{kpi.transfers}</span>
+                <span className="text-[#9ca3af] flex items-center gap-1"><Clock size={12} /> Transferts</span>
+                <span className="font-bold" style={{ color: accent }}>{kpi.transfers}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[#9ca3af]">En attente</span>
                 <span className="font-bold text-[#c24a08]">{kpi.pendingSemi}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#9ca3af]">Alertes</span>
+                <span className="font-bold text-red-500">{kpi.alertes}</span>
               </div>
             </div>
           </div>

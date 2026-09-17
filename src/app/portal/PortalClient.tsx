@@ -1,14 +1,16 @@
 "use client";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useMes } from "@/lib/store/mes-store";
+import type { AtelierId } from "@/lib/ateliers";
 import { parseQr } from "@/lib/qr/manifest";
 import { cueSuccess, cueError, cueScrapAlert } from "@/lib/audio/cues";
 import { useStepTimer } from "@/hooks/useStepTimer";
 import Scanner from "@/components/qr/Scanner";
 import KioskLock from "@/components/worker/KioskLock";
 import CueOverlay from "@/components/worker/CueOverlay";
-import { startStep, completeStep } from "@/app/actions";
+import { startStep } from "@/app/actions";
+import { declarerProduction } from "@/app/actions-portail";
 import { Wifi, WifiOff, Play, CheckCircle2, Plus, X } from "lucide-react";
 
 type ActiveStep = {
@@ -24,15 +26,19 @@ type MaterialRow = { stockItemId: string; stockItemName: string; unit: string; q
 
 const A1 = "#c24a08";
 const A2 = "#2f6eb5";
+const M1 = "#7c3aed";
 
-export default function PortalClient({ mode = "factory", atelierId, etape }: { mode?: "factory" | "warehouse"; atelierId?: 1 | 2 | null; etape?: number | null }) {
+export default function PortalClient({ mode = "factory", atelierId, etape }: { mode?: "factory" | "warehouse"; atelierId?: AtelierId | null; etape?: number | null }) {
   const { kiosk, flash, online } = useMes();
   const atelierCible = atelierId ?? kiosk?.atelierId ?? null;
   const etapeCible = etape ?? kiosk?.stepOrder ?? null;
-  const accent = atelierCible === 1 ? A1 : atelierCible === 2 ? A2 : "#4a7c59";
+  const accent = atelierCible === 1 ? A1 : atelierCible === 2 ? A2 : atelierCible === 3 ? M1 : "#4a7c59";
   const [step, setStep] = useState<ActiveStep | null>(null);
   const [msg, setMsg] = useState("");
   const [materials, setMaterials] = useState<MaterialRow[]>([]);
+  const [quantiteOk, setQuantiteOk] = useState(0);
+  const [quantitePerdue, setQuantitePerdue] = useState(0);
+  const [quantiteReutilisee, setQuantiteReutilisee] = useState(0);
   const [branchChoice, setBranchChoice] = useState<"direct" | "indirect" | null>(null);
   const [busy, setBusy] = useState(false);
   const timer = useStepTimer(step?.started_at, step?.estimated_minutes ?? 0);
@@ -81,6 +87,9 @@ export default function PortalClient({ mode = "factory", atelierId, etape }: { m
       qr_code_hash: data.qr_code_hash
     });
     setMaterials([]);
+    setQuantiteOk(item?.quantity ?? 0);
+    setQuantitePerdue(0);
+    setQuantiteReutilisee(0);
     setBranchChoice(null);
     cueSuccess();
     flash({ kind: "success", message: `Étape ${data.step_order} : ${data.step_name}`, id: Date.now() });
@@ -99,8 +108,11 @@ export default function PortalClient({ mode = "factory", atelierId, etape }: { m
     if (!step) return;
     setBusy(true);
     try {
-      await completeStep({
+      const res = await declarerProduction({
         stepId: step.id,
+        quantiteOk,
+        quantitePerdue,
+        quantiteReutilisee,
         branchChoice: branchChoice ?? undefined,
         materials: materials.filter((m) => m.quantityUsed > 0 || m.quantityLost > 0).map((m) => ({
           stockItemId: m.stockItemId, quantityUsed: m.quantityUsed, quantityLost: m.quantityLost
@@ -108,9 +120,10 @@ export default function PortalClient({ mode = "factory", atelierId, etape }: { m
         nextStepName: branchChoice === "indirect" ? step.branch_insert_name ?? undefined : undefined,
         nextStepMinutes: branchChoice === "indirect" ? step.branch_insert_minutes : undefined
       });
+      if (!res.ok) throw new Error(res.message);
       cueSuccess();
       flash({ kind: "success", message: "Étape terminée ✅", id: Date.now() });
-      setMsg(`✅ ${step.step_name} terminée`);
+      setMsg(`✅ ${res.message}`);
       setStep(null); setMaterials([]); setBranchChoice(null);
     } catch (e: any) {
       cueError(); setMsg(`❌ ${e.message}`);
@@ -206,9 +219,30 @@ export default function PortalClient({ mode = "factory", atelierId, etape }: { m
             </div>
           )}
 
-          {/* Material declaration */}
+          {/* Production declaration */}
           {step.status === "ACTIVE" && (
             <div className="mt-4 space-y-2.5">
+              <p className="text-sm font-black text-[#1a1d23]">Déclaration de production</p>
+              <div className="grid grid-cols-3 gap-2">
+                <label className="rounded-xl bg-[#4a7c59]/[0.06] p-2.5">
+                  <span className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[#4a7c59]">✅ Produites</span>
+                  <input type="number" min={0} step="any" value={quantiteOk}
+                    onChange={(e) => setQuantiteOk(Math.max(0, Number(e.target.value)))}
+                    className="mt-1 w-full bg-transparent text-center text-xl font-black text-[#1a1d23] focus:outline-none" />
+                </label>
+                <label className="rounded-xl bg-red-50 p-2.5">
+                  <span className="block text-[10px] font-bold uppercase tracking-[0.15em] text-red-500">❌ Perdues</span>
+                  <input type="number" min={0} step="any" value={quantitePerdue}
+                    onChange={(e) => setQuantitePerdue(Math.max(0, Number(e.target.value)))}
+                    className="mt-1 w-full bg-transparent text-center text-xl font-black text-[#1a1d23] focus:outline-none" />
+                </label>
+                <label className="rounded-xl bg-amber-50 p-2.5">
+                  <span className="block text-[10px] font-bold uppercase tracking-[0.15em] text-amber-600">♻️ Réutilisées</span>
+                  <input type="number" min={0} step="any" value={quantiteReutilisee}
+                    onChange={(e) => setQuantiteReutilisee(Math.max(0, Number(e.target.value)))}
+                    className="mt-1 w-full bg-transparent text-center text-xl font-black text-[#1a1d23] focus:outline-none" />
+                </label>
+              </div>
               <p className="text-sm font-black text-[#1a1d23]">Consommation matière</p>
               <MaterialInput onAdd={(m) => setMaterials((prev) => [...prev, m])} />
               {materials.length > 0 && (
@@ -259,21 +293,37 @@ export default function PortalClient({ mode = "factory", atelierId, etape }: { m
   );
 }
 
-/* ── Material input sub-component ── */
+/* ── Material input sub-component (sélection du vrai stock MP) ── */
 function MaterialInput({ onAdd }: { onAdd: (m: MaterialRow) => void }) {
-  const [name, setName] = useState("");
+  const [stocks, setStocks] = useState<Array<{ id: string; name: string; unit: string; quantity: number }>>([]);
+  const [sel, setSel] = useState("");
   const [qty, setQty] = useState(1);
+  useEffect(() => {
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.from("stock_items").select("id,name,unit,quantity").order("name").limit(100);
+        if (data) setStocks(data as any);
+      } catch { /* liste optionnelle */ }
+    })();
+  }, []);
   return (
     <form className="flex gap-2" onSubmit={(e) => {
       e.preventDefault();
-      if (name.trim()) {
-        onAdd({ stockItemId: crypto.randomUUID(), stockItemName: name.trim(), unit: "unit", quantityUsed: qty, quantityLost: 0 });
-        setName(""); setQty(1);
+      const found = stocks.find((s) => s.id === sel);
+      if (found) {
+        onAdd({ stockItemId: found.id, stockItemName: found.name, unit: found.unit ?? "pcs", quantityUsed: qty, quantityLost: 0 });
+        setSel(""); setQty(1);
       }
     }}>
-      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom du matériau"
-        className="flex-1 rounded-xl border border-black/[0.08] bg-white px-3 py-2.5 text-sm text-[#1a1d23] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#4a7c59]/20" />
-      <input type="number" min={0} step="any" value={qty} onChange={(e) => setQty(Number(e.target.value))}
+      <select value={sel} onChange={(e) => setSel(e.target.value)}
+        className="flex-1 rounded-xl border border-black/[0.08] bg-white px-3 py-2.5 text-sm text-[#1a1d23] focus:outline-none focus:ring-2 focus:ring-[#4a7c59]/20">
+        <option value="">Choisir la matière…</option>
+        {stocks.map((s) => (
+          <option key={s.id} value={s.id}>{s.name} (reste {s.quantity} {s.unit ?? ""})</option>
+        ))}
+      </select>
+      <input type="number" min={0} step="any" value={qty} onChange={(e) => setQty(Math.max(0, Number(e.target.value)))}
         className="w-24 rounded-xl border border-black/[0.08] bg-white px-2 py-2.5 text-center text-sm text-[#1a1d23] focus:outline-none focus:ring-2 focus:ring-[#4a7c59]/20" />
       <button className="flex items-center gap-1 rounded-xl border border-black/[0.06] bg-black/[0.02] px-3 py-2.5 text-sm font-bold text-[#6b7280] hover:bg-black/[0.04] transition-colors">
         <Plus size={14} /> Ajouter

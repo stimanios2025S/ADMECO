@@ -2,6 +2,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
 import { GlassCard, SectionTitle, StatusPill, Empty } from "@/components/admin/ui";
+import { getProfil } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -21,18 +22,36 @@ function LoadError({ message }: { message: string }) {
 
 export default async function OrdersPage() {
   try {
-    const supabase = createServerSupabase();
-    const { data: orders, error } = await supabase.from("work_orders").select("*, work_order_items(id,product_name,quantity,status)").order("created_at", { ascending: false }).limit(50);
-    if (error) throw new Error("work_orders: " + error.message);
+    const profil = await getProfil();
+    const usine = profil?.usine_code ?? "ADMEDCO";
+    const supabase: any = createServerSupabase();
+
+    let orders: any[] = [];
+    try {
+      const { data, error } = await supabase
+        .from("work_orders")
+        .select("*, work_order_items(id,product_name,quantity,status)")
+        .eq("usine_code", usine)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      orders = (data as any[]) ?? [];
+    } catch (e: any) {
+      // Schéma sans usine_code → liste globale (fallback)
+      if (!/usine_code|column/i.test(e?.message ?? "")) throw e;
+      const { data, error } = await supabase.from("work_orders").select("*, work_order_items(id,product_name,quantity,status)").order("created_at", { ascending: false }).limit(50);
+      if (error) throw new Error("work_orders: " + error.message);
+      orders = (data as any[]) ?? [];
+    }
 
     return (
-      <AdminShell pageTitle="Commandes" pageHint="Toutes les commandes — créer, suivre et libérer vers l'Atelier 2.">
+      <AdminShell pageTitle="Commandes" pageHint={`Commandes de l'usine ${usine} — créer, suivre et décider les destinations.`}>
         <div className="stagger space-y-5">
           <div className="flex justify-end">
             <Link href="/admin/orders/new" className="btn-fire inline-flex items-center gap-1.5 px-5 py-2.5 text-sm">+ Nouvelle commande</Link>
           </div>
           {!orders || orders.length === 0 ? (
-            <Empty icon="📦" title="Aucune commande" hint="Créez votre première commande de production." />
+            <Empty icon="📦" title={`Aucune commande (${usine})`} hint="Créez votre première commande de production." />
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
               {orders.map((o: any) => (
@@ -42,7 +61,7 @@ export default async function OrdersPage() {
                     <StatusPill status={o.status} />
                   </div>
                   <p className="mt-1 text-xs text-[#7c8091]">
-                    {o.work_order_items?.length ?? 0} articles · {new Date(o.created_at).toLocaleDateString("fr-FR")}
+                    {o.work_order_items?.length ?? 0} articles · {o.created_at ? new Date(o.created_at).toLocaleDateString("fr-FR") : "—"}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {(o.work_order_items ?? []).slice(0, 3).map((item: any) => (

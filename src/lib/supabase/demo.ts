@@ -33,14 +33,24 @@ const demoUsers = [
     portal: "portal",
     full_name: "Chef Atelier 2",
     title: "Portail Atelier 2 — Assemblage & Finition"
+  },
+  {
+    id: "demo-mag-id",
+    email: "magasin@admedco.ma",
+    password: "Magasin123!",
+    role: "MAGASINIER",
+    portal: "reception",
+    full_name: "Magasinier",
+    title: "Réception matière première"
   }
 ] as const;
 
 const demoData: Record<string, any[]> = {
   profiles: [
-    { id: "demo-admin-id", role: "ADMIN", atelier_id: 1, full_name: "Directeur d'usine", created_at: makeIso() },
-    { id: "demo-atelier1-id", role: "WORKSHOP", atelier_id: 1, full_name: "Chef Atelier 1", created_at: makeIso() },
-    { id: "demo-atelier2-id", role: "WAREHOUSE", atelier_id: 2, full_name: "Chef Atelier 2", created_at: makeIso() }
+    { id: "demo-admin-id", role: "ADMIN", atelier_id: 1, usine_code: "ADMEDCO", full_name: "Directeur d'usine", created_at: makeIso() },
+    { id: "demo-atelier1-id", role: "WORKSHOP", atelier_id: 1, usine_code: "ADMEDCO", full_name: "Chef Atelier 1", created_at: makeIso() },
+    { id: "demo-atelier2-id", role: "WAREHOUSE", atelier_id: 2, usine_code: "ADMEDCO", full_name: "Chef Atelier 2", created_at: makeIso() },
+    { id: "demo-mag-id", role: "MAGASINIER", atelier_id: null, usine_code: "ADMEDCO", full_name: "Magasinier", created_at: makeIso() }
   ],
   product_categories: [
     { id: "cat-chairs", name: "Chaises", description: "Chaises salle à manger / bureau" },

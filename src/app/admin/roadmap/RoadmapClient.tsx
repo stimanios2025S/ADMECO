@@ -1,117 +1,157 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Truck, PackageCheck } from "lucide-react";
-import { GlassCard, SectionTitle, StatusPill } from "@/components/admin/ui";
-import LivePipeline from "@/components/admin/LivePipeline";
-import GanttBoard from "@/components/admin/GanttBoard";
-import { verifyTransfer } from "@/app/actions";
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { Package, ArrowRight, CheckCircle2, Circle, Loader, Truck, Home } from "lucide-react";
+import { GlassCard, SectionTitle, StatusPill, Empty } from "@/components/admin/ui";
 import { cn } from "@/lib/utils";
 
-const ATELIER_META: Record<number, { name: string; site: string; color: string }> = {
-  1: { name: "Atelier 1 — Bois & Découpe", site: "ADMEDCO", color: "from-[#c24a08] to-[#c24a08]" },
-  2: { name: "Atelier 2 — Assemblage & Finition", site: "ADMEDCO", color: "from-[#2f6eb5] to-[#2f6eb5]" },
+type Props = {
+  usine: string;
+  orders: any[];
+  items: any[];
+  steps: any[];
+  semi: any[];
+  destinations: any[];
+  transfers: any[];
 };
 
-export default function RoadmapClient({ orders, steps, transfers, selectedId }: { orders: any[]; steps: any[]; transfers: any[]; selectedId: string }) {
-  const router = useRouter();
-  const [filter, setFilter] = useState<"ALL" | 1 | 2>("ALL");
-  const [busy, setBusy] = useState<string | null>(null);
+const ATELIER_NOM: Record<number, string> = {
+  1: "Atelier 1 — Bois & Découpe",
+  2: "Atelier 2 — Assemblage & Finition",
+  3: "MOBILIX — Finition & Montage"
+};
 
-  const visible = steps.filter((s) => filter === "ALL" || s.atelier_id === filter);
-  const done = steps.filter((s) => s.status === "DONE").length;
-  const pct = steps.length ? Math.round((done / steps.length) * 100) : 0;
-  const orderTransfers = transfers.filter((t) => t.order_id === selectedId);
-  const selected = orders.find((o) => o.id === selectedId);
+function etapeRoadmap(order: any, orderItems: any[], allSteps: any[], allSemi: any[], allDest: any[], allTrans: any[]) {
+  // Commande → Réservé → En production → Stock atelier → Décision → MOBILIX/Livré
+  const itemIds = new Set(orderItems.map((i) => i.id));
+  const steps = allSteps.filter((s) => itemIds.has(s.item_id));
+  const semiLots = allSemi.filter((s) => itemIds.has(s.item_id ?? s.order_item_id));
+  const dests = allDest.filter((d) => itemIds.has(d.order_item_id) || semiLots.some((s) => s.id === d.semi_stock_id));
+  const trans = allTrans.filter((t) => t.order_id === order.id || orderItems.some((i) => i.id === t.order_item_id));
+
+  const enProduction = steps.find((s) => s.status === "ACTIVE" || s.status === "IN_PROGRESS");
+  const terminees = steps.filter((s) => s.status === "DONE" || s.status === "COMPLETED").length;
+  const decidee = dests.length > 0 ? dests[0] : null;
+  const expedie = trans.find((t) => t.status === "VERIFIED" || t.status === "DELIVERED" || t.status === "RELEASED");
+
+  const phases = [
+    { key: "commande", label: "Commande", done: true, detail: `${orderItems.length} article(s) · ${order.order_number}` },
+    { key: "reserve", label: "Réservé", done: orderItems.length > 0, detail: orderItems.length > 0 ? "Matières réservées" : "En attente de réservation" },
+    {
+      key: "production", label: "En production",
+      done: terminees > 0 || !!enProduction, active: !!enProduction && terminees < steps.length,
+      detail: enProduction
+        ? `${ATELIER_NOM[enProduction.atelier_id] ?? `Atelier ${enProduction.atelier_id}`} · ${enProduction.step_name}`
+        : terminees > 0 ? `${terminees}/${steps.length} étape(s) terminée(s)` : "Pas encore démarrée"
+    },
+    {
+      key: "stock", label: "Stock atelier",
+      done: semiLots.length > 0,
+      detail: semiLots.length > 0 ? `${semiLots.length} lot(s) semi-fini(s)` : "Aucun lot semi-fini"
+    },
+    {
+      key: "decision", label: "Décision destination",
+      done: !!decidee,
+      detail: decidee ? `${decidee.destination === "MOBILIX" ? "Vers MOBILIX" : "Client direct"} · ${decidee.bordereau ?? ""}` : "En attente de décision"
+    },
+    {
+      key: "final", label: decidee?.destination === "CLIENT_DIRECT" ? "Livré" : "MOBILIX",
+      done: !!expedie || decidee?.statut === "LIVRE" || decidee?.statut === "EXPEDIE",
+      detail: expedie ? `${expedie.manifest_qr ?? "Bordereau"} · ${expedie.status}` : "En attente d'expédition"
+    }
+  ];
+  const doneCount = phases.filter((p) => p.done).length;
+  return { phases, doneCount, total: phases.length, pct: Math.round((doneCount / phases.length) * 100) };
+}
+
+export default function RoadmapClient({ usine, orders, items, steps, semi, destinations, transfers }: Props) {
+  const [filtre, setFiltre] = useState<"TOUS" | "EN_COURS" | "EN_ATTENTE" | "TERMINE">("TOUS");
+  const [recherche, setRecherche] = useState("");
+
+  const lignes = useMemo(() => {
+    return orders.map((o) => {
+      const oItems = items.filter((i) => i.order_id === o.id);
+      const r = etapeRoadmap(o, oItems, steps, semi, destinations, transfers);
+      const statutGroupe =
+        ["RELEASED", "DELIVERED", "CANCELLED"].includes(o.status) || r.pct === 100 ? "TERMINE"
+        : r.doneCount <= 2 ? "EN_ATTENTE" : "EN_COURS";
+      return { order: o, items: oItems, ...r, statutGroupe };
+    });
+  }, [orders, items, steps, semi, destinations, transfers]);
+
+  const visibles = lignes.filter((l) => {
+    if (filtre !== "TOUS" && l.statutGroupe !== filtre) return false;
+    if (recherche && !l.order.order_number.toLowerCase().includes(recherche.toLowerCase())) return false;
+    return true;
+  });
 
   return (
     <div className="stagger space-y-5">
-      {/* sélecteur commande */}
       <div className="card flex flex-wrap items-center gap-2 p-3">
-        <span className="px-1 text-[11px] font-bold uppercase tracking-[0.2em] text-[#7c8091]">Commande</span>
-        <div className="flex flex-wrap gap-1.5">
-          {orders.map((o: any) => (
-            <button key={o.id} onClick={() => router.push(`/admin/roadmap?order=${o.id}`)}
-              className={cn("rounded-xl border px-3 py-1.5 text-sm font-bold transition",
-                o.id === selectedId ? "border-[#c24a08]/40 bg-[#c24a08]/10 text-[#c24a08]" : "border-[#e6e1d8] text-[#7c8091] hover:bg-[#f8f7f5] hover:text-[#1a1d23]")}>
-              {o.order_number}
-            </button>
+        <span className="px-1 text-[11px] font-bold uppercase tracking-[0.2em] text-[#7c8091]">Usine {usine}</span>
+        {(["TOUS", "EN_COURS", "EN_ATTENTE", "TERMINE"] as const).map((f) => (
+          <button key={f} onClick={() => setFiltre(f)}
+            className={cn("rounded-xl border px-3 py-1.5 text-[12px] font-bold transition",
+              filtre === f ? "border-[#4a7c59]/40 bg-[#4a7c59]/10 text-[#4a7c59]" : "border-black/10 text-[#7c8091] hover:text-[#1a1d23]")}>
+            {f === "TOUS" ? "Toutes" : f === "EN_COURS" ? "En cours" : f === "EN_ATTENTE" ? "En attente" : "Terminées"}
+          </button>
+        ))}
+        <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher n° commande…"
+          className="input ml-auto max-w-[220px] px-3 py-1.5 text-[12px]" />
+      </div>
+
+      {visibles.length === 0 ? (
+        <Empty icon="🗺️" title="Aucune commande" hint="Aucune commande ne correspond au filtre." />
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {visibles.map(({ order, items: oItems, phases, pct }) => (
+            <GlassCard key={order.id}>
+              <div className="mb-3 flex items-center gap-2">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#4a7c59]/10 text-[#4a7c59]"><Package size={17} /></span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Link href={`/admin/orders/${order.id}`} className="text-[14px] font-extrabold text-[#1a1d23] hover:underline">
+                      {order.order_number}
+                    </Link>
+                    <StatusPill status={order.status} />
+                  </div>
+                  <p className="text-[11px] text-[#9ca3af]">{oItems.length} article(s) · {order.created_at ? new Date(order.created_at).toLocaleDateString("fr-FR") : "—"} · {pct}%</p>
+                </div>
+                <span className="text-[12px] font-black text-[#4a7c59]">{pct}%</span>
+              </div>
+              <div className="mb-4 h-2 overflow-hidden rounded-full bg-black/[0.05]">
+                <div className="h-full rounded-full bg-gradient-to-r from-[#4a7c59] to-[#7c3aed] transition-all" style={{ width: `${pct}%` }} />
+              </div>
+              {/* Timeline verticale */}
+              <ol className="relative space-y-0 border-l-2 border-black/[0.06] ml-2 pl-0">
+                {phases.map((p, idx) => (
+                  <li key={p.key} className="relative flex gap-3 pb-4 pl-5 last:pb-0">
+                    <span className={cn("absolute -left-[9px] top-0.5 grid h-4 w-4 place-items-center rounded-full border-2 bg-white",
+                      p.done ? "border-[#4a7c59]" : (p as any).active ? "border-[#2f6eb5]" : "border-black/15")}>
+                      {p.done
+                        ? <CheckCircle2 size={10} className="text-[#4a7c59]" />
+                        : (p as any).active ? <Loader size={10} className="text-[#2f6eb5]" /> : <Circle size={8} className="text-black/20" />}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className={cn("text-[13px] font-bold", p.done ? "text-[#1a1d23]" : "text-[#9ca3af]")}>
+                        {idx + 1}. {p.label}
+                        {(p as any).active && <span className="ml-2 rounded-full bg-[#2f6eb5]/10 px-2 py-0.5 text-[10px] font-black text-[#2f6eb5]">EN COURS</span>}
+                      </p>
+                      <p className="truncate text-[11px] text-[#7c8091]">{p.detail}</p>
+                    </div>
+                    {p.key === "final" && p.done && (
+                      <span className="shrink-0">{(p.label === "MOBILIX") ? <Truck size={14} className="text-[#7c3aed]" /> : <Home size={14} className="text-[#4a7c59]" />}</span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+              <Link href={`/admin/orders/${order.id}`} className="mt-3 inline-flex items-center gap-1 text-[12px] font-bold text-[#4a7c59] hover:underline">
+                Ouvrir la commande <ArrowRight size={12} />
+              </Link>
+            </GlassCard>
           ))}
         </div>
-        {selected && (
-          <div className="ml-auto flex items-center gap-2 text-sm">
-            <StatusPill status={selected.status} />
-            <span className="text-[#7c8091]">{done}/{steps.length} · <b className="text-[#1a1d23]">{pct}%</b></span>
-          </div>
-        )}
-      </div>
-
-      {/* rivière de progression */}
-      <GlassCard>
-        <SectionTitle kicker="Parcours" title={`${selected?.order_number ?? ""} — Atelier 1 → Atelier 2`} hint="Rivière de progression entre les deux ateliers." />
-        <div className="mb-2 h-3 overflow-hidden rounded-full bg-[#f0ede8]">
-          <div className="h-full rounded-full bg-gradient-to-r from-[#c24a08] via-[#c24a08] to-[#2f6eb5] transition-all" style={{ width: `${pct}%` }} />
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {[1, 2].map((a) => {
-            const mine = steps.filter((s) => s.atelier_id === a);
-            const d = mine.filter((s) => s.status === "DONE").length;
-            const m = ATELIER_META[a];
-            return (
-              <button key={a} onClick={() => setFilter(filter === a ? "ALL" : (a as 1 | 2))}
-                className={cn("card p-3 text-left transition", filter === a && "border-[#c24a08]/40")}>
-                <p className="text-xs font-bold text-[#1a1d23]">{m.name}</p>
-                <p className="text-[11px] text-[#7c8091]">{m.site} · {d}/{mine.length} terminées</p>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#f0ede8]">
-                  <div className={cn("h-full rounded-full bg-gradient-to-r", m.color)} style={{ width: mine.length ? `${(d / mine.length) * 100}%` : "0%" }} />
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        {filter !== "ALL" && (
-          <button onClick={() => setFilter("ALL")} className="btn-ghost mt-3 px-3 py-1.5 text-xs">Voir les deux ateliers</button>
-        )}
-      </GlassCard>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <GlassCard>
-          <SectionTitle kicker="Kanban" title="Pipeline en direct" hint={filter === "ALL" ? "Toutes les étapes." : `Filtré : Atelier ${filter}.`} />
-          <LivePipeline steps={visible} />
-        </GlassCard>
-        <GlassCard>
-          <SectionTitle kicker="Gantt" title="Écarts de temps" hint="Réel vs cible par étape." />
-          <GanttBoard steps={visible} />
-        </GlassCard>
-      </div>
-
-      {/* transferts */}
-      <GlassCard>
-        <SectionTitle kicker="Logistique" title="Transferts entre ateliers" hint="Vérifiez les bordereaux à l'arrivée Atelier 2." />
-        {orderTransfers.length === 0 ? (
-          <p className="text-sm text-[#7c8091]">Aucun bordereau pour cette commande — générez-en un depuis la page commande.</p>
-        ) : (
-          <div className="grid gap-2.5 md:grid-cols-2">
-            {orderTransfers.map((t: any) => (
-              <div key={t.id} className="card flex items-center gap-3 p-4">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-600"><Truck size={19} /></span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-mono text-sm font-bold text-[#c24a08]">{t.manifest_qr}</p>
-                  <p className="text-xs text-[#7c8091]">Atelier 1 → Atelier 2 · ×{t.item_count} articles</p>
-                  <div className="mt-1"><StatusPill status={t.status} /></div>
-                </div>
-                {t.status === "PENDING" && (
-                  <button disabled={busy === t.id}
-                    onClick={async () => { setBusy(t.id); await verifyTransfer(t.id, true); setBusy(null); router.refresh(); }}
-                    className="btn-ice inline-flex shrink-0 items-center gap-1 px-3 py-2 text-xs">
-                    <PackageCheck size={14} /> {busy === t.id ? "…" : "Vérifier"}
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </GlassCard>
+      )}
     </div>
   );
 }

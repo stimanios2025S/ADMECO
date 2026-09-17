@@ -3,9 +3,10 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, Package, Warehouse, Siren, Users, BarChart3,
-  Menu, X, TabletSmartphone, ChevronLeft, ChevronRight, Bell, Settings,
-  Boxes, Handshake, FileText, Factory, ListTree, Cog, IdCard, BookOpen, ClipboardCheck, Building2, Layers, LogOut, HelpCircle
+  LayoutDashboard, Truck, Siren, BookOpen, Package, Factory, Send,
+  Warehouse, ClipboardCheck, Building2, Boxes, Handshake, FileText,
+  Layers, ListTree, Users, Menu, TabletSmartphone, ChevronLeft,
+  ChevronRight, Bell, Settings, Sofa
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import UserChip from "./UserChip";
@@ -14,57 +15,94 @@ type Section = { label: string; items: { href: string; label: string; icon: any;
 
 const SECTIONS: Section[] = [
   {
-    label: "MENU",
+    label: "PILOTAGE",
     items: [
       { href: "/admin", label: "Tableau de bord", icon: LayoutDashboard },
-      { href: "/admin/orders", label: "Commandes", icon: Package },
-      { href: "/admin/stocks", label: "Stocks", icon: Warehouse },
-      { href: "/admin/articles", label: "Articles", icon: Boxes },
-      { href: "/admin/nomenclatures", label: "Nomenclatures", icon: ListTree },
-      { href: "/admin/fabrication", label: "Fabrication", icon: Factory },
+      { href: "/admin/roadmap", label: "Feuille de route", icon: Truck },
+      { href: "/admin/incidents", label: "Alertes", icon: Siren },
+      { href: "/admin/archives", label: "Archives", icon: BookOpen },
     ]
   },
   {
-    label: "OUTILS ERP",
+    label: "PRODUCTION",
     items: [
+      { href: "/admin/orders", label: "Commandes", icon: Package },
+      { href: "/admin/fabrication", label: "Fabrication", icon: Factory },
+      { href: "/admin/suivi-mobilix", label: "Suivi MOBILIX", icon: Sofa },
+      { href: "/admin/destinations", label: "Destinations", icon: Send },
+    ]
+  },
+  {
+    label: "STOCKS",
+    items: [
+      { href: "/admin/stocks", label: "Stocks", icon: Warehouse },
+      { href: "/admin/reception", label: "Réception MP", icon: ClipboardCheck },
+      { href: "/admin/depots", label: "Dépôts", icon: Building2 },
+    ]
+  },
+  {
+    label: "ERP SILWANE",
+    items: [
+      { href: "/admin/articles", label: "Articles", icon: Boxes },
       { href: "/admin/tiers", label: "Tiers", icon: Handshake },
       { href: "/admin/documents", label: "Documents", icon: FileText },
       { href: "/admin/lots", label: "Lots", icon: Layers },
-      { href: "/admin/machines", label: "Machines", icon: Cog },
-      { href: "/admin/employes", label: "Employés", icon: IdCard },
-      { href: "/admin/ecritures", label: "Comptabilité", icon: BookOpen },
-      { href: "/admin/depots", label: "Dépôts", icon: Building2 },
-      { href: "/admin/inventaires", label: "Inventaires", icon: ClipboardCheck },
+      { href: "/admin/nomenclatures", label: "Nomenclatures", icon: ListTree },
     ]
   },
   {
     label: "SUIVI",
     items: [
-      { href: "/admin/incidents", label: "Incidents", icon: Siren },
       { href: "/admin/team", label: "Équipe", icon: Users },
-      { href: "/admin/analytics", label: "Analyses", icon: BarChart3 },
     ]
   }
 ];
 
-const FLAT_TABS = SECTIONS.flatMap((s) => s.items);
+const ROUTES_MAGASINIER = ["/admin/stocks", "/admin/reception", "/admin/depots"];
 
 export default function AdminShell({ children, pageTitle, pageHint }: { children: ReactNode; pageTitle: string; pageHint?: string }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
+  const [usine, setUsine] = useState<string | null>(null);
 
   useEffect(() => { setMobileOpen(false); }, [pathname]);
+
+  useEffect(() => {
+    fetch("/api/mon-profil")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((profil) => {
+        if (profil) {
+          setRole(profil.role ?? null);
+          setUsine(profil.usine_code ?? null);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const isMagasinier = role === "MAGASINIER";
+
+  const visibleSections: Section[] = isMagasinier
+    ? SECTIONS.map((s) => ({
+        ...s,
+        items: s.items.filter((item) => ROUTES_MAGASINIER.includes(item.href)),
+      })).filter((s) => s.items.length > 0)
+    : SECTIONS;
+
+  const FLAT_TABS = visibleSections.flatMap((s) => s.items);
 
   const isActive = (href: string) => {
     if (href === "/admin") return pathname === "/admin";
     return pathname.startsWith(href);
   };
 
+  const badgeColor = usine === "MOBILIX" ? "#7c3aed" : "#4a7c59";
+
   const sidebarBody = (
     <div className="flex h-full flex-col bg-[#fafbf9]">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 pt-7 pb-6">
+      <div className="flex items-center gap-3 px-5 pt-7 pb-4">
         <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#4a7c59] text-xl font-black text-white shadow-md shadow-[#4a7c59]/20">
           🪑
         </div>
@@ -76,9 +114,33 @@ export default function AdminShell({ children, pageTitle, pageHint }: { children
         )}
       </div>
 
+      {/* Badge usine */}
+      {!collapsed ? (
+        usine && (
+          <div className="px-5 pb-4">
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-white"
+              style={{ backgroundColor: badgeColor }}>
+              <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
+              {usine}
+            </span>
+          </div>
+        )
+      ) : (
+        usine && (
+          <div className="flex justify-center pb-3">
+            <span
+              className="h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: badgeColor }}
+              title={usine}
+            />
+          </div>
+        )
+      )}
+
       {/* Sections nav */}
       <nav className="flex-1 overflow-y-auto px-3 space-y-5">
-        {SECTIONS.map((section) => (
+        {visibleSections.map((section) => (
           <div key={section.label}>
             {!collapsed && (
               <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#b0b5bf]">
@@ -115,23 +177,11 @@ export default function AdminShell({ children, pageTitle, pageHint }: { children
       {/* Bottom links */}
       <div className="border-t border-black/[0.04] px-3 py-3 space-y-0.5">
         {!collapsed && (
-          <>
-            <Link href="/portal"
-              className="flex items-center gap-3 rounded-xl border border-[#4a7c59]/15 bg-[#4a7c59]/[0.04] px-3 py-2.5 text-[13px] font-medium text-[#4a7c59] hover:bg-[#4a7c59]/[0.08] transition-colors">
-              <TabletSmartphone size={16} /> Portail ateliers
-            </Link>
-            <a href="/guide" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-3 rounded-xl border border-black/[0.06] px-3 py-2.5 text-[13px] font-medium text-[#6b7280] hover:bg-black/[0.04] transition-colors">
-              <HelpCircle size={16} /> Guide d'utilisation
-            </a>
-          </>
+          <Link href="/portal"
+            className="flex items-center gap-3 rounded-xl border border-[#4a7c59]/15 bg-[#4a7c59]/[0.04] px-3 py-2.5 text-[13px] font-medium text-[#4a7c59] hover:bg-[#4a7c59]/[0.08] transition-colors">
+            <TabletSmartphone size={16} /> Portail ateliers
+          </Link>
         )}
-        <a href="/guide" target="_blank" rel="noopener noreferrer"
-          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#6b7280] hover:bg-black/[0.04] transition-colors"
-          title="Guide d'utilisation">
-          <HelpCircle size={17} />
-          {!collapsed && "Guide d'utilisation"}
-        </a>
         <div className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-[#9ca3af]">
           <span className="h-2 w-2 rounded-full bg-[#4a7c59] live-dot" />
           {!collapsed && "Système en ligne"}

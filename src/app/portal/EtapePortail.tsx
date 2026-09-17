@@ -1,14 +1,15 @@
 "use client";
 import Link from "next/link";
 import { ChevronRight, ArrowLeft } from "lucide-react";
-import { ATELIERS } from "@/lib/ateliers";
+import { ATELIERS, type AtelierId } from "@/lib/ateliers";
 import { etapesAtelier } from "@/lib/etapes";
+import { ordreMobilixCourt } from "@/lib/process-mobilix";
 import { cn } from "@/lib/utils";
 
-export default function EtapePortail({ atelier, etapeActive }: { atelier: 1 | 2; etapeActive?: number | null }) {
+export default function EtapePortail({ atelier, etapeActive }: { atelier: AtelierId; etapeActive?: number | null }) {
   const info = ATELIERS.find((a) => a.id === atelier)!;
   const etapes = etapesAtelier(atelier);
-  const accent = atelier === 1 ? "#c24a08" : "#2f6eb5";
+  const accent = atelier === 1 ? "#c24a08" : atelier === 2 ? "#2f6eb5" : "#7c3aed";
 
   return (
     <div className="space-y-4">
@@ -46,7 +47,7 @@ export default function EtapePortail({ atelier, etapeActive }: { atelier: 1 | 2;
                 <span
                   className="rounded-full px-2.5 py-1 text-[11px] font-black"
                   style={actif ? { background: `${accent}15`, color: accent } : { background: "rgba(0,0,0,.04)", color: "#9ca3af" }}>
-                  ÉTAPE {e.ordre}
+                  {atelier === 3 ? `POSTE ${ordreMobilixCourt(e.ordre)}` : `ÉTAPE ${e.ordre}`}
                 </span>
               </div>
               <p className="mt-3 text-lg font-black tracking-tight text-[#1a1d23]">{e.nom}</p>

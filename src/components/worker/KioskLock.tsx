@@ -1,17 +1,17 @@
 "use client";
 import { useState } from "react";
 import { useMes } from "@/lib/store/mes-store";
-import { ATELIERS } from "@/lib/ateliers";
+import { ATELIERS, type AtelierId } from "@/lib/ateliers";
 import { etapesAtelier } from "@/lib/etapes";
 import { Lock, Unlock } from "lucide-react";
 
-export default function KioskLock({ atelierId: forceAtelier, etape: forceEtape }: { atelierId?: 1 | 2 | null; etape?: number | null }) {
+export default function KioskLock({ atelierId: forceAtelier, etape: forceEtape }: { atelierId?: AtelierId | null; etape?: number | null }) {
   const { kiosk, lock, unlock } = useMes();
-  const [atelierId, setAtelierId] = useState<1 | 2>(forceAtelier ?? 1);
+  const [atelierId, setAtelierId] = useState<AtelierId>(forceAtelier ?? 1);
   const etapes = etapesAtelier(atelierId);
   const [stepOrder, setStepOrder] = useState(forceEtape ?? 1);
   const [name, setName] = useState("");
-  const accent = atelierId === 1 ? "#c24a08" : "#2f6eb5";
+  const accent = atelierId === 1 ? "#c24a08" : atelierId === 2 ? "#2f6eb5" : "#7c3aed";
 
   // ── Already locked ──
   if (kiosk) {

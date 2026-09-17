@@ -1,12 +1,15 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import AdminShell from "@/components/admin/AdminShell";
 import OrderDetailClient from "./OrderDetailClient";
+import { getProfil } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function OrderDetailPage({ params }: { params: { id: string } }) {
   try {
-    const supabase = createServerSupabase();
+    const profil = await getProfil();
+    const usine = profil?.usine_code ?? "ADMEDCO";
+    const supabase: any = createServerSupabase();
     const [{ data: order, error: eo }, { data: items, error: ei }, { data: transfers, error: et }] = await Promise.all([
       supabase.from("work_orders").select("*").eq("id", params.id).single(),
       supabase.from("work_order_items").select("*, product_categories(name)").eq("order_id", params.id),
@@ -17,6 +20,18 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     if (et) throw new Error("site_transfers: " + et.message);
 
     if (!order) return <AdminShell pageTitle="Commande introuvable" pageHint=""><p>Introuvable.</p></AdminShell>;
+
+    // Scoping usine : une commande d'une autre usine n'est pas affichable
+    if ((order as any).usine_code && (order as any).usine_code !== usine) {
+      return (
+        <AdminShell pageTitle="Commande" pageHint="">
+          <div className="card space-y-2 border-amber-200 p-6">
+            <p className="font-black text-[#1a1d23]">Commande d'une autre usine</p>
+            <p className="text-sm text-[#7c8091]">Cette commande appartient à l'usine {(order as any).usine_code} — vous êtes scopé sur {usine}.</p>
+          </div>
+        </AdminShell>
+      );
+    }
 
     // Get steps per item
     const itemIds = (items ?? []).map((i: any) => i.id);
