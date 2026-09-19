@@ -7,8 +7,9 @@
 #     source "$(dirname "$0")/lib.sh"
 #
 # ── RÈGLE ABSOLUE DE CE SERVEUR ──
-# Deux applications sont en production sur cette machine :
-#     wa-gateway:3000   et   rmasc-onsite:4002
+# Deux applications sont en production sur cette machine. Noms PM2
+# réels, relevés sur place — ils ne portent PAS le port :
+#     wa-gateway  (:3000)   et   rmasc-onsite  (:4002)
 # Aucun script d'ici ne doit les arrêter, les redémarrer, ni
 # modifier /etc/cloudflared/config.yml ou /etc/nginx.
 # Les garde-fous sont dans require_protected_apps().
@@ -62,19 +63,43 @@ detect_docker() {
 }
 
 # ── Statut d'une application PM2 : online / stopped / absent ──
+#
+# ⚠️ PM2 ne nomme PAS forcément « <projet>:<port> ». Sur ce serveur, les
+#    deux applications de production s'appellent « wa-gateway » et
+#    « rmasc-onsite » : la convention n'existe que pour ADMEDCO, qui a été
+#    créée avec. Comparer à l'identique faisait donc déclarer « absent »
+#    des applications pourtant « online », et le garde-fou refusait tout
+#    déploiement en accusant la production d'être tombée.
+#
+# On cherche donc le nom exact, PUIS le nom sans son suffixe de port. Le
+#    repli ne s'active que si le nom exact est introuvable : il rend le
+#    garde-fou juste, il ne le rend pas permissif.
+#
+# Le nom est passé par PM2_APP et non par argv : avec `node -e`, la
+#    position des arguments libres dépend de la version de Node. Une
+#    variable d'environnement, elle, ne dépend de rien.
 pm2_status() {
-  pm2 jlist 2>/dev/null | node -e '
+  local out=""
+  # `|| true` : si le daemon PM2 est éteint, `pm2 jlist` échoue. Sans
+  # cela, `set -o pipefail` propageait l'échec jusqu'à l'affectation de
+  # l'appelant, et `set -e` tuait le script SANS un mot — au lieu de
+  # laisser le garde-fou annoncer « absent ». Le repli sur « absent »
+  # est donc ici, et non chez l'appelant.
+  out="$(pm2 jlist 2>/dev/null | PM2_APP="$1" node -e '
     let buf = "";
     process.stdin.on("data", (c) => (buf += c)).on("end", () => {
-      const name = process.argv[1];
+      const nom = String(process.env.PM2_APP || "");
+      const sansPort = nom.split(":")[0];
       try {
         const a = JSON.parse(buf.slice(buf.indexOf("["), buf.lastIndexOf("]") + 1));
-        const hit = a.find((x) => x.name === name);
+        const hit = a.find((x) => x.name === nom) || a.find((x) => x.name === sansPort);
         process.stdout.write(
           hit ? (hit.pm2_env && hit.pm2_env.status) || "unknown" : "absent"
         );
       } catch { process.stdout.write("absent"); }
-    });' "$1"
+    });' || true)"
+  [[ -n "$out" ]] || out="absent"
+  printf '%s' "$out"
 }
 
 # ── Garde-fou : les deux applications de production doivent être en vie ──

@@ -1,12 +1,15 @@
 // ═══════════════════════════════════════════════════════════
 // PM2 — APPLICATION ADMEDCO (Next.js)
 //
-// Ce fichier ne déclare QU'ADMEDCO. Il ne touche ni à wa-gateway:3000
-// ni à rmasc-onsite:4002 : `pm2 start deploy/ecosystem.config.js`
-// ajoute une application, il n'en redémarre aucune autre.
+// Ce fichier ne déclare QU'ADMEDCO. Il ne touche ni à wa-gateway ni à
+// rmasc-onsite : `pm2 start deploy/ecosystem.config.js` ajoute une
+// application, il n'en redémarre aucune autre.
 //
-// Le nom suit la convention déjà en place sur le serveur,
-// « <projet>:<port> » — d'où « admedco:4003 ».
+// Le nom « admedco:4003 » porte le port, mais ce n'est PAS la
+// convention du serveur : les deux applications de production
+// s'appellent simplement « wa-gateway » et « rmasc-onsite », sans
+// suffixe. Ne pas en déduire que `pm2 <nom>` fonctionne partout —
+// `pm2_status()` (lib.sh) accepte les deux écritures pour cette raison.
 //
 // Le port est choisi à 4003 : 3000 est pris par wa-gateway et 4002 par
 // rmasc-onsite. Ne pas réutiliser ces deux ports.

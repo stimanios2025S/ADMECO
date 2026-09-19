@@ -54,6 +54,10 @@ bash /opt/admedco/deploy/deploy.sh
 
 ```bash
 bash /opt/admedco/deploy/verify.sh
+
+# Le garde-fou reconnaît-il bien les deux applications de production ?
+# (ne touche à rien : PM2 n'est pas interrogé, il est simulé)
+bash /opt/admedco/scripts/verifier-pm2-status.sh
 ```
 
 `deploy.sh` enchaîne sept étapes et **s'arrête net** à la première qui
@@ -123,10 +127,10 @@ Options utiles :
 
 | Chemin | Pourquoi |
 |---|---|
-| `/etc/cloudflared/config.yml` | Fait tourner wa-gateway:3000 et rmasc-onsite:4002 |
+| `/etc/cloudflared/config.yml` | Fait tourner `wa-gateway` (:3000) et `rmasc-onsite` (:4002) |
 | `/etc/cloudflared/aef1e8a1-….json` | Credentials de ces deux applications |
 | `/etc/nginx/sites-enabled/rmasc-app.conf` | Configuration nginx en production |
-| les processus PM2 `wa-gateway:3000`, `rmasc-onsite:4002` | Applications en production |
+| les processus PM2 `wa-gateway` (:3000), `rmasc-onsite` (:4002) | Applications en production |
 | le domaine `sarl-rmasc.com` dans Cloudflare | Celui de l'application existante |
 
 ### ⛔ Ne jamais lancer `cloudflared service install`
@@ -639,6 +643,7 @@ l'authentification des e-mails du domaine sans rien apporter à l'ERP.
 | `502` alors que le connecteur est « Healthy » | Le connecteur tourne sur la **mauvaise machine** : `Replicas` → `Architecture` doit être `linux_amd64`. |
 | La démo est revenue en production | `0003`/`0006`/`0007` ont été rejouées (§3). Les migrations passent désormais par `migrate.sh`. |
 | Le portail est blanc mais le serveur va bien | `NEXT_PUBLIC_SUPABASE_URL` en `127.0.0.1` (§3). |
+| « `wa-gateway:3000` → absent » alors que `pm2 list` la montre `online` | Deux causes distinctes. **(a)** Le script tourne en `root` : voir l'encadré « Jamais avec `sudo` ». **(b)** Les noms PM2 réels ne portent pas le port — `wa-gateway`, `rmasc-onsite`. `pm2_status()` (lib.sh) accepte désormais les deux écritures ; si le message revient, vérifier que `PROTECTED_APPS` désigne bien des noms existants. |
 
 Logs utiles :
 
