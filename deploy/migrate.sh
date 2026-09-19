@@ -50,6 +50,12 @@ done
 
 banner_start "MIGRATIONS — ADMEDCO"
 
+# `--status` est un RAPPORT : il ne doit RIEN écrire. Sans cette ligne il
+# créait la table de suivi et pouvait y insérer l'amorce — un « simple
+# état des lieux » modifiait la base, ce qui est exactement le genre de
+# surprise qu'on ne veut pas la veille d'une mise en production.
+if (( STATUS_ONLY )); then DRY_RUN=1; fi
+
 need_cmd sha256sum
 detect_docker
 
@@ -93,11 +99,19 @@ if [[ -z "${APPLIED// }" ]] && (( ! NO_BASELINE )); then
     if (( ! ASSUME_YES )) && ! confirm "Confirmer l'amorce jusqu'à $UNTIL ?"; then
       die "Amorce refusée. Utiliser --baseline <version> pour choisir la charnière."
     fi
+    # En simulation la table n'existe pas encore : la relire juste après
+    # échouait, et le script s'arrêtait là — précisément dans le cas où
+    # on voulait le prévisualiser. On mémorise donc ce qui AURAIT été
+    # amorcé, pour que l'état affiché ensuite soit cohérent. Sans cela,
+    # un --dry-run annoncerait « tout en attente », y compris les
+    # migrations qu'il vient d'écrire sous vos yeux.
+    SIMULEES=()
     for f in "$MIGRATIONS_DIR"/*.sql; do
       v="$(basename "$f" | cut -d_ -f1)"
       if [[ "$v" > "$UNTIL" ]]; then continue; fi
       if (( DRY_RUN )); then
         skip "[simulation] enregistrerait $v"
+        SIMULEES+=("$v")
       else
         q "INSERT INTO schema_migrations (version, name, checksum)
            VALUES ('$v', '$(basename "$f")', '$(sha256sum "$f" | cut -d' ' -f1)')
@@ -105,8 +119,12 @@ if [[ -z "${APPLIED// }" ]] && (( ! NO_BASELINE )); then
         ok "amorcée : $(basename "$f")"
       fi
     done
-    APPLIED="$(q "SELECT COALESCE(string_agg(version, ' ' ORDER BY version), '')
-                  FROM schema_migrations;")"
+    if (( DRY_RUN )); then
+      APPLIED="${SIMULEES[*]:-}"
+    else
+      APPLIED="$(q "SELECT COALESCE(string_agg(version, ' ' ORDER BY version), '')
+                    FROM schema_migrations;")"
+    fi
   fi
 fi
 

@@ -31,8 +31,24 @@ git add -A && git commit -m "..." && git push
 bash /opt/admedco/deploy/preflight.sh
 
 # 2. Déployer : code → environnement → base → build → PM2 → contrôle
-sudo bash /opt/admedco/deploy/deploy.sh
+bash /opt/admedco/deploy/deploy.sh
 ```
+
+> ⛔ **Jamais avec `sudo`** — et pas seulement pour `deploy.sh`.
+>
+> Le daemon PM2 appartient à `sarlrmasc`. En root, `pm2 list` est vide : donc
+> `preflight.sh` déclare `wa-gateway:3000` et `rmasc-onsite:4002` « absentes »
+> et **refuse le déploiement**. Si l'on passait outre, on créerait un second
+> daemon PM2 root, séparé du vrai — et les deux applications de production ne
+> seraient plus pilotées là où on croit.
+>
+> Corollaire moins visible : `env-supabase.sh` écrit `/opt/admedco/.env.local`.
+> Lancé en root, le fichier **appartient à root** — et le build, qui tourne en
+> `sarlrmasc`, ne peut alors plus le lire. L'application se construirait sans
+> jamais voir Supabase, avec une page blanche pour seul symptôme.
+>
+> Les scripts élèvent les privilèges **eux-mêmes** quand c'est nécessaire
+> (`sudo docker`, `sudo -n mkdir`), et uniquement là.
 
 🖧 **SERVEUR** — contrôler à tout moment :
 
@@ -221,8 +237,31 @@ Il demande confirmation. Pour choisir une autre charnière :
 ```bash
 bash /opt/admedco/deploy/migrate.sh --status     # que reste-t-il à jouer ?
 bash /opt/admedco/deploy/migrate.sh --dry-run    # simulation, n'écrit rien
-sudo bash /opt/admedco/deploy/migrate.sh         # applique
+bash /opt/admedco/deploy/migrate.sh              # applique
 ```
+
+> **`--status` et `--dry-run` n'écrivent rien** — c'était faux avant correction :
+> l'amorce s'exécutait *avant* le test `STATUS_ONLY`, si bien qu'un simple état
+> des lieux créait la table de suivi et pouvait y insérer l'amorce. Les deux
+> options sont désormais en lecture seule.
+
+> ⚠️ **La charnière d'amorce ne se lit pas dans `\dt`.** Certaines migrations
+> n'ajoutent aucune table : `0013_realtime_portail.sql` se contente d'inscrire
+> six tables dans la publication `supabase_realtime`. Si on l'enregistre comme
+> appliquée à tort, les files d'atelier s'affichent mais **ne se rafraîchissent
+> jamais** sur les tablettes — panne silencieuse, en plein atelier. Pour la
+> trancher :
+>
+> ```bash
+> sudo docker exec -i supabase-db psql -U postgres -d postgres -c \
+>   "SELECT tablename FROM pg_publication_tables
+>     WHERE pubname = 'supabase_realtime' AND schemaname = 'public'
+>     ORDER BY tablename;"
+> ```
+>
+> Les six attendues : `destinations`, `material_logs`, `semi_finished_stock`,
+> `site_transfers`, `stock_items`, `work_order_steps`. Si elles y sont → la
+> charnière `0013` est juste. Si elles manquent → `--baseline=0012`.
 
 Chaque migration tourne dans `--single-transaction` : elle passe entièrement
 ou pas du tout. Aucune migration du dépôt n'utilise `CREATE INDEX
@@ -234,8 +273,8 @@ du dossier `supabase/migrations/`, `0017` comprise.
 🖧 **SERVEUR** :
 
 ```bash
-sudo bash /opt/admedco/deploy/env-supabase.sh --show    # voir sans écrire
-sudo bash /opt/admedco/deploy/env-supabase.sh           # écrire
+bash /opt/admedco/deploy/env-supabase.sh --show    # voir sans écrire
+bash /opt/admedco/deploy/env-supabase.sh           # écrire
 ```
 
 Le script lit `ANON_KEY` et `SERVICE_ROLE_KEY` directement dans le `.env` de la
@@ -249,7 +288,7 @@ serveur, et le portail resterait blanc sur le terrain. Le script **refuse
 d'écrire** une URL locale et indique la marche à suivre :
 
 ```bash
-sudo bash deploy/env-supabase.sh --url=https://supabase.admedco.com
+bash deploy/env-supabase.sh --url=https://supabase.admedco.com
 ```
 
 > `SITE_URL` de la pile Supabase est volontairement ignoré : c'est l'adresse de
@@ -628,9 +667,9 @@ git push
 ```bash
 cd /opt/admedco
 git pull --ff-only                        # vérifier ce qui arrive
-sudo bash deploy/migrate.sh --status      # 0017 est-elle en attente ?
-sudo bash deploy/migrate.sh --dry-run     # simulation, n'écrit rien
-sudo bash deploy/deploy.sh                # tout : pré-vol → code → env → base → build → PM2 → contrôle
+bash deploy/migrate.sh --status      # 0017 est-elle en attente ?
+bash deploy/migrate.sh --dry-run     # simulation, n'écrit rien
+bash deploy/deploy.sh                # tout : pré-vol → code → env → base → build → PM2 → contrôle
 ```
 
 `deploy.sh` fait le `git pull` lui-même, donc `git pull --ff-only` juste avant
