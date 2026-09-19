@@ -6,7 +6,8 @@ import {
   LayoutDashboard, Truck, Siren, BookOpen, Package, Factory, Send,
   Warehouse, ClipboardCheck, Building2, Boxes, Handshake, FileText,
   Layers, ListTree, Users, Menu, TabletSmartphone, ChevronLeft,
-  ChevronRight, Bell, Settings, Sofa, Hammer
+  ChevronRight, Bell, Settings, Sofa, Hammer, ShoppingCart, QrCode,
+  SlidersHorizontal, FlaskConical, Route
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import UserChip from "./UserChip";
@@ -19,6 +20,7 @@ const SECTIONS: Section[] = [
     items: [
       { href: "/admin", label: "Tableau de bord", icon: LayoutDashboard },
       { href: "/admin/roadmap", label: "Feuille de route", icon: Truck },
+      { href: "/admin/simulateur", label: "Simulateur de chaîne", icon: Route },
       { href: "/admin/incidents", label: "Alertes", icon: Siren },
       { href: "/admin/archives", label: "Archives", icon: BookOpen },
     ]
@@ -26,6 +28,7 @@ const SECTIONS: Section[] = [
   {
     label: "PRODUCTION",
     items: [
+      { href: "/admin/commandes", label: "Commandes client", icon: ShoppingCart },
       { href: "/admin/orders", label: "Commandes", icon: Package },
       { href: "/admin/fabrication", label: "Fabrication", icon: Factory },
       { href: "/admin/suivi-atelier1", label: "Suivi Atelier 1", icon: Hammer },
@@ -37,6 +40,7 @@ const SECTIONS: Section[] = [
     label: "STOCKS",
     items: [
       { href: "/admin/stocks", label: "Stocks", icon: Warehouse },
+      { href: "/admin/seuils", label: "Seuils & récupération", icon: SlidersHorizontal },
       { href: "/admin/reception", label: "Réception MP", icon: ClipboardCheck },
       { href: "/admin/depots", label: "Dépôts", icon: Building2 },
     ]
@@ -49,11 +53,13 @@ const SECTIONS: Section[] = [
       { href: "/admin/documents", label: "Documents", icon: FileText },
       { href: "/admin/lots", label: "Lots", icon: Layers },
       { href: "/admin/nomenclatures", label: "Nomenclatures", icon: ListTree },
+      { href: "/admin/rendements", label: "Rendements matière", icon: FlaskConical },
     ]
   },
   {
     label: "SUIVI",
     items: [
+      { href: "/admin/ouvriers", label: "Ouvriers & QR", icon: QrCode },
       { href: "/admin/team", label: "Équipe", icon: Users },
     ]
   }

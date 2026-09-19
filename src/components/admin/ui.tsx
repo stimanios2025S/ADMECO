@@ -63,7 +63,11 @@ export function StatusPill({ status }: { status: string }) {
     ALL_READY: "bg-[#4a7c59]/10 text-[#4a7c59] border-[#4a7c59]/20",
     PARTIAL_READY: "bg-amber-50 text-amber-600 border-amber-200",
     ADMIN: "bg-[#c24a08]/10 text-[#c24a08] border-[#c24a08]/20",
-    WORKER: "bg-[#2f6eb5]/10 text-[#2f6eb5] border-[#2f6eb5]/20"
+    WORKER: "bg-[#2f6eb5]/10 text-[#2f6eb5] border-[#2f6eb5]/20",
+    // Seuils de stock : « SOUS_SEUIL » = le plancher est franchi, donc
+    // une dette de production va naître. « OK » = rien à signaler.
+    SOUS_SEUIL: "bg-red-50 text-red-500 border-red-200",
+    OK: "bg-[#4a7c59]/10 text-[#4a7c59] border-[#4a7c59]/20"
   };
   return (
     <span className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold", map[status] ?? "bg-[#7c8091]/10 text-[#7c8091] border-black/10")}>
