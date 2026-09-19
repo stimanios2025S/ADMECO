@@ -1,17 +1,72 @@
-# Déploiement ADMEDCO — runbook exact
+# Déploiement ADMEDCO
 
-Chaque étape indique **où** elle s'exécute :
+Chaque commande indique **où** elle s'exécute :
 
 | Marqueur | Signification |
 |---|---|
-| 🖥️ **PC LOCAL** | Sur ta machine Windows, dans le dossier `E:\ADMECO` |
+| 🖥️ **PC LOCAL** | Ta machine Windows, dans `E:\ADMECO` |
 | 🖧 **SERVEUR** | En SSH sur `greendutyconfig`, session `sarlrmasc` |
-| 🌐 **DASHBOARD** | Dans le navigateur, sur https://one.dash.cloudflare.com |
+| 🌐 **DASHBOARD** | Navigateur, https://one.dash.cloudflare.com |
 | 🌍 **NAVIGATEUR** | Depuis n'importe où, pour tester le résultat |
 
 ---
 
-## 1. Architecture
+## 1. Démarrage rapide — la voie scriptée
+
+> **C'est la méthode recommandée.** Le déploiement manuel du §6 reste
+> documenté comme filet de sécurité, mais il n'est plus la référence.
+
+🖥️ **PC LOCAL** — publier le code :
+
+```bash
+cd E:\ADMECO
+git add -A && git commit -m "..." && git push
+```
+
+🖧 **SERVEUR** — vérifier, puis déployer :
+
+```bash
+# 1. Le serveur est-il en état de recevoir un déploiement ?
+#    (lecture seule, ne modifie rien)
+bash /opt/admedco/deploy/preflight.sh
+
+# 2. Déployer : code → environnement → base → build → PM2 → contrôle
+sudo bash /opt/admedco/deploy/deploy.sh
+```
+
+🖧 **SERVEUR** — contrôler à tout moment :
+
+```bash
+bash /opt/admedco/deploy/verify.sh
+```
+
+`deploy.sh` enchaîne sept étapes et **s'arrête net** à la première qui
+échoue, sans jamais laisser la base ou l'application à moitié modifiée :
+
+```
+0. Pré-vol              applications de production en ligne ? port 4003 libre ?
+1. Code                 git pull --ff-only
+2. Environnement        .env.local généré depuis la pile Supabase
+3. Base                 migrations manquantes, une transaction chacune
+4. Dépendances          npm ci (complet — le build en a besoin)
+5. Compilation          npm run build
+6. PM2                  admedco:4003 démarré ou redémarré, puis pm2 save
+7. Contrôle             HTTP sur 4003 + non-régression de :3000 et :4002
+```
+
+Options utiles :
+
+| Commande | Effet |
+|---|---|
+| `deploy.sh --yes` | Ne rien demander |
+| `deploy.sh --skip-pull` | Ne pas toucher au code |
+| `deploy.sh --skip-env` | Conserver le `.env.local` existant *(défaut s'il existe)* |
+| `deploy.sh --skip-migrate` | Ne pas toucher à la base |
+| `deploy.sh --skip-build` | Ne pas recompiler (déconseillé) |
+
+---
+
+## 2. Architecture
 
 ```
                       Internet
@@ -65,343 +120,420 @@ tunnel qui fait tourner les deux applications existantes. Elle l'écraserait et
 les couperait toutes les deux. Le service ADMEDCO porte volontairement un nom
 distinct (`cloudflared-admedco.service`) pour que la question ne se pose pas.
 
----
+**Ces interdits sont vérifiés automatiquement.** `preflight.sh` relit l'état des
+deux applications avant chaque déploiement, et `deploy.sh` le relit après en
+comparant avec l'état d'avant. Une régression est signalée en fin de sortie.
 
-## 2. ÉTAPE 1 — 🖥️ PC LOCAL : pousser le code
+### Les sept écrans du workflow
+
+| Chemin | Qui l'ouvre | Ce qu'il fait |
+|---|---|---|
+| `/admin/commandes` | l'administrateur | Saisir une commande client, **copier le lien à envoyer au client**, puis « Trier et lancer » : l'agent découpe la commande en une sous-commande ADMEDCO (le dur) et une sous-commande MOBILIX (le mou), et lance la production de chacune |
+| `/commande/<jeton>` | le **client**, sur son téléphone | Le catalogue, le panier, l'envoi. Aucun compte, **aucun prix d'achat, aucun stock, aucun atelier** — le client ne voit que sa commande |
+| `/admin/simulateur` | l'administrateur | **Voir la chaîne avant de la lancer.** Choisit un produit fabriqué, déroule le triage, la route et le plan matière, et affiche les ordres de fabrication, l'ordre global des étapes par atelier et les matières manquantes. **Lecture seule** : rien n'est lancé, rien n'est réservé |
+| `/admin/ouvriers` | l'administrateur | Générer les **deux QR du matin** par ouvrier, les imprimer, affecter chaque opération à un ouvrier dans un ordre précis, lire le **bilan** de la journée et le **classement** (admin seulement) |
+| `/journee/<jeton>` | l'**ouvrier**, en scannant | Le même écran sert les deux QR : `qr_journee` affiche tout son travail du jour dans l'ordre reçu ; `qr_entree` n'affiche **qu'un bouton** — pointer l'entrée ou la sortie |
+| `/admin/seuils` | l'administrateur | Fixer le **plancher** et le **plafond** de chaque sous-stock, voir ce qui est passé dessous, et lire la **dette de production** que la prochaine commande absorbera |
+| `/admin/rendements` | l'administrateur | Saisir **combien une unité de matière donne de pièces** (1 barre → 4 pièces), usine par usine, et **vérifier l'effet** sur un produit réel avant de valider |
+
+Les deux dernières routes sont **volontairement publiques** (le `middleware` ne
+protège que `/admin` et `/templates`) : un ouvrier scanne un QR sans se
+connecter, et un client ouvre son lien sans compte. Tout ce qu'elles exposent
+est un **jeton**, pas une session.
+
+Les jetons changent **chaque jour** (`journees_ouvrier.qr_journee` /
+`qr_entree`, régénérés par « Générer les codes du matin »). Un QR photographié
+la veille ne vaut plus rien le lendemain — et les jetons déjà générés sont
+**conservés** lors d'une relance, sinon un ouvrier qui a scanné le matin ne
+pourrait plus pointer son départ le soir.
+
+### Vérifier un produit réel avant de le lancer
+
+Les exports Silwane (`COM_Item`, `COM_Formula`, `COM_BOM`…) vivent hors du
+dépôt, dans `E:\Massiexporte`. Trois outils les lisent **sans jamais écrire** :
 
 ```bash
-cd E:\ADMECO
-git add -A
-git commit -m "deploy: tunnel ADMEDCO en mode token + runbook serveur"
-git push
+# 1. Retrouver un article quand seul le nom est connu
+#    (Silwane écrit « CHG 021 » avec une espace, « CHG020 » sans)
+node scripts/chercher-article.mjs visiteur
+
+# 2. Relire une nomenclature et la confronter à l'écran Silwane
+#    (Nombre composants / Total PMP / Quantité)
+node scripts/fiche-produit.mjs CHG020 "CHG 021"
+
+# 3. Rejouer TRIAGE + ROUTE + MATIÈRE sur ce produit
+node scripts/verifier-chaine.mjs CHG020 --qte 10
 ```
 
-**Attendu :** `main -> main`, sans erreur.
+Le troisième compile les modules purs du MES (`triage.ts`,
+`route-production.ts`, `agent-matiere.ts`) dans `.tmp-sim/` et les exécute.
+Il ne réimplémente **aucune** règle : ce qu'il affiche est ce que
+l'application calculera. C'est la même vérification que `/admin/simulateur`,
+mais sans base de données.
+
+> **Le nom d'un article n'est pas son code.** `CHG 021` porte une espace,
+> `CHG020` non. Un code mal recopié donne « article introuvable » sans autre
+> explication — d'où `chercher-article.mjs`.
 
 ---
 
-## 3. ÉTAPE 2 — 🌐 DASHBOARD : vérifier les Public Hostnames
+## 3. La base de données
+
+### `schema_migrations` — pourquoi elle existe
+
+Le runbook précédent rejouait les migrations « à la main », en supposant
+qu'elles sont toutes ré-exécutables sans effet. **C'est faux pour trois
+d'entre elles :**
+
+| Migration | Ce qu'un rejeu provoquerait |
+|---|---|
+| `0003_seed.sql` | Réinsère des articles de **démo** |
+| `0006_seed_stock_templates.sql` | Réinsère du stock de **démo** |
+| `0007_pied_metal_eco.sql` | Réinsère la gamme de **démo** |
+
+`0015_stock_reel_silwane.sql` supprime ces lignes de démo — et il le fait avec
+un `ON CONFLICT DO NOTHING` sur des lignes dont le code est `NULL`, ce qui ne
+bloque donc rien. **Rejouer 0003, 0006 ou 0007 ferait revenir la démo en
+production.**
+
+D'où la table `schema_migrations` : chaque migration appliquée y est
+enregistrée avec son empreinte SHA-256. On ne rejoue que ce qui manque.
+
+### Amorce sur une base déjà peuplée
+
+À la première exécution sur ce serveur, la table est vide alors que le schéma
+existe déjà (les migrations 0001→0013 ont été jouées à la main). `migrate.sh`
+détecte ce cas et **enregistre** 0001→0013 comme appliquées **sans les
+rejouer** — précisément pour éviter le retour de la démo.
 
 ```
-one.dash.cloudflare.com
-  → Networks
-  → Tunnels
-  → « admedco et mobilix »
+Amorce du suivi jusqu'à 0013
+⚠ La base contient déjà un schéma, mais aucune trace de migration.
+```
+
+Il demande confirmation. Pour choisir une autre charnière :
+`migrate.sh --baseline=0010`.
+
+### Utilisation
+
+🖧 **SERVEUR** :
+
+```bash
+bash /opt/admedco/deploy/migrate.sh --status     # que reste-t-il à jouer ?
+bash /opt/admedco/deploy/migrate.sh --dry-run    # simulation, n'écrit rien
+sudo bash /opt/admedco/deploy/migrate.sh         # applique
+```
+
+Chaque migration tourne dans `--single-transaction` : elle passe entièrement
+ou pas du tout. Aucune migration du dépôt n'utilise `CREATE INDEX
+CONCURRENTLY`, qui serait incompatible — c'est vérifié sur **les 17 fichiers**
+du dossier `supabase/migrations/`, `0017` comprise.
+
+### `.env.local` — généré, jamais recopié à la main
+
+🖧 **SERVEUR** :
+
+```bash
+sudo bash /opt/admedco/deploy/env-supabase.sh --show    # voir sans écrire
+sudo bash /opt/admedco/deploy/env-supabase.sh           # écrire
+```
+
+Le script lit `ANON_KEY` et `SERVICE_ROLE_KEY` directement dans le `.env` de la
+pile Docker Supabase — puisque les clés y sont déjà. Les recopier depuis un
+chat est une source d'erreur : le token du tunnel en a déjà fait les frais.
+
+**L'URL, elle, ne peut pas être devinée.** `NEXT_PUBLIC_SUPABASE_URL` est
+l'adresse que le **navigateur de l'ouvrier** utilise : authentification et
+temps réel passent par là. Une adresse en `127.0.0.1` ne fonctionne que sur le
+serveur, et le portail resterait blanc sur le terrain. Le script **refuse
+d'écrire** une URL locale et indique la marche à suivre :
+
+```bash
+sudo bash deploy/env-supabase.sh --url=https://supabase.admedco.com
+```
+
+> `SITE_URL` de la pile Supabase est volontairement ignoré : c'est l'adresse de
+> l'application appelante, pas celle de l'API. La confondre pointerait le
+> navigateur vers l'ERP lui-même.
+
+### La migration `0017` — le socle du workflow
+
+`0017_workflow_complet.sql` ne crée aucun écran : elle **rend possibles** les
+mécanismes décrits par l'exploitant. Elle est déjà prise en charge par
+`migrate.sh` (elle n'est pas dans `schema_migrations`, donc elle sera jouée).
+
+Ce qu'elle apporte, et qu'aucune version précédente ne permettait :
+
+| # | Apport | Pourquoi c'était bloquant |
+|---|--------|---------------------------|
+| 1 | **MOBILIX passe à deux ateliers** (id 3 = M1 découpe bois, id 5 = M2 tapissage) | Le modèle d'usine n'avait qu'un atelier MOBILIX |
+| 2 | **`sequence`** — l'ordre **global** des étapes, propre à chaque pièce | `work_order_steps` était `UNIQUE(item_id, step_order)`. Une pièce traverse plusieurs ateliers qui numérotent **chacun depuis 1** : elle ne pouvait donc pas avoir deux « étape 5 ». Le parcours réel `A1 → A3 poudrage → A2 montage → A3 emballage` était **irreprésentable** |
+| 3 | **Déclaration ouvrier** : `quantity_taken` / `quantity_ok` / `quantity_rebut` | L'ouvrier ne pouvait déclarer que « fait / pas fait » |
+| 4 | **Réservation matière** tracée à part du prélèvement réel | Réserver et retirer étaient confondus |
+| 5 | **`parcages`** + dépôts `DEP-ENCOURS-ADM` / `DEP-ENCOURS-MBX` | Aucun moyen de laisser un travail commencé quand une urgence arrive |
+| 6 | **`dette_production`** — le système de récupération 200/300 | Le manque sous le plancher n'était nulle part |
+| 7 | **`rendement_matiere`** — combien une unité de matière donne de pièces | Le pont entre « 300 chaises » et « combien de barres sortir du stock » n'existait pas |
+| 8 | **`commandes_client`** + `commande_client_lignes` | Pas de commande client, donc pas de portail |
+| 9 | **Triage** par usine (`role_triage`, `destination`) | Rien ne séparait la part ADMEDCO de la part MOBILIX |
+| 10 | **`journees_ouvrier`** + `affectations_etape` | Deux QR par ouvrier, et le temps par poste : le socle du classement |
+| 11 | `category_id` de `work_order_items` passe en **nullable** | Une commande réelle vise un **article** Silwane, pas une catégorie de démo |
+| 12 | Vues `v_bilan_journalier`, `v_classement_ouvrier`, `v_stocks_sous_seuil`, `v_dette_par_article` | Aucun pilotage n'était possible |
+| 13 | RLS + droits sur les sept nouvelles tables | — |
+
+> ⚠️ **La migration `0017` est obligatoire.** Sans elle, chaque écriture du
+> workflow échoue avec un message explicite (`table ou colonne manquante …
+> la migration 0017 doit être exécutée sur le serveur`) — jamais en silence.
+> Les messages sont produits par `errFr()` dans `src/app/actions-workflow.ts`.
+
+> 🔒 **`v_classement_ouvrier` est réservée à l'administrateur.** Une vue
+> Postgres **ne respecte pas** la RLS de ses tables sous-jacentes. La vue est
+> donc `REVOKE` des rôles `anon` et `authenticated`, et seul le `service_role`
+> peut la lire. L'action serveur `classementOuvriers()` vérifie elle-même
+> `role === "ADMIN"` avant de la consulter. **Ne rien ajouter à la fin de
+> `0017` qui accorderait des droits sur le schéma `public`** : le `REVOKE`
+> doit rester la dernière instruction du fichier.
+
+**Ce que l'exploitant doit encore fournir** — et **où** le saisir. L'agent
+n'invente rien : tant qu'une donnée manque, il le signale au lieu de la deviner.
+
+| Donnée | Où la saisir | Si elle manque |
+|---|---|---|
+| **Rendements matière**, usine par usine (« 1 barre → combien de pièces ») | `/admin/rendements` | L'agent suppose **1 pour 1** et marque `rendementRenseigne: false` à chaque calcul |
+| **Seuils 200 / 300** (plancher / plafond), article par article | `/admin/seuils` | Aucune dette n'est créée : le plancher est `NULL`, donc rien n'est suivi |
+| **Temps estimés** par opération | `/admin/ouvriers`, onglet *Affectation*, champ au moment d'affecter | 30 min par défaut (valeur de `work_order_steps.estimated_minutes` en 0005) |
+| **Ouvriers** : nom, atelier, `usine_code`, rôle `WORKER` | `/admin/team` | Aucune journée ne peut être générée : `genererJournees()` dit « Aucun ouvrier à qui générer une journée » |
+
+Les rendements et les seuils se saisissent donc **au fil de l'eau**, depuis
+l'application, sans SQL et sans redéploiement : ce sont des données, pas du code.
+
+---
+
+## 4. Le tunnel Cloudflare
+
+### 4.1 🌐 DASHBOARD — les Public Hostnames
+
+```
+one.dash.cloudflare.com → Networks → Tunnels → « admedco et mobilix »
   → onglet « Public Hostname »
 ```
 
-Les trois lignes suivantes doivent exister, **avec exactement cette URL** :
-
-| Subdomain | Domain | Type | URL |
+| Subdomain | Domain | Service Type | Service URL |
 |---|---|---|---|
-| *(vide)* | `admedco.com` | HTTP | `127.0.0.1:4003` |
-| `www` | `admedco.com` | HTTP | `127.0.0.1:4003` |
-| `erp` | `admedco.com` | HTTP | `127.0.0.1:4003` |
+| *(vide)* | `admedco.com` | `HTTP` | `localhost:4003` |
+| `www` | `admedco.com` | `HTTP` | `localhost:4003` |
+| `erp` | `admedco.com` | `HTTP` | `localhost:4003` |
 
 ⛔ **Contrôler chaque URL une par une.** `3000` appartient à wa-gateway et
 `4002` à rmasc-onsite : une URL qui pointe là enverrait le domaine ADMEDCO sur
-une application existante. Si une ligne est fausse, corriger avec **Edit**.
+une application existante.
+
+> **`localhost:4003` et `127.0.0.1:4003` sont équivalents ici.** cloudflared
+> tourne sur le même serveur que l'application. Ne pas mettre `https://`, ni de
+> chemin, ni le nom du domaine — le chemin est transmis tel quel par le tunnel.
 
 C'est cette liste qui **est** la configuration du tunnel. Il n'y a aucun
 fichier à éditer sur le serveur pour ça.
 
----
-
-## 4. ÉTAPE 3 — 🌐 DASHBOARD : copier le token
-
-Même page, à droite de « admedco et mobilix » :
-
-```
-⋯  →  « Copy token »
-```
+### 4.2 Récupérer le token
 
 Le token est une longue chaîne commençant par `eyJhIjoi…` (~200 caractères).
+Sa partie décodable contient l'ID du tunnel — c'est ainsi qu'on vérifie qu'on
+a le bon : `"t":"9c8f8ce5-4c53-4b45-9f44-9d2dc39aab55"`.
 
-📋 **Garde-le dans le presse-papier** : il sert à l'ÉTAPE 6. Ne le colle nulle
-part ailleurs — ni dans un fichier du dépôt, ni dans un chat.
+La nouvelle interface Cloudflare **n'affiche plus de bouton « Copy token »**
+sur la page Overview. Deux méthodes fonctionnent :
 
----
+**Méthode A — depuis une machine où un connecteur tourne déjà**
 
-## 5. ÉTAPE 4 — 🖧 SERVEUR : diagnostic (lecture seule)
-
-```bash
-pm2 list
-sudo ss -ltnp | grep -E ':(3000|4002|4003)\b' || echo "4003 libre"
-command -v cloudflared
-sudo docker ps --format '{{.Names}}\t{{.Ports}}' | grep -i supabase
-node -v; npm -v; pm2 -v
+```powershell
+# Windows
+Get-Content C:\ProgramData\cloudflared\token
+(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\cloudflared').ImagePath
 ```
 
-**Attendu :**
-
-| Contrôle | Résultat attendu |
-|---|---|
-| `pm2 list` | `wa-gateway:3000` et `rmasc-onsite:4002` en `online` |
-| Port 4003 | `4003 libre` |
-| `command -v cloudflared` | `/usr/local/bin/cloudflared` |
-| `docker ps` | le conteneur `supabase-db` visible |
-
-> ⚠️ Si `command -v cloudflared` renvoie autre chose que
-> `/usr/local/bin/cloudflared`, noter le chemin : il faudra corriger la ligne
-> `ExecStart` du fichier `deploy/cloudflared-admedco.service` avant l'ÉTAPE 7.
-
----
-
-## 6. ÉTAPE 5 — 🖧 SERVEUR : cloner le dépôt
-
 ```bash
-sudo mkdir -p /opt/admedco
-sudo chown $USER:$USER /opt/admedco
-
-git clone https://github.com/stimanios2025S/ADMECO.git /opt/admedco
-cd /opt/admedco
-git log --oneline -3
+# Linux
+sudo systemctl cat cloudflared-admedco | grep -o 'eyJ[A-Za-z0-9._-]*'
 ```
 
-> **Attention au nom du dépôt :** c'est `ADMECO`, pas `ADMEDCO`.
-> Le dossier local, lui, s'appelle bien `/opt/admedco`.
+**Méthode B — depuis le dashboard (génère un token neuf)**
 
-**Attendu :** les 3 derniers commits, dont celui poussé à l'ÉTAPE 1.
+```
+Overview → carte « Replicas » → bouton « + Add a replica »
+```
 
----
+Les onglets par système affichent la commande d'installation, qui contient le
+token.
 
-## 7. ÉTAPE 6 — 🖧 SERVEUR : le token du tunnel
+> **`Rotate token`** invalide le token actuel et en crée un neuf. C'est la
+> façon propre de **révoquer un ancien connecteur**. À ne faire que
+> volontairement : tout connecteur détenant l'ancien token cesse aussitôt de
+> fonctionner (`Invalid tunnel secret`).
 
-Remplace `COLLE_LE_TOKEN_ICI` par le token copié à l'ÉTAPE 3, **puis** lance le
-bloc. Les guillemets autour de `'EOF'` sont obligatoires : sans eux, le shell
-interpréterait les caractères du token.
+### 4.3 ⚠️ Vérifier les replicas avant d'installer
+
+```
+Overview → carte « Replicas »
+```
+
+Un tunnel peut avoir plusieurs replicas, et Cloudflare **répartit alors les
+requêtes au hasard entre eux**. Si un replica tourne sur la mauvaise machine,
+le domaine répond correctement une fois sur deux et échoue l'autre fois — une
+panne intermittente, très coûteuse à diagnostiquer.
+
+Il faut donc que le connecteur Linux soit **le seul replica** du tunnel.
+
+### 4.4 Installer le connecteur
+
+🖧 **SERVEUR** :
 
 ```bash
+# Le token, jamais dans un fichier du dépôt (chmod 600, root seul)
 sudo tee /etc/cloudflared/admedco.env > /dev/null <<'EOF'
 TUNNEL_TOKEN=COLLE_LE_TOKEN_ICI
 EOF
-
 sudo chmod 600 /etc/cloudflared/admedco.env
+sudo grep -c '^TUNNEL_TOKEN=eyJ' /etc/cloudflared/admedco.env   # → 1
 
-# Contrôles
-sudo ls -la /etc/cloudflared/
-sudo grep -c '^TUNNEL_TOKEN=eyJ' /etc/cloudflared/admedco.env
-```
-
-**Attendu :** `admedco.env` en `-rw-------` (root seul) et le `grep` renvoie `1`.
-
-> Ce fichier **s'ajoute** à `/etc/cloudflared/`. Il ne remplace ni `config.yml`
-> ni `aef1e8a1-….json`, qui doivent rester exactement tels quels.
-
----
-
-## 8. ÉTAPE 7 — 🖧 SERVEUR : le service du tunnel
-
-```bash
-# Vérifier le chemin du binaire (ÉTAPE 4) avant d'installer
-grep ExecStart /opt/admedco/deploy/cloudflared-admedco.service
-
+# Le service
+grep ExecStart /opt/admedco/deploy/cloudflared-admedco.service   # vérifier le chemin du binaire
+sudo cp /opt/admedco/deploy/cloudflared-admedco.yml    /etc/cloudflared/admedco.yml
 sudo cp /opt/admedco/deploy/cloudflared-admedco.service /etc/systemd/system/
 sudo systemctl daemon-reload
-
-# Vérifier que le token est bien injecté dans la ligne de commande
-systemctl show cloudflared-admedco -p ExecStart
-
 sudo systemctl enable --now cloudflared-admedco
 
-systemctl status cloudflared-admedco --no-pager
 journalctl -u cloudflared-admedco -n 40 --no-pager
 ```
 
-**Attendu dans le journal :** `Registered tunnel connection` (plusieurs lignes,
-une par edge Cloudflare).
+**Attendu :** `Registered tunnel connection` (plusieurs lignes, une par edge).
 
-**Puis vérifier que les deux autres applications vont toujours bien :**
+> Le tunnel démarrera avant l'application : il renverra `502` pendant quelques
+> minutes. Ce n'est pas une erreur.
 
-```bash
-pm2 list
-systemctl status cloudflared --no-pager | head -5
-curl -I http://127.0.0.1:3000
-curl -I http://127.0.0.1:4002
+### 4.5 ⚠️ Le piège du fichier de configuration par défaut
+
+**Ne pas ignorer cette sous-section : elle protège les deux applications
+existantes.**
+
+cloudflared cherche sa configuration dans des emplacements par défaut si on ne
+lui passe pas `--config`. Le troisième de la liste est
+`/etc/cloudflared/config.yml` — **la configuration du tunnel de production**.
+Un tunnel lancé avec `--token` charge quand même ce fichier et en reprend le
+`credentials-file` :
+
+```
+INF Settings: map[cred-file:/etc/cloudflared/aef1e8a1-….json
+                 credentials-file:/etc/cloudflared/aef1e8a1-….json
+                 no-autoupdate:true token:*****]
 ```
 
-> Le tunnel démarrera avant l'application (ÉTAPE 9) : c'est normal, il
-> renverra `502` pendant quelques minutes. Ce n'est pas une erreur.
+Le token gagne, donc la connexion va bien vers le tunnel ADMEDCO. Mais les
+identifiants de **production** sont chargés en mémoire et servent de repli : si
+le token venait à manquer, le service ADMEDCO deviendrait un second replica du
+tunnel de production — et `:3000` / `:4002` échoueraient une fois sur deux.
+
+D'où le `--config /etc/cloudflared/admedco.yml` du `ExecStart` et le fichier
+minimal livré dans `deploy/cloudflared-admedco.yml`.
+
+**Contrôle — la ligne `Settings:` ne doit contenir AUCUN `credentials-file` :**
+
+```bash
+journalctl -u cloudflared-admedco -n 40 --no-pager | grep 'Settings:'
+```
+
+| Ce que tu lis | Verdict |
+|---|---|
+| `map[config:/etc/cloudflared/admedco.yml no-autoupdate:true token:*****]` | ✅ correct |
+| `credentials-file:/etc/cloudflared/aef1e8a1-….json` présent | ⛔ `--config` manquant |
 
 ---
 
-## 9. ÉTAPE 8 — 🖧 SERVEUR : les migrations
+## 5. Ce que fait chaque script
 
-Les 16 migrations existent dans le dépôt, mais seules les **3 dernières** sont
-nouvelles : la base Supabase tourne déjà avec les 13 premières.
+| Script | Rôle | Écrit ? |
+|---|---|---|
+| `lib.sh` | Helpers partagés, garde-fous. Sourcé, jamais exécuté | non |
+| `preflight.sh` | Le serveur peut-il recevoir un déploiement ? | non |
+| `env-supabase.sh` | Génère `.env.local` depuis la pile Supabase | `.env.local` |
+| `migrate.sh` | Applique les migrations manquantes, avec suivi | la base |
+| `deploy.sh` | Enchaîne tout : le point d'entrée | tout |
+| `verify.sh` | Contrôle de bout en bout | non |
+
+Les cinq scripts refusent de s'exécuter si les deux applications de production
+ne sont pas `online` : si l'une est déjà tombée, on veut le savoir **avant**
+d'intervenir, pas après.
+
+---
+
+## 6. Déploiement manuel — filet de sécurité
+
+À n'utiliser que si les scripts sont indisponibles (dépôt non cloné, par
+exemple). C'est la voie que `deploy.sh` automatise.
+
+🖧 **SERVEUR** :
 
 ```bash
-cd /opt/admedco/supabase/migrations
+# 1. Diagnostic
+pm2 list
+sudo ss -ltnp | grep -E ':(3000|4002|4003)\b' || echo "4003 libre"
+sudo docker ps --format '{{.Names}}\t{{.Ports}}' | grep -i supabase
+node -v; npm -v; pm2 -v
 
+# 2. Code
+sudo mkdir -p /opt/admedco && sudo chown $USER:$USER /opt/admedco
+git clone https://github.com/stimanios2025S/ADMECO.git /opt/admedco
+```
+
+> **Attention au nom du dépôt :** c'est `ADMECO`, pas `ADMEDCO`.
+> Le dossier serveur, lui, s'appelle bien `/opt/admedco`.
+
+```bash
+# 3. Environnement  (voir §3 pour le contenu et les avertissements)
+nano /opt/admedco/.env.local
+chmod 600 /opt/admedco/.env.local
+
+# 4. Migrations     (voir §3 — ne PAS rejouer 0003/0006/0007)
+cd /opt/admedco/supabase/migrations
 for f in 0014_gamme_eco.sql 0015_stock_reel_silwane.sql 0016_atelier_poudrage.sql; do
   echo "── $f"
   sudo docker exec -i supabase-db psql -U postgres -d postgres < "$f" || exit 1
 done
-```
 
-Toutes sont idempotentes : les rejouer ne casse rien.
-
-**Contrôle après 0016 :**
-
-```bash
-sudo docker exec -i supabase-db psql -U postgres -d postgres <<'SQL'
-SELECT id, code, name FROM ateliers ORDER BY id;
-SELECT code, nom FROM erp_depots WHERE code LIKE 'DEP-%' ORDER BY code;
-SELECT atelier_id, COUNT(*) FROM work_order_steps GROUP BY atelier_id ORDER BY atelier_id;
-SQL
-```
-
-**Attendu :**
-
-- `ateliers` → `1 = A1`, `2 = A2`, `3 = MOBILIX` *(ne pas toucher)*, `4 = A3`
-- `erp_depots` → les dépôts `DEP-…` dont celui de l'Atelier 3
-- `work_order_steps` → **uniquement** les valeurs `1`, `2`, `3` en `atelier_id`
-  (aucune ligne sur `4` tant qu'aucun ordre A3 n'a été lancé)
-
----
-
-## 10. ÉTAPE 9 — 🖧 SERVEUR : l'application
-
-### 9.1 Le fichier d'environnement
-
-D'abord, localiser la stack Supabase pour retrouver les clés :
-
-```bash
-sudo docker inspect supabase-db \
-  --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}'
-```
-
-Cette commande affiche le dossier de la stack. Les clés s'y trouvent dans le
-fichier `.env` (`ANON_KEY` et `SERVICE_ROLE_KEY`).
-
-Puis créer le fichier de l'application :
-
-```bash
-nano /opt/admedco/.env.local
-```
-
-**Contenu exact — 3 lignes, rien d'autre :**
-
-```ini
-NEXT_PUBLIC_SUPABASE_URL=https://supabase.TON-DOMAINE.com
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi...
-```
-
-```bash
-chmod 600 /opt/admedco/.env.local
-```
-
-> **`NEXT_PUBLIC_SUPABASE_URL` doit être l'URL publique**, celle que le
-> navigateur de l'ouvrier peut joindre — pas `127.0.0.1`, pas `localhost`.
-> C'est cette URL qui sert l'authentification et le temps réel.
-
-> **Ne PAS ajouter `NEXT_PUBLIC_DEMO_MODE`.** Dans
-> `src/lib/supabase/config.ts`, `demoActif()` n'est vrai que si Supabase *n'est
-> pas* configuré **et** que cette variable vaut `1`. Ne pas la mettre du tout
-> est la bonne configuration : c'est ce qui éteint définitivement le mode démo.
-
-Ces 4 variables sont les seules lues par le code
-(`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
-`SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_DEMO_MODE`). Inutile d'en inventer
-d'autres.
-
-### 9.2 ⚠️ Construire — l'ordre compte
-
-```bash
+# 5. Compilation    (l'ordre compte : .env.local AVANT le build)
 cd /opt/admedco
-npm ci
-npm run build
+npm ci && npm run build
+
+# 6. Application
+mkdir -p /var/log/admedco
+pm2 start /opt/admedco/deploy/ecosystem.config.js
+pm2 save
+pm2 list
+
+# 7. Contrôle local — avant même de regarder le DNS
+curl -I http://127.0.0.1:4003
 ```
 
 > **`NEXT_PUBLIC_*` est figé au moment du `build`, pas au démarrage.**
 > Les valeurs sont écrites en dur dans le JavaScript envoyé au navigateur.
-> Construire sans `.env.local` en place produit une application qui ne saura
-> jamais joindre Supabase, même avec un `.env.local` parfait ensuite. Il faut
-> alors rebuilder.
->
-> Dans `ecosystem.config.js`, seuls `NODE_ENV` et `PORT` sont passés : ce sont
-> les seules variables utiles à l'exécution. Les autres viennent de
-> `.env.local`, lu par Next.js au démarrage.
+> Construire sans `.env.local` produit une application qui ne saura jamais
+> joindre Supabase, même avec un `.env.local` parfait ensuite. Il faut alors
+> rebuilder.
 
-### 9.3 Lancer avec PM2
-
-```bash
-mkdir -p /var/log/admedco
-
-pm2 start /opt/admedco/deploy/ecosystem.config.js
-pm2 save
-
-pm2 list
-```
-
-**Attendu :** une ligne `admedco:4003` en `online`, et **les deux autres
-applications toujours en `online`, inchangées**.
-
-### 9.4 Vérification locale, avant de regarder le DNS
-
-```bash
-curl -I http://127.0.0.1:4003
-```
-
-**Attendu :** `HTTP/1.1 200` ou `307` vers `/login` — les deux sont bons.
-
-```bash
-curl -s http://127.0.0.1:4003/login | head -20
-```
-
-**Attendu :** le HTML de la page de connexion.
-
-> Tant que ce `curl` ne répond pas, inutile de regarder le tunnel : le problème
-> est dans l'application.
+> **Le contrôle de la base après migration :**
+> ```bash
+> sudo docker exec -i supabase-db psql -U postgres -d postgres <<'SQL'
+> SELECT id, code, name FROM ateliers ORDER BY id;
+> SELECT code, nom FROM erp_depots WHERE code LIKE 'DEP-%' ORDER BY code;
+> SELECT atelier_id, COUNT(*) FROM work_order_steps GROUP BY atelier_id ORDER BY atelier_id;
+> SQL
+> ```
+> Attendu : `1 = A1`, `2 = A2`, `3 = MOBILIX` *(ne pas toucher)*, `4 = A3`.
 
 ---
 
-## 11. ÉTAPE 10 — 🖧 SERVEUR : contrôle de bout en bout
+## 7. La racine `admedco.com` (plus tard)
 
-```bash
-# 1. L'application répond en local
-curl -I http://127.0.0.1:4003
-
-# 2. Le tunnel est connecté
-journalctl -u cloudflared-admedco -n 20 --no-pager | grep -i "Registered tunnel"
-
-# 3. Le DNS pointe vers Cloudflare, pas vers Squarespace
-dig +short erp.admedco.com
-
-# 4. Les deux autres applications sont intactes
-pm2 list
-curl -I http://127.0.0.1:3000
-curl -I http://127.0.0.1:4002
-```
-
-**Attendu :**
-
-| Contrôle | Résultat |
-|---|---|
-| `curl` local | `200` ou `307` |
-| journal tunnel | au moins une ligne `Registered tunnel connection` |
-| `dig erp.admedco.com` | des IP Cloudflare (`104.x` / `172.6x`) — **surtout pas** `198.185.x` |
-| `pm2 list` | 3 applications `online` |
-
----
-
-## 12. ÉTAPE 11 — 🌍 NAVIGATEUR : test réel
-
-Depuis ta machine, hors du serveur :
-
-| Adresse | Attendu |
-|---|---|
-| `https://erp.admedco.com` | Page de connexion ADMEDCO, cadenas HTTPS |
-| `https://erp.admedco.com/portal` | Le portail ouvrier avec les 4 ateliers |
-| `https://erp.admedco.com/admin` | Demande l'authentification |
-| Console navigateur (F12) | Aucune erreur Supabase |
-
----
-
-## 13. ÉTAPE 12 — 🌐 DASHBOARD : la racine `admedco.com` (plus tard)
-
-**Ne faire ceci qu'après l'ÉTAPE 11 réussie.** On change une seule chose à la
+**Ne faire ceci qu'après un `verify.sh` vert.** On change une seule chose à la
 fois : tant que `erp.admedco.com` n'est pas confirmé, on ne touche pas à la
 racine.
 
@@ -414,7 +546,7 @@ Failed to add route: code: 1003, reason: An A, AAAA, or CNAME record
 with that host already exists.
 ```
 
-Dans `admedco.com` → **DNS** → **Records** :
+🌐 **DASHBOARD** — `admedco.com` → **DNS** → **Records**.
 
 **1. Supprimer ces 5 lignes** (parking Squarespace) :
 
@@ -451,18 +583,23 @@ l'authentification des e-mails du domaine sans rien apporter à l'ERP.
 
 ---
 
-## 14. Dépannage
+## 8. Dépannage
 
 | Symptôme | Cause probable |
 |---|---|
-| `502 Bad Gateway` | L'app ne tourne pas encore (ÉTAPE 9) : `pm2 logs admedco:4003`. |
-| `404` de Cloudflare | Le Public Hostname ne correspond pas au nom demandé (ÉTAPE 2). |
-| `dig` renvoie une IP Squarespace | Ancien enregistrement `A` encore présent (ÉTAPE 12). |
-| Service tunnel qui ne démarre pas | Token tronqué : `sudo cat /etc/cloudflared/admedco.env`. |
-| `Failed to add route: code: 1003` | Enregistrement existant sur ce nom (ÉTAPE 12). |
-| Page blanche, erreurs Supabase | `.env.local` absent **au moment du build**. Rebuilder (§9.2). |
-| `EADDRINUSE` sur 4003 | Un processus occupe déjà le port : `sudo ss -ltnp \| grep 4003`. |
+| `502 Bad Gateway` | L'app ne tourne pas : `pm2 logs "admedco:4003"`. |
+| `404` de Cloudflare | Le Public Hostname ne correspond pas au nom demandé (§4.1). |
+| `dig` renvoie une IP Squarespace | Ancien enregistrement `A` encore présent (§7). |
+| `Invalid tunnel secret` | Token révoqué ou tronqué : régénérer (§4.2) puis §4.4. |
+| `Failed to add route: code: 1003` | Enregistrement existant sur ce nom (§7). |
+| Page blanche, erreurs Supabase | `.env.local` absent **au moment du build** (§6). |
+| `EADDRINUSE` sur 4003 | `sudo ss -ltnp \| grep 4003`. |
 | `No file cert.pem` | Normal ici. Ne concerne que les tunnels créés en ligne de commande. |
+| Le domaine marche une fois sur deux | **Deux replicas** sur le tunnel (§4.3). |
+| Pas de bouton « Copy token » | Normal : la nouvelle interface ne l'affiche plus (§4.2). |
+| `502` alors que le connecteur est « Healthy » | Le connecteur tourne sur la **mauvaise machine** : `Replicas` → `Architecture` doit être `linux_amd64`. |
+| La démo est revenue en production | `0003`/`0006`/`0007` ont été rejouées (§3). Les migrations passent désormais par `migrate.sh`. |
+| Le portail est blanc mais le serveur va bien | `NEXT_PUBLIC_SUPABASE_URL` en `127.0.0.1` (§3). |
 
 Logs utiles :
 
@@ -474,29 +611,40 @@ sudo tail -f /var/log/admedco/err.log
 
 ---
 
-## 15. Mise à jour (routine)
+## 9. Routine de mise à jour et retour arrière
+
+### Mise à jour
 
 🖥️ **PC LOCAL** :
 
 ```bash
-cd E:\ADMECO
-git add -A && git commit -m "..." && git push
+git add -A
+git commit -m "workflow complet : commandes client, QR ouvriers, seuils, rendements"
+git push
 ```
 
 🖧 **SERVEUR** :
 
 ```bash
 cd /opt/admedco
-git pull
-npm ci
-npm run build          # obligatoire : seul le build re-génère les pages
-pm2 restart "admedco:4003"
+git pull --ff-only                        # vérifier ce qui arrive
+sudo bash deploy/migrate.sh --status      # 0017 est-elle en attente ?
+sudo bash deploy/migrate.sh --dry-run     # simulation, n'écrit rien
+sudo bash deploy/deploy.sh                # tout : pré-vol → code → env → base → build → PM2 → contrôle
 ```
 
-Le tunnel et le DNS ne se retouchent jamais. `pm2 restart` ne concerne que
-`admedco:4003` — les deux autres applications ne bougent pas.
+`deploy.sh` fait le `git pull` lui-même, donc `git pull --ff-only` juste avant
+n'est utile que pour **voir** ce qui arrive. Le tunnel et le DNS ne se
+retouchent jamais. `deploy.sh` ne concerne que `admedco:4003` — les deux autres
+applications ne bougent pas, et il compare leur état avant/après.
 
-### Rollback
+> ⚠️ **`npm run build` est obligatoire à chaque déploiement.** Les variables
+> `NEXT_PUBLIC_*` sont **figées à la compilation**, pas lues au démarrage.
+> Changer `.env.local` sans reconstruire ne change rien.
+
+### Retour arrière
+
+🖧 **SERVEUR** :
 
 ```bash
 cd /opt/admedco
@@ -506,18 +654,26 @@ npm ci && npm run build
 pm2 restart "admedco:4003"
 ```
 
+> **Le retour arrière du code ne défait pas les migrations.** Le schéma ajouté
+> par `0014`/`0015`/`0016` est additif (`ADD COLUMN IF NOT EXISTS`,
+> `CREATE TABLE IF NOT EXISTS`) : l'ancienne version du code cohabite avec lui
+> sans erreur. C'est volontaire — on ne supprime jamais une colonne en
+> production.
+
 ---
 
-## 16. Résumé des variables
+## 10. Résumé des variables
 
 | Variable | Valeur | Où |
 |---|---|---|
 | Dépôt git | `https://github.com/stimanios2025S/ADMECO.git` | GitHub |
 | Domaine | `admedco.com` | Cloudflare |
-| Sous-domaine de démarrage | `erp.admedco.com` | déjà routé |
+| Sous-domaine | `erp.admedco.com` | déjà routé |
 | Tunnel ID | `9c8f8ce5-4c53-4b45-9f44-9d2dc39aab55` | dashboard |
 | Token du tunnel | secret | `/etc/cloudflared/admedco.env` (root, 0600) |
 | Env de l'application | 3 variables | `/opt/admedco/.env.local` (0600) |
 | Port applicatif | `4003` | `ecosystem.config.js` |
 | Ports interdits | `3000`, `4002` | déjà pris |
 | Répertoire serveur | `/opt/admedco` | ce runbook |
+| Conteneur base | `supabase-db` | Docker |
+| Suivi des migrations | table `schema_migrations` | base |

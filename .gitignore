@@ -26,3 +26,6 @@ tsconfig.tsbuildinfo
 deploy/*.env
 !deploy/*.env.example
 *.token
+
+# modules purs compilés hors application, pour scripts/verifier-chaine.mjs
+.tmp-sim/

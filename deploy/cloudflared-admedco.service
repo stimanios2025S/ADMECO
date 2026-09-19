@@ -54,7 +54,15 @@ EnvironmentFile=/etc/cloudflared/admedco.env
 # --no-autoupdate : la mise à jour se fait à la main, jamais pendant un
 #   redémarrage de production. Sans ce drapeau, cloudflared peut se
 #   remplacer lui-même et repartir en cours de service.
-ExecStart=/usr/local/bin/cloudflared --no-autoupdate tunnel run --token ${TUNNEL_TOKEN}
+# --config est OBLIGATOIRE, même si ce tunnel ne se configure pas par
+#   fichier. Sans lui, cloudflared lit /etc/cloudflared/config.yml par
+#   défaut — la configuration du tunnel de PRODUCTION — et en reprend le
+#   credentials-file. Constaté sur ce serveur :
+#     INF Settings: map[credentials-file:/etc/cloudflared/aef1e8a1-….json …]
+#   Le token gagne aujourd'hui, mais les identifiants de production sont
+#   chargés en mémoire et serviraient de repli si le token venait à
+#   manquer. Voir l'en-tête de /etc/cloudflared/admedco.yml.
+ExecStart=/usr/local/bin/cloudflared --no-autoupdate --config /etc/cloudflared/admedco.yml tunnel run --token ${TUNNEL_TOKEN}
 
 Restart=always
 RestartSec=5

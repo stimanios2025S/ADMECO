@@ -1,0 +1,44 @@
+# ═══════════════════════════════════════════════════════════
+# TUNNEL ADMEDCO — FICHIER DE CONFIGURATION VOLONTAIREMENT MINIMAL
+#
+# À installer dans /etc/cloudflared/admedco.yml
+#
+# ⚠️ CE FICHIER N'EST PAS /etc/cloudflared/config.yml
+#
+# ── Pourquoi ce fichier existe ──
+#
+# cloudflared cherche sa configuration dans des emplacements par défaut
+# quand on ne lui passe pas --config. Notamment /etc/cloudflared/config.yml
+# — c'est-à-dire la configuration du tunnel des deux applications
+# existantes (aef1e8a1-…).
+#
+# Sans --config explicite, un tunnel pourtant lancé avec --token charge
+# ce fichier-là par défaut et en reprend le credentials-file. Constaté
+# en production sur ce serveur, dans le journal de cloudflared-admedco :
+#
+#   INF Settings: map[cred-file:/etc/cloudflared/aef1e8a1-….json
+#                    credentials-file:/etc/cloudflared/aef1e8a1-….json
+#                    no-autoupdate:true token:*****]
+#
+# ── Le risque concret ──
+#
+# Le token gagne aujourd'hui, donc la connexion va bien vers le tunnel
+# ADMEDCO. Mais les identifiants du tunnel de PRODUCTION sont chargés en
+# mémoire. Si le token venait à manquer (fichier vide, mal collé, expiré),
+# cloudflared retomberait sur ces identifiants — et le service ADMEDCO
+# deviendrait un SECOND replica du tunnel de production. Cloudflare
+# répartissant les requêtes au hasard entre replicas, wa-gateway:3000 et
+# rmasc-onsite:4002 se mettraient alors à échouer une fois sur deux.
+#
+# Ce fichier, passé explicitement avec --config, coupe court : cloudflared
+# ne cherche plus rien par défaut, et ne voit jamais les identifiants de
+# l'autre tunnel.
+#
+# ── Ce qu'il ne contient pas, et pourquoi ──
+#
+# Aucune règle d'ingress, aucun hostname, aucun port. Ce tunnel est
+# « remotely-managed » : ses routes (Public Hostnames) sont stockées chez
+# Cloudflare et poussées depuis le dashboard. Il n'y a rien à écrire ici.
+# ═══════════════════════════════════════════════════════════
+
+no-autoupdate: true
