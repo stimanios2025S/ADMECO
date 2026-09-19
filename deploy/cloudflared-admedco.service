@@ -1,0 +1,53 @@
+# ═══════════════════════════════════════════════════════════
+# SERVICE SYSTEMD — TUNNEL CLOUDFLARE ADMEDCO
+#
+# À installer dans /etc/systemd/system/cloudflared-admedco.service
+#
+# Nom volontairement distinct de `cloudflared.service` (le service du tunnel
+# existant qui fait tourner wa-gateway et rmasc-onsite). Les deux tournent
+# en parallèle sans se connaître :
+#
+#   systemctl status cloudflared           ← les 2 apps existantes
+#   systemctl status cloudflared-admedco   ← ADMEDCO uniquement
+#
+# Redémarrer l'un n'a aucun effet sur l'autre.
+#
+# ⚠️ Vérifier le chemin du binaire avant d'installer :
+#      command -v cloudflared
+#    → /usr/local/bin/cloudflared (installation par .deb/.rpm : /usr/bin)
+#    Si le chemin diffère, corriger la ligne ExecStart ci-dessous.
+# ═══════════════════════════════════════════════════════════
+
+[Unit]
+Description=Cloudflare Tunnel — ADMEDCO (127.0.0.1:4003)
+Documentation=https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# root : le fichier de credentials est en 0600 et n'est lisible que par root.
+# cloudflared ne fait que sortir une connexion sortante, il n'ouvre aucun port.
+User=root
+# --no-autoupdate : la mise à jour se fait à la main, jamais pendant un
+#   redémarrage de production. Sans ce drapeau cloudflared peut se remplacer
+#   lui-même et repartir en cours de service.
+ExecStart=/usr/local/bin/cloudflared --no-autoupdate --config /etc/cloudflared/admedco.yml tunnel run
+Restart=always
+RestartSec=5
+
+# Journal dédié, pour ne pas noyer celui du tunnel principal :
+#   journalctl -u cloudflared-admedco -f
+SyslogIdentifier=cloudflared-admedco
+StandardOutput=journal
+StandardError=journal
+
+# Durcissement — cloudflared ne fait que lire sa configuration et sortir
+# sur le réseau. Volontairement modéré : un durcissement trop agressif
+# (ProtectSystem=strict) casse l'écriture de l'état interne au premier
+# redémarrage, et la panne est silencieuse.
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
