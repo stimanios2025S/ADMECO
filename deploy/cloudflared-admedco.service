@@ -3,18 +3,34 @@
 #
 # À installer dans /etc/systemd/system/cloudflared-admedco.service
 #
-# Nom volontairement distinct de `cloudflared.service` (le service du tunnel
-# existant qui fait tourner wa-gateway et rmasc-onsite). Les deux tournent
-# en parallèle sans se connaître :
+# ⛔ NE JAMAIS lancer `cloudflared service install` sur ce serveur.
+#    Cette commande écrit /etc/systemd/system/cloudflared.service —
+#    c'est-à-dire le fichier du tunnel qui fait tourner
+#    wa-gateway:3000 et rmasc-onsite:4002. Elle l'écraserait et
+#    couperait les deux applications d'un coup. C'est précisément
+#    pourquoi ce fichier-ci porte un nom distinct.
 #
-#   systemctl status cloudflared           ← les 2 apps existantes
-#   systemctl status cloudflared-admedco   ← ADMEDCO uniquement
+# ── Pourquoi il n'y a ni config.yml ni credentials ici ──
 #
-# Redémarrer l'un n'a aucun effet sur l'autre.
+# Ce tunnel a été créé depuis le dashboard Cloudflare : il est
+# « remotely-managed ». Ses règles d'ingress (les Public Hostnames)
+# sont stockées chez Cloudflare, pas dans un fichier sur le serveur.
+# Il n'a donc ni config.yml, ni fichier de credentials — seulement
+# un token.
+#
+# C'est la différence avec le tunnel des deux autres applications
+# (aef1e8a1-f335-4530-83bf-d4ba13c23785), qui lui est local :
+#   /etc/cloudflared/config.yml + aef1e8a1-….json + cloudflared.service
+#
+# ── Le token est un SECRET ──
+#
+# Il vit dans /etc/cloudflared/admedco.env (root seul, chmod 600).
+# Il ne doit jamais être committé, ni collé dans un fichier du dépôt.
 #
 # ⚠️ Vérifier le chemin du binaire avant d'installer :
 #      command -v cloudflared
-#    → /usr/local/bin/cloudflared (installation par .deb/.rpm : /usr/bin)
+#    → /usr/local/bin/cloudflared (binaire téléchargé : le cas ici)
+#    → /usr/bin/cloudflared     (paquet .deb/.rpm)
 #    Si le chemin diffère, corriger la ligne ExecStart ci-dessous.
 # ═══════════════════════════════════════════════════════════
 
@@ -26,13 +42,20 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-# root : le fichier de credentials est en 0600 et n'est lisible que par root.
-# cloudflared ne fait que sortir une connexion sortante, il n'ouvre aucun port.
+# root : cloudflared lit son token dans un fichier en 0600. Il ne fait
+# que sortir une connexion vers Cloudflare, il n'ouvre aucun port local.
 User=root
+
+# Fournit $TUNNEL_TOKEN à la ligne ExecStart ci-dessous.
+# Si ce fichier est absent, le service refuse de démarrer (c'est voulu :
+# mieux vaut une erreur nette qu'un tunnel à moitié configuré).
+EnvironmentFile=/etc/cloudflared/admedco.env
+
 # --no-autoupdate : la mise à jour se fait à la main, jamais pendant un
-#   redémarrage de production. Sans ce drapeau cloudflared peut se remplacer
-#   lui-même et repartir en cours de service.
-ExecStart=/usr/local/bin/cloudflared --no-autoupdate --config /etc/cloudflared/admedco.yml tunnel run
+#   redémarrage de production. Sans ce drapeau, cloudflared peut se
+#   remplacer lui-même et repartir en cours de service.
+ExecStart=/usr/local/bin/cloudflared --no-autoupdate tunnel run --token ${TUNNEL_TOKEN}
+
 Restart=always
 RestartSec=5
 
@@ -42,8 +65,7 @@ SyslogIdentifier=cloudflared-admedco
 StandardOutput=journal
 StandardError=journal
 
-# Durcissement — cloudflared ne fait que lire sa configuration et sortir
-# sur le réseau. Volontairement modéré : un durcissement trop agressif
+# Durcissement — volontairement modéré. Un durcissement trop agressif
 # (ProtectSystem=strict) casse l'écriture de l'état interne au premier
 # redémarrage, et la panne est silencieuse.
 NoNewPrivileges=true

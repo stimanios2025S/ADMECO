@@ -20,3 +20,9 @@ build/
 # artefacts de build (regénérés à chaque `tsc`/`next build`)
 tsconfig.tsbuildinfo
 *.tsbuildinfo
+
+# token du tunnel ADMEDCO — le vrai vit dans /etc/cloudflared/admedco.env
+# (le modèle *.example peut, lui, rester dans le dépôt)
+deploy/*.env
+!deploy/*.env.example
+*.token
