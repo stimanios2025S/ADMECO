@@ -16,3 +16,7 @@ build/
 *.log
 .vercel
 .env*
+
+# artefacts de build (regénérés à chaque `tsc`/`next build`)
+tsconfig.tsbuildinfo
+*.tsbuildinfo
