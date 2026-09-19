@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Plus, Building2 } from "lucide-react";
 import { GlassCard, SectionTitle, Empty } from "@/components/admin/ui";
 import { ajouterDepot } from "@/app/actions-erp";
-import { atelierNom } from "@/lib/ateliers";
+import { ATELIERS, atelierNom } from "@/lib/ateliers";
 
 export default function PageClient({ depots }: { depots: any[] }) {
   const [open, setOpen] = useState(false);
@@ -54,8 +54,9 @@ export default function PageClient({ depots }: { depots: any[] }) {
               <input name="code" placeholder="Code (ex: DEP-MP)" className="input" required />
               <select name="atelier_id" className="input" defaultValue="">
                 <option value="">Commun A1 + A2 (centrale)</option>
-                <option value="1">Atelier 1 — Bois & Découpe</option>
-                <option value="2">Atelier 2 — Assemblage & Finition</option>
+                {ATELIERS.filter((a) => a.usine === "ADMEDCO").map((a) => (
+                  <option key={a.id} value={a.id}>{a.nom}</option>
+                ))}
               </select>
             </div>
             <input name="nom" placeholder="Nom" className="input" required />

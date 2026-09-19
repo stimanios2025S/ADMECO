@@ -22,6 +22,7 @@ type ActiveStep = {
   started_at: string | null; item_id: string; item_name: string;
   item_quantity: number; design_notes: string; dimensions: any;
   qr_code_hash: string;
+  target_qty: number; order_number: string; priority: number;
 };
 
 type MaterialRow = { stockItemId: string; stockItemName: string; unit: string; quantityUsed: number; quantityLost: number };
@@ -53,7 +54,7 @@ export default function PortalClient({ mode = "factory", atelierId, etape }: { m
 
     const supabase = createClient();
     const { data, error } = await supabase.from("work_order_steps")
-      .select("*, work_order_items(product_name, quantity, category_id, design_notes, dimensions)")
+      .select("*, work_order_items(product_name, quantity, category_id, design_notes, dimensions, work_orders(order_number, priority))")
       .eq("qr_code_hash", parsed.hash).single();
     if (error || !data) { cueError(); setMsg("❌ QR d'étape inconnu"); return; }
     const poste = kiosk?.atelierId ?? atelierId ?? null;
@@ -87,10 +88,14 @@ export default function PortalClient({ mode = "factory", atelierId, etape }: { m
       started_at: data.started_at, item_id: data.item_id,
       item_name: item?.product_name ?? "—", item_quantity: item?.quantity ?? 0,
       design_notes: item?.design_notes ?? "", dimensions: item?.dimensions ?? {},
-      qr_code_hash: data.qr_code_hash
+      qr_code_hash: data.qr_code_hash,
+      target_qty: Number((data as any).target_qty) || 0,
+      order_number: (item as any)?.work_orders?.order_number ?? "",
+      priority: Number((item as any)?.work_orders?.priority) || 3,
     });
     setMaterials([]);
-    setQuantiteOk(item?.quantity ?? 0);
+    // L'objectif du matin pré-remplit la quantité — l'ouvrier ajuste au réel
+    setQuantiteOk(Number((data as any).target_qty) || (item?.quantity ?? 0));
     setQuantitePerdue(0);
     setQuantiteReutilisee(0);
     setBranchChoice(null);
@@ -240,6 +245,11 @@ export default function PortalClient({ mode = "factory", atelierId, etape }: { m
           {step.status === "ACTIVE" && (
             <div className="mt-4 space-y-2.5">
               <p className="text-sm font-black text-[#1a1d23]">Déclaration de production</p>
+              {/* Objectif du matin fixé par l'admin */}
+              <div className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold" style={{ background: `${accent}10`, color: accent }}>
+                🎯 Objectif ce matin : {step.target_qty > 0 ? `${step.target_qty} pièce(s)` : "— (non fixé)"}
+                {step.order_number && <span className="ml-auto font-mono text-xs opacity-70">{step.order_number}</span>}
+              </div>
               <div className="grid grid-cols-3 gap-2">
                 <label className="rounded-xl bg-[#4a7c59]/[0.06] p-2.5">
                   <span className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[#4a7c59]">✅ Produites</span>
@@ -312,15 +322,31 @@ export default function PortalClient({ mode = "factory", atelierId, etape }: { m
 
 /* ── Material input sub-component (sélection du vrai stock MP) ── */
 function MaterialInput({ onAdd }: { onAdd: (m: MaterialRow) => void }) {
-  const [stocks, setStocks] = useState<Array<{ id: string; name: string; unit: string; quantity: number }>>([]);
+  const [stocks, setStocks] = useState<Array<{ id: string; name: string; unit: string; quantity: number; code?: string }>>([]);
   const [sel, setSel] = useState("");
   const [qty, setQty] = useState(1);
   useEffect(() => {
     (async () => {
+      const supabase = createClient();
+      // Stock réel uniquement : matière première du dépôt MP. On exclut les
+      // lignes de démo et on ne propose jamais un produit fini à consommer.
+      // La 2e tentative couvre le cas où la migration 0015 n'est pas jouée.
+      const lire = async (avecFiltreDemo: boolean) => {
+        let q = supabase
+          .from("stock_items")
+          .select("id,name,unit,quantity,code")
+          .eq("depot_code", "DEP-MP");
+        if (avecFiltreDemo) q = q.eq("is_demo", false);
+        const { data } = await q.order("name").limit(500);
+        return (data as any[]) ?? null;
+      };
       try {
-        const supabase = createClient();
-        const { data } = await supabase.from("stock_items").select("id,name,unit,quantity").order("name").limit(100);
-        if (data) setStocks(data as any);
+        const strict = await lire(true);
+        if (strict) { setStocks(strict); return; }
+      } catch { /* colonne is_demo absente */ }
+      try {
+        const large = await lire(false);
+        if (large) setStocks(large);
       } catch { /* liste optionnelle */ }
     })();
   }, []);
@@ -337,7 +363,9 @@ function MaterialInput({ onAdd }: { onAdd: (m: MaterialRow) => void }) {
         className="flex-1 rounded-xl border border-black/[0.08] bg-white px-3 py-2.5 text-sm text-[#1a1d23] focus:outline-none focus:ring-2 focus:ring-[#4a7c59]/20">
         <option value="">Choisir la matière…</option>
         {stocks.map((s) => (
-          <option key={s.id} value={s.id}>{s.name} (reste {s.quantity} {s.unit ?? ""})</option>
+          <option key={s.id} value={s.id}>
+            {s.code ? `[${s.code}] ` : ""}{s.name} (reste {s.quantity} {s.unit ?? ""})
+          </option>
         ))}
       </select>
       <input type="number" min={0} step="any" value={qty} onChange={(e) => setQty(Math.max(0, Number(e.target.value)))}

@@ -99,7 +99,7 @@ export default function Atelier2Tools({ etape }: { etape?: number | null }) {
           {def ? `${def.icone} ${def.nom}` : "🔧 Assemblage & Finition"}
         </h2>
         <p className="mt-1 text-sm text-[#6b7280]">
-          {def ? def.description : "Assemblage, soudage, poudrage, montage."}
+          {def ? def.description : "Montage du mobilier de bureau sur pièces déjà poudrées par l'Atelier 3."}
         </p>
 
         {def && (
@@ -109,7 +109,7 @@ export default function Atelier2Tools({ etape }: { etape?: number | null }) {
         )}
 
         <div className="mt-3 rounded-xl bg-black/[0.02] px-3 py-2 text-xs text-[#6b7280]">
-          📦 <span className="font-bold text-[#1a1d23]">Stock A1 + DEP-MP</span> → alimentent ce poste · Production → <span className="font-bold text-[#1a1d23]">Stock A2</span>
+          📦 <span className="font-bold text-[#1a1d23]">Atelier 3 (pièces poudrées) + DEP-MP</span> → alimentent ce poste · Production → <span className="font-bold text-[#1a1d23]">Atelier 3 (emballage)</span>
         </div>
 
         {/* Progress bar */}
@@ -142,10 +142,10 @@ export default function Atelier2Tools({ etape }: { etape?: number | null }) {
           ))}
         </div>
 
-        {/* Bordereau form — only at A2-REC */}
-        {def?.code === "A2-REC" && (
+        {/* Bordereau form — only at A2-REC-A3 (réception des pièces poudrées) */}
+        {def?.code === "A2-REC-A3" && (
           <div className="mt-4 rounded-xl border border-dashed p-3" style={{ borderColor: ACCENT_BORDER, background: ACCENT_SOFT }}>
-            <p className="mb-2 text-xs font-bold" style={{ color: ACCENT }}>📦 Réception transfert A1 → A2</p>
+            <p className="mb-2 text-xs font-bold" style={{ color: ACCENT }}>📦 Réception des pièces poudrées — A3 → A2</p>
             <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (code.trim()) { setMsg(`🔍 Recherche du bordereau ${code.trim()}…`); } }}>
               <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Scanner le bordereau (MNF-…)"
                 className="flex-1 rounded-lg border border-black/[0.08] bg-white px-3 py-2.5 text-sm text-[#1a1d23] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#2f6eb5]/20" />

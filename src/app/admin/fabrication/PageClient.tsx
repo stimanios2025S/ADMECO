@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { Plus, Search, Factory } from "lucide-react";
 import { GlassCard, SectionTitle, Empty } from "@/components/admin/ui";
 import { ajouterFabrication } from "@/app/actions-erp";
-import { atelierNom } from "@/lib/ateliers";
+import { ATELIERS, atelierNom } from "@/lib/ateliers";
 import { cn } from "@/lib/utils";
 
 const STATUTS = [
@@ -78,8 +78,9 @@ export default function PageClient({ ordres, articles }: { ordres: any[]; articl
             <div className="grid grid-cols-2 gap-2">
               <input name="numero" placeholder="N° ordre" className="input" required />
               <select name="atelier_id" className="input" defaultValue="1">
-                <option value="1">Atelier 1 — Bois & Découpe</option>
-                <option value="2">Atelier 2 — Assemblage & Finition</option>
+                {ATELIERS.filter((a) => a.usine === "ADMEDCO").map((a) => (
+                  <option key={a.id} value={a.id}>{a.nom}</option>
+                ))}
               </select>
             </div>
             <select name="article_id" className="input" defaultValue="">

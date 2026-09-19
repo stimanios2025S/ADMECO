@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Truck, Siren, BookOpen, Package, Factory, Send,
   Warehouse, ClipboardCheck, Building2, Boxes, Handshake, FileText,
   Layers, ListTree, Users, Menu, TabletSmartphone, ChevronLeft,
-  ChevronRight, Bell, Settings, Sofa
+  ChevronRight, Bell, Settings, Sofa, Hammer
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import UserChip from "./UserChip";
@@ -28,6 +28,7 @@ const SECTIONS: Section[] = [
     items: [
       { href: "/admin/orders", label: "Commandes", icon: Package },
       { href: "/admin/fabrication", label: "Fabrication", icon: Factory },
+      { href: "/admin/suivi-atelier1", label: "Suivi Atelier 1", icon: Hammer },
       { href: "/admin/suivi-mobilix", label: "Suivi MOBILIX", icon: Sofa },
       { href: "/admin/destinations", label: "Destinations", icon: Send },
     ]

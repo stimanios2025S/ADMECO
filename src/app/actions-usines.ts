@@ -2,10 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createServiceSupabase } from "@/lib/supabase/service";
 import { getProfil, depotMP } from "@/lib/auth";
 import { calculBesoinMP, messageEmprunt } from "@/lib/agents/reservation";
 import { parserFactureTexte, classerFamille } from "@/lib/agents/reception";
 import { ETAPES_MOBILIX, type ModeleMobilix } from "@/lib/process-mobilix";
+import { OPERATIONS_A1 } from "@/lib/process-admedco-a1";
+import { ETAPES_A1_GAMME } from "@/lib/process-eco";
 
 const rnd = (n = 6) => {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789";
@@ -735,4 +738,177 @@ async function creerLignesMobilix(
     orderId,
     message: `Suivi MOBILIX ${modele} lancé : ${qty} chaise(s), 19 étapes M1 avec QR.`
   };
+}
+
+// ─── 9. Lancer le suivi Atelier 01 — gamme TÔLE, 6 postes + transfert A3 ──────
+// SOURCE UNIQUE : la gamme vient de lib/process-admedco-a1.ts (via la façade
+// lib/process-eco.ts). Il n'existe plus qu'un seul jeu d'étapes pour
+// l'atelier_id 1 — l'ancien `lancerSuiviA1` qui écrivait 19 étapes « bois »
+// sur le même atelier est devenu un simple relais vers cette fonction.
+//
+// Chaque étape = 1 QR (généré par la base). target_qty = objectif du matin.
+// L'étape 7 n'entre PAS en stock produit fini : elle transfère vers l'Atelier 3
+// (poudrage), qui travaille pour l'Atelier 1 comme pour l'Atelier 2.
+//
+// La valeur `product_line: "ECO"` est conservée : c'est elle qui déclenche
+// l'affichage du PanneauEco dans /admin/orders/[id].
+export async function lancerSuiviEco(input: {
+  orderNumber: string;
+  productName: string;
+  quantity: number;
+  priority?: number;
+  objectifs?: Record<number, number>;
+}): Promise<{ ok: boolean; message: string; orderId?: string }> {
+  try {
+    const qty = Math.floor(Number(input.quantity) || 0);
+    if (!input.orderNumber?.trim()) return { ok: false, message: "Numéro de suivi requis (ex. ECO-2026-001)." };
+    if (!input.productName?.trim()) return { ok: false, message: "Nom du produit requis." };
+    if (!(qty > 0)) return { ok: false, message: "Quantité invalide." };
+    const prio = Math.min(5, Math.max(1, Math.floor(Number(input.priority) || 3)));
+
+    // La création des commandes est une action admin : clé service pour
+    // préserver l'écriture après suppression de la connexion du portail ouvrier.
+    const supabase: any = createServiceSupabase();
+    const nom = input.productName.trim();
+
+    const base: any = { order_number: input.orderNumber.trim(), status: "CREATED", usine_code: "ADMEDCO", product_line: "ECO", priority: prio };
+    let orderId: string;
+    const { data: order, error: eO } = await supabase.from("work_orders").insert(base).select("id").maybeSingle();
+    if (eO) {
+      // Schéma sans nouvelles colonnes → repli minimal
+      if (/usine_code|priority|product_line|column/i.test(eO.message)) {
+        const retry = await supabase
+          .from("work_orders")
+          .insert({ order_number: input.orderNumber.trim(), status: "CREATED" })
+          .select("id")
+          .maybeSingle();
+        if (retry.error) throw new Error(retry.error.message);
+        orderId = (retry.data as any).id as string;
+      } else throw new Error(eO.message);
+    } else orderId = (order as any).id as string;
+
+    // Essayer de poser priorité + ligne (silencieux si colonnes absentes)
+    try {
+      await supabase.from("work_orders").update({ priority: prio, product_line: "ECO" }).eq("id", orderId);
+    } catch { /* migration 0014 non jouée */ }
+
+    const { data: inserted, error: eI } = await supabase
+      .from("work_order_items")
+      .insert({
+        order_id: orderId,
+        product_name: `${nom} ×${qty}`,
+        quantity: qty,
+        status: "CREATED",
+        design_notes: `Suivi Atelier 1 — Tôle & Gros œuvre — ${OPERATIONS_A1.length} opérations / ${ETAPES_A1_GAMME.length} étapes — DEP-MP → Atelier 3 (poudrage)`
+      })
+      .select("id")
+      .maybeSingle();
+    if (eI) throw new Error(eI.message);
+    const itemId = (inserted as any).id as string;
+
+    // Une seule boucle sur la gamme complète : 6 postes de production + le
+    // transfert vers l'Atelier 3. Plus de tableau « étapes » auquel on
+    // rattache une étape finale à part — c'était la source des deux gammes.
+    const steps = ETAPES_A1_GAMME.map((e) => ({
+      item_id: itemId,
+      step_order: e.ordre,
+      atelier_id: 1,
+      step_name: e.nom,
+      estimated_minutes: 30,
+      has_branch: false,
+      status: "PENDING",
+      // L'objectif du matin se saisit par étape ; par défaut la dernière étape
+      // (transfert) reçoit la quantité commandée, les autres 0 tant que
+      // l'admin n'a rien fixé.
+      target_qty: Math.max(0, Math.floor(Number(input.objectifs?.[e.ordre]) || (e.ordre === ETAPES_A1_GAMME.length ? qty : 0))),
+    }));
+    // Repli si colonne target_qty absente
+    let eS: any = null;
+    try {
+      const r = await supabase.from("work_order_steps").insert(steps);
+      eS = r.error ?? null;
+    } catch (e: any) { eS = e; }
+    if (eS && /target_qty|column/i.test(eS?.message ?? "")) {
+      const slim = steps.map(({ target_qty: _t, ...rest }: any) => rest);
+      const r2 = await supabase.from("work_order_steps").insert(slim);
+      if (r2.error) throw new Error(`Étapes Atelier 1 : ${r2.error.message}`);
+    } else if (eS) throw new Error(`Étapes Atelier 1 : ${eS?.message ?? eS}`);
+
+    // Trace de la réservation matière. C'était le seul apport utile de
+    // l'ancien `lancerSuiviA1` ; on le conserve ici pour ne pas perdre
+    // l'historique des lancements.
+    try {
+      await supabase.from("reservation_events").insert({
+        order_item_id: itemId,
+        stock_item_id: null,
+        type: "RESERVE",
+        qty,
+        note: `Suivi A1 ${nom} : ${qty} pièce(s) — ${OPERATIONS_A1.length} opérations / ${ETAPES_A1_GAMME.length} étapes`,
+      });
+    } catch {
+      /* journal optionnel : table absente sur les schémas anciens */
+    }
+
+    revalidatePath("/admin/orders");
+    revalidatePath("/portal");
+    revalidatePath("/admin");
+    return {
+      ok: true,
+      orderId,
+      message: `Suivi Atelier 1 lancé : ${nom} ×${qty} — ${OPERATIONS_A1.length} opérations / ${ETAPES_A1_GAMME.length} étapes, sortie vers l'Atelier 3 (poudrage), priorité ${prio}.`,
+    };
+  } catch (e: any) {
+    return { ok: false, message: errFr("Échec du lancement suivi Atelier 1", e) };
+  }
+}
+
+// ─── 10. Changer la priorité d'une commande (admin) — 1 urgent … 5 basse ─────
+export async function changerPriorite(orderId: string, priority: number): Promise<{ ok: boolean; message: string }> {
+  try {
+    const prio = Math.min(5, Math.max(1, Math.floor(Number(priority) || 3)));
+    const supabase: any = createServiceSupabase();
+    const { error } = await supabase.from("work_orders").update({ priority: prio }).eq("id", orderId);
+    if (error) throw new Error(error.message);
+    revalidatePath("/admin/orders");
+    revalidatePath("/portal");
+    const label = prio === 1 ? "urgente" : prio === 2 ? "haute" : prio === 3 ? "normale" : prio === 4 ? "basse" : "très basse";
+    return { ok: true, message: `Priorité → ${prio} (${label}).` };
+  } catch (e: any) {
+    return { ok: false, message: errFr("Impossible de changer la priorité", e) };
+  }
+}
+
+// ─── 11. Fixer l'objectif du matin d'une étape (admin) ───────────────────────
+export async function fixerObjectif(stepId: string, targetQty: number): Promise<{ ok: boolean; message: string }> {
+  try {
+    const q = Math.max(0, Math.floor(Number(targetQty) || 0));
+    const supabase: any = createServiceSupabase();
+    const { error } = await supabase.from("work_order_steps").update({ target_qty: q }).eq("id", stepId);
+    if (error) throw new Error(error.message);
+    revalidatePath("/admin/orders");
+    revalidatePath("/portal");
+    return { ok: true, message: `Objectif fixé : ${q} pièce(s) ce matin.` };
+  } catch (e: any) {
+    return { ok: false, message: errFr("Impossible de fixer l'objectif", e) };
+  }
+}
+// ─── 8. Relais historique vers le suivi Atelier 1 ─────────────────────────────
+// Cette action écrivait sa PROPRE gamme (19 étapes « bois » : sciage panneaux,
+// CNC, mastic bois, sens du fil) sur le même atelier_id 1 que `lancerSuiviEco`,
+// qui en écrivait 6 autres. Résultat : deux gammes contradictoires dans la
+// même file ouvrier. Elle ne fait plus que relayer la gamme unique.
+//
+// Conservée à l'export pour ne casser aucun appelant ; à supprimer une fois
+// confirmé qu'aucun écran ne l'utilise plus.
+export async function lancerSuiviA1(input: {
+  orderNumber: string;
+  productName: string;
+  quantity: number;
+}): Promise<{ ok: boolean; message: string; orderId?: string }> {
+  return lancerSuiviEco({
+    orderNumber: input.orderNumber,
+    productName: input.productName,
+    quantity: input.quantity,
+    priority: 3,
+  });
 }

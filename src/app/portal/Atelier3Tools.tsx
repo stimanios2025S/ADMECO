@@ -2,14 +2,18 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { statutFr } from "@/lib/fr";
-import { ETAPES_A1_GAMME } from "@/lib/process-eco";
+import { ETAPES_A3 } from "@/lib/etapes";
 import Link from "next/link";
-import { Package, Clock, Loader2 } from "lucide-react";
+import { Package, Clock, Loader2, ArrowRight } from "lucide-react";
 
-// Gamme de l'Atelier 01 — Tôle : 6 postes de production puis le transfert
-// vers l'Atelier 3 (poudrage). Source unique : lib/process-admedco-a1.ts,
-// réexposée par lib/process-eco.ts.
-const ETAPES_ATELIER1 = ETAPES_A1_GAMME;
+// Atelier 3 — Poudrage & Emballage.
+//
+// Particularité : cet atelier travaille POUR les deux ateliers de fabrication
+// et la pièce y entre DEUX FOIS.
+//   Phase 1 (poudrage)  : reçoit A1 (tôle) et A2 (métal brut), sort la pièce peinte.
+//   Phase 2 (emballage) : reçoit le produit monté par A2, emballe, met en stock PF.
+// La file affiche donc l'origine de chaque pièce — sans quoi l'ouvrier ne sait
+// pas quel bordereau il réceptionne.
 
 type Etape = {
   id: string; step_order: number; step_name: string; status: string;
@@ -17,12 +21,12 @@ type Etape = {
   work_order_items?: { product_name: string; quantity: number } | null;
 };
 
-const ACCENT = "#c24a08";
-const ACCENT_SOFT = "rgba(194,74,8,.06)";
-const ACCENT_BORDER = "rgba(194,74,8,.15)";
+const ACCENT = "#0f766e";
+const ACCENT_SOFT = "rgba(15,118,110,.06)";
+const ACCENT_BORDER = "rgba(15,118,110,.15)";
 
-export default function Atelier1Tools({ etape }: { etape?: number | null }) {
-  const def = ETAPES_ATELIER1.find((e) => e.ordre === etape) ?? null;
+export default function Atelier3Tools({ etape }: { etape?: number | null }) {
+  const def = ETAPES_A3.find((e) => e.ordre === etape) ?? null;
   const [lignes, setLignes] = useState<Etape[]>([]);
   const [stats, setStats] = useState({ pending: 0, active: 0, done: 0 });
   const [charge, setCharge] = useState(true);
@@ -34,23 +38,22 @@ export default function Atelier1Tools({ etape }: { etape?: number | null }) {
 
       let q = supabase.from("work_order_steps")
         .select("id,step_order,step_name,status,estimated_minutes,started_at,work_order_items(product_name,quantity)")
-        .eq("atelier_id", 1);
+        .eq("atelier_id", 4);
       if (etape) q = q.eq("step_order", etape);
       q = q.order("step_order").limit(20);
       const { data } = await q;
       if (actif && data) setLignes(data as any);
 
-      let sq = supabase.from("work_order_steps").select("status", { count: "exact" }).eq("atelier_id", 1);
-      if (etape) sq = sq.eq("step_order", etape);
-      const { count: total } = await sq;
-      let sq2 = supabase.from("work_order_steps").select("status", { count: "exact" }).eq("atelier_id", 1).eq("status", "DONE");
-      if (etape) sq2 = sq2.eq("step_order", etape);
-      const { count: done } = await sq2;
-      let sq3 = supabase.from("work_order_steps").select("status", { count: "exact" }).eq("atelier_id", 1).eq("status", "ACTIVE");
-      if (etape) sq3 = sq3.eq("step_order", etape);
-      const { count: active } = await sq3;
+      const compter = async (statut?: string) => {
+        let s = supabase.from("work_order_steps").select("status", { count: "exact" }).eq("atelier_id", 4);
+        if (etape) s = s.eq("step_order", etape);
+        if (statut) s = s.eq("status", statut);
+        const { count } = await s;
+        return count ?? 0;
+      };
+      const [total, done, active] = await Promise.all([compter(), compter("DONE"), compter("ACTIVE")]);
       if (actif) {
-        setStats({ pending: (total ?? 0) - (done ?? 0) - (active ?? 0), active: active ?? 0, done: done ?? 0 });
+        setStats({ pending: total - done - active, active, done });
         setCharge(false);
       }
     };
@@ -69,17 +72,24 @@ export default function Atelier1Tools({ etape }: { etape?: number | null }) {
       <div className="rounded-2xl border border-black/[0.04] bg-white p-5 shadow-sm">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: ACCENT_SOFT, color: ACCENT }}>
-            {def ? `Étape ${def.ordre}/${ETAPES_ATELIER1.length}` : "Atelier 1 — Poste"}
+            {def ? `Étape ${def.ordre}/${ETAPES_A3.length}` : "Atelier 3 — Poste"}
           </span>
           {def && <span className="rounded-full bg-black/[0.04] px-2.5 py-1 text-[11px] font-bold text-[#9ca3af]">{def.code}</span>}
         </div>
 
         <h2 className="mt-3 text-2xl font-black tracking-tight text-[#1a1d23]">
-          {def ? `${def.icone} ${def.nom}` : "🪚 Tôle & Gros œuvre"}
+          {def ? `${def.icone} ${def.nom}` : "🎨 Poudrage & Emballage"}
         </h2>
         <p className="mt-1 text-sm text-[#6b7280]">
-          {def ? def.description : "Coupe, perçage, soudage et transfert vers l'Atelier 3."}
+          {def ? def.description : "Deux passes : poudrage des pièces brutes, puis emballage du produit monté."}
         </p>
+
+        {def?.phase && (
+          <span className="mt-3 inline-block rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider"
+            style={{ background: `${ACCENT}12`, color: ACCENT }}>
+            {def.phase}
+          </span>
+        )}
 
         {def && (
           <div className="mt-3 rounded-xl px-3 py-2.5 text-xs font-semibold" style={{ background: ACCENT_SOFT, color: ACCENT }}>
@@ -88,7 +98,20 @@ export default function Atelier1Tools({ etape }: { etape?: number | null }) {
         )}
 
         <div className="mt-3 rounded-xl bg-black/[0.02] px-3 py-2 text-xs text-[#6b7280]">
-          📦 <span className="font-bold text-[#1a1d23]">DEP-MP centrale</span> → alimente ce poste · Sortie → <span className="font-bold text-[#1a1d23]">Atelier 3 (poudrage)</span>
+          <p className="flex flex-wrap items-center gap-1.5">
+            <span className="font-bold text-[#1a1d23]">A1 (tôle)</span>
+            <ArrowRight size={11} />
+            <span className="font-bold" style={{ color: ACCENT }}>A3 phase 1 — poudrage</span>
+            <ArrowRight size={11} />
+            <span className="font-bold text-[#1a1d23]">A2 montage</span>
+          </p>
+          <p className="mt-1 flex flex-wrap items-center gap-1.5">
+            <ArrowRight size={11} />
+            <span className="font-bold" style={{ color: ACCENT }}>A3 phase 2 — emballage</span>
+            <ArrowRight size={11} />
+            <span className="font-bold text-[#1a1d23]">Stock produit fini</span>
+          </p>
+          <p className="mt-1 text-[#9ca3af]">On poudre AVANT de monter : l&apos;Atelier 2 ne reçoit que des pièces déjà peintes.</p>
         </div>
 
         {/* Progress bar */}
@@ -110,8 +133,8 @@ export default function Atelier1Tools({ etape }: { etape?: number | null }) {
 
         {/* Quick nav */}
         <div className="mt-4 flex flex-wrap gap-1.5">
-          {ETAPES_ATELIER1.map((e) => (
-            <Link key={e.code} href={`/portal?atelier=1&etape=${e.ordre}`}
+          {ETAPES_A3.map((e) => (
+            <Link key={e.code} href={`/portal?atelier=4&etape=${e.ordre}`}
               className="rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-colors"
               style={e.ordre === etape
                 ? { background: ACCENT_SOFT, color: ACCENT, boxShadow: `inset 0 0 0 1px ${ACCENT_BORDER}` }
@@ -121,17 +144,19 @@ export default function Atelier1Tools({ etape }: { etape?: number | null }) {
           ))}
         </div>
 
-        <Link href="/portal?atelier=1"
-          className="mt-3 inline-flex items-center gap-1 rounded-xl border border-black/[0.06] bg-black/[0.02] px-3 py-2 text-xs font-bold text-[#6b7280] hover:text-[#1a1d23] transition-colors">
-          ← Toutes les étapes A1
-        </Link>
+        {def && (
+          <Link href="/portal?atelier=4"
+            className="mt-3 inline-flex items-center gap-1 rounded-xl border border-black/[0.06] bg-black/[0.02] px-3 py-2 text-xs font-bold text-[#6b7280] hover:text-[#1a1d23] transition-colors">
+            ← Toutes les étapes A3
+          </Link>
+        )}
       </div>
 
       {/* ── Queue ── */}
       <div className="rounded-2xl border border-black/[0.04] bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between">
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#9ca3af]">
-            {def ? `File — Étape ${def.ordre}` : "File Atelier 1"} · {lignes.length}
+            {def ? `File — Étape ${def.ordre}` : "File Atelier 3"} · {lignes.length}
           </p>
         </div>
 
@@ -151,9 +176,9 @@ export default function Atelier1Tools({ etape }: { etape?: number | null }) {
           <div className="mt-6 rounded-2xl border border-dashed border-black/[0.08] bg-black/[0.01] p-8 text-center">
             <p className="text-3xl">{def ? "✅" : "📭"}</p>
             <p className="mt-2 text-sm font-bold text-[#6b7280]">
-              {def ? `Aucune pièce pour ${def.nom}` : "Aucune étape en attente"}
+              {def ? `Aucune pièce pour ${def.nom}` : "Aucune pièce en attente"}
             </p>
-            <p className="mt-1 text-xs text-[#9ca3af]">Toutes les pièces ont été traitées.</p>
+            <p className="mt-1 text-xs text-[#9ca3af]">Rien n&apos;a encore été transféré par les Ateliers 1 et 2.</p>
           </div>
         ) : (
           <div className="mt-3 space-y-1.5">

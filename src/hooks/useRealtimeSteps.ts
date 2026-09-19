@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { hasSupabaseConfig } from "@/lib/supabase/demo";
+import { hasSupabaseConfig } from "@/lib/supabase/config";
 
 /**
  * Horloge temps réel : s'incrémente à chaque changement sur les tables

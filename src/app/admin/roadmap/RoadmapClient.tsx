@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Package, ArrowRight, CheckCircle2, Circle, Loader, Truck, Home } from "lucide-react";
 import { GlassCard, SectionTitle, StatusPill, Empty } from "@/components/admin/ui";
+import { ATELIERS } from "@/lib/ateliers";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -15,11 +16,11 @@ type Props = {
   transfers: any[];
 };
 
-const ATELIER_NOM: Record<number, string> = {
-  1: "Atelier 1 — Bois & Découpe",
-  2: "Atelier 2 — Assemblage & Finition",
-  3: "MOBILIX — Finition & Montage"
-};
+// Noms repris de la source unique lib/ateliers.ts — jamais recopiés à la main,
+// sinon l'écran continue d'afficher « Bois & Découpe » pour l'Atelier 1 tôle.
+const ATELIER_NOM: Record<number, string> = Object.fromEntries(
+  ATELIERS.map((a) => [a.id, a.nom])
+);
 
 function etapeRoadmap(order: any, orderItems: any[], allSteps: any[], allSemi: any[], allDest: any[], allTrans: any[]) {
   // Commande → Réservé → En production → Stock atelier → Décision → MOBILIX/Livré

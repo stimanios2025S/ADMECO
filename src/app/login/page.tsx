@@ -67,13 +67,13 @@ export default function LoginPage() {
                 <span className="text-[#6fa67d]">en temps réel.</span>
               </h2>
               <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/50">
-                Du bois brut au meuble fini — suitrez chaque étape, chaque atelier, chaque gramme de matière première.
+                De la tôle brute au meuble fini — suivez chaque étape, chaque atelier, chaque gramme de matière première.
               </p>
             </div>
 
             <div className="grid gap-4 max-w-lg">
               {[
-                { icon: <Factory size={18} />, title: "2 ateliers connectés", desc: "Bois & Découpe → Assemblage & Finition" },
+                { icon: <Factory size={18} />, title: "3 ateliers ADMEDCO connectés", desc: "Tôle & Gros œuvre + Bureau → Poudrage & Emballage" },
                 { icon: <TabletSmartphone size={18} />, title: "Portails opérateur", desc: "QR scan, timer, déclaration matière en temps réel" },
                 { icon: <Shield size={18} />, title: "Traçabilité totale", desc: "Stock MP centrale, réservation, consommation déclarée" },
               ].map((f, i) => (

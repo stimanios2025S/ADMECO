@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { atelierUsine, type AtelierId } from "@/lib/ateliers";
+import { ATELIERS, atelierUsine, type AtelierId } from "@/lib/ateliers";
 
 type ProfilApi = {
   id: string;
@@ -41,8 +41,10 @@ export default function PortalAutoRoute({ atelierDemande }: { atelierDemande: At
         router.replace("/redirection");
         return;
       }
-      // WORKER : forcer son atelier si l'URL n'en précise pas
-      const atelierProfil = (profil.atelier_id === 1 || profil.atelier_id === 2 || profil.atelier_id === 3)
+      // WORKER : forcer son atelier si l'URL n'en précise pas.
+      // Validé contre la liste réelle des ateliers : une liste écrite à la
+      // main avait déjà manqué l'Atelier 3 (id 4) à sa création.
+      const atelierProfil = ATELIERS.some((a) => a.id === profil.atelier_id)
         ? (profil.atelier_id as AtelierId)
         : null;
       if (!atelierDemande && atelierProfil) {

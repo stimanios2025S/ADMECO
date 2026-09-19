@@ -5,16 +5,18 @@ import { Truck, ChevronDown, ChevronRight } from "lucide-react";
 import { GlassCard, SectionTitle, StatusPill } from "@/components/admin/ui";
 import LivePipeline from "@/components/admin/LivePipeline";
 import GanttBoard from "@/components/admin/GanttBoard";
+import PanneauEco from "@/components/admin/PanneauEco";
 import { libererVersAtelier2 } from "@/app/actions";
 
-export default function OrderDetailClient({ orderId, orderStatus, items, stepsByItem, transfers }: {
-  orderId: string; orderStatus: string; items: any[]; stepsByItem: Record<string, any[]>; transfers: any[];
+export default function OrderDetailClient({ order, orderId, orderStatus, items, stepsByItem, transfers }: {
+  order: any; orderId: string; orderStatus: string; items: any[]; stepsByItem: Record<string, any[]>; transfers: any[];
 }) {
   const router = useRouter();
   const [expanded, setExpanded] = useState<string | null>(items[0]?.id ?? null);
   const [busy, setBusy] = useState(false);
 
   const readyItems = items.filter((i) => i.status === "SEMI_READY");
+  const allSteps = Object.values(stepsByItem).flat();
 
   return (
     <div className="stagger space-y-5">
@@ -43,6 +45,9 @@ export default function OrderDetailClient({ orderId, orderStatus, items, stepsBy
           ))}
         </GlassCard>
       )}
+
+      {/* Panneau ECO : priorités + objectifs + QR — toujours visible (données optionnelles) */}
+      <PanneauEco order={order} steps={allSteps} />
 
       <GlassCard>
         <SectionTitle kicker="Produits" title="Articles et avancement de production" />

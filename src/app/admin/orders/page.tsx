@@ -32,6 +32,7 @@ export default async function OrdersPage() {
         .from("work_orders")
         .select("*, work_order_items(id,product_name,quantity,status)")
         .eq("usine_code", usine)
+        .order("priority")
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;

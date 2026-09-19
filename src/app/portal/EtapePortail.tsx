@@ -3,13 +3,16 @@ import Link from "next/link";
 import { ChevronRight, ArrowLeft } from "lucide-react";
 import { ATELIERS, type AtelierId } from "@/lib/ateliers";
 import { etapesAtelier } from "@/lib/etapes";
+import { ETAPES_A1_GAMME } from "@/lib/process-eco";
 import { ordreMobilixCourt } from "@/lib/process-mobilix";
 import { cn } from "@/lib/utils";
 
 export default function EtapePortail({ atelier, etapeActive }: { atelier: AtelierId; etapeActive?: number | null }) {
   const info = ATELIERS.find((a) => a.id === atelier)!;
-  const etapes = etapesAtelier(atelier);
-  const accent = atelier === 1 ? "#c24a08" : atelier === 2 ? "#2f6eb5" : "#7c3aed";
+  // Atelier 1 = gamme tôle complète (6 étapes de production + le transfert
+  // vers l'Atelier 3) ; les autres ateliers gardent leur gamme dédiée.
+  const etapes = atelier === 1 ? ETAPES_A1_GAMME : etapesAtelier(atelier);
+  const accent = atelier === 1 ? "#c24a08" : atelier === 2 ? "#2f6eb5" : atelier === 4 ? "#0f766e" : "#7c3aed";
 
   return (
     <div className="space-y-4">
@@ -50,6 +53,15 @@ export default function EtapePortail({ atelier, etapeActive }: { atelier: Atelie
                   {atelier === 3 ? `POSTE ${ordreMobilixCourt(e.ordre)}` : `ÉTAPE ${e.ordre}`}
                 </span>
               </div>
+              {/* A3 mêle deux passes : on l'affiche pour que l'ouvrier sache
+                  s'il poudre une pièce brute ou s'il emballe un produit monté. */}
+              {e.phase && (
+                <span
+                  className="mt-3 inline-block rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider"
+                  style={{ background: `${accent}12`, color: accent }}>
+                  {e.phase}
+                </span>
+              )}
               <p className="mt-3 text-lg font-black tracking-tight text-[#1a1d23]">{e.nom}</p>
               <p className="mt-1 text-sm text-[#6b7280]">{e.description}</p>
               <div className="mt-2 rounded-xl bg-black/[0.02] px-3 py-2 text-xs text-[#6b7280]">📋 {e.consigne}</div>

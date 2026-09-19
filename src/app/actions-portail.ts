@@ -1,5 +1,7 @@
 "use server";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { createServiceSupabase } from "@/lib/supabase/service";
+import { depotEntreeEtape, etapesAtelier } from "@/lib/etapes";
+import type { AtelierId } from "@/lib/ateliers";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -38,7 +40,9 @@ export async function declarerProduction(
 ): Promise<{ ok: boolean; message: string }> {
   try {
     if (!input?.stepId) return { ok: false, message: "Étape manquante." };
-    const supabase: any = createServerSupabase();
+    // Le portail est sans mot de passe : les mutations passent par la clé
+    // service uniquement dans cette action serveur, jamais vers le navigateur.
+    const supabase: any = createServiceSupabase();
     const now = new Date().toISOString();
     const ok = num(input.quantiteOk);
     const perdu = num(input.quantitePerdue);
@@ -105,6 +109,27 @@ export async function declarerProduction(
     const mats = (input.materials ?? []).filter(
       (m) => num(m.quantityUsed) > 0 || num(m.quantityLost) > 0
     );
+    // Dépôt alimenté par cette étape, s'il y en a un — même sans matière
+    // déclarée. La décision se prend sur le CODE de l'étape, jamais sur son
+    // numéro d'ordre : l'étape 7 de l'Atelier 1 est un transfert vers le
+    // poudrage (DEP-A3), plus une entrée en produit fini (DEP-PF).
+    const nomStocke: string | null = (step as any).step_name ?? null;
+    // Définition officielle de l'étape dans la gamme de son atelier
+    // (source unique : lib/etapes.ts).
+    const defEtape = (() => {
+      const a = Number((step as any).atelier_id);
+      if (!a) return null;
+      const gamme = etapesAtelier(a as AtelierId);
+      return gamme.find((e) => e.ordre === Number((step as any).step_order)) ?? null;
+    })();
+    // Priorité au NOM STOCKÉ quand il désigne explicitement un stock produit
+    // fini : les ordres lancés avant la création de l'Atelier 3 ont une étape
+    // 7 qui EST bien une entrée en DEP-PF, même si la gamme d'aujourd'hui y
+    // met un transfert vers le poudrage. Sans cette règle, leurs pièces
+    // finies partiraient en DEP-A3.
+    const depotEntree = /stock produit fini/i.test(nomStocke ?? "")
+      ? "DEP-PF"
+      : depotEntreeEtape({ code: defEtape?.code ?? null, nom: nomStocke });
     for (const m of mats) {
       const utilise = num(m.quantityUsed);
       const casse = num(m.quantityLost);
@@ -229,6 +254,69 @@ export async function declarerProduction(
     revalidatePath("/admin");
     revalidatePath("/admin/stocks");
     revalidatePath("/admin/archives");
+
+    // 3. Entrée au dépôt alimenté par cette étape
+    //    DEP-PF = fin de chaîne (emballage A3)
+    //    DEP-A3 = pièces de l'Atelier 1 parties au poudrage
+    //    Voir depotEntreeEtape() : la destination découle du code de l'étape.
+    if (depotEntree && ok > 0) {
+      const libelleEntree = depotEntree === "DEP-PF" ? "Entrée produit fini" : `Entrée ${depotEntree}`;
+      try {
+        // Trouver ou créer l'article de stock (même nom que l'article produit)
+        let pfId: string | null = null;
+        try {
+          const { data: found } = await supabase
+            .from("stock_items")
+            .select("id,quantity")
+            .eq("name", nomArticle)
+            .eq("depot_code", depotEntree)
+            .maybeSingle();
+          if ((found as any)?.id) {
+            pfId = (found as any).id as string;
+            await supabase.from("stock_items").update({
+              quantity: num((found as any).quantity) + ok,
+            }).eq("id", pfId);
+          }
+        } catch { /* recherche optionnelle */ }
+        if (!pfId) {
+          try {
+            const { data: created } = await supabase.from("stock_items").insert({
+              name: nomArticle,
+              unit: "pcs",
+              quantity: ok,
+              alert_threshold: 5,
+              depot_code: depotEntree,
+              usine_code: usine,
+            }).select("id").maybeSingle();
+            pfId = ((created as any)?.id as string) ?? null;
+          } catch { /* création optionnelle (colonne manquante) */ }
+        }
+        if (pfId) {
+          try {
+            await supabase.from("stock_movements").insert({
+              stock_item_id: pfId,
+              step_id: input.stepId,
+              order_item_id: itemId,
+              movement_type: "produce",
+              quantity: ok,
+              depot_code: depotEntree,
+              note: `${libelleEntree} : ${nomArticle} ×${ok} (perdues : ${perdu})`,
+            });
+          } catch {
+            try {
+              await supabase.from("stock_movements").insert({
+                stock_item_id: pfId,
+                step_id: input.stepId,
+                order_item_id: itemId,
+                movement_type: "produce",
+                quantity: ok,
+                note: `${libelleEntree} : ${nomArticle} ×${ok}`,
+              });
+            } catch { /* mouvements optionnels */ }
+          }
+        }
+      } catch { /* entrée dépôt optionnelle */ }
+    }
 
     const resume =
       `Étape « ${(step as any).step_name} » terminée : ` +

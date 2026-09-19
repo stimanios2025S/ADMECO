@@ -2,11 +2,14 @@ import { Suspense } from "react";
 import PortalClient from "./PortalClient";
 import Atelier1Tools from "./Atelier1Tools";
 import Atelier2Tools from "./Atelier2Tools";
+import Atelier3Tools from "./Atelier3Tools";
 import MobilixTools from "./MobilixTools";
 import EtapePortail from "./EtapePortail";
-import PortalAutoRoute from "./PortalAutoRoute";
 import PortalSync from "./PortalSync";
+import PortailSimple from "./PortailSimple";
 import type { AtelierId } from "@/lib/ateliers";
+import { ETAPES_A1_GAMME } from "@/lib/process-eco";
+import { ETAPES_A3 } from "@/lib/etapes";
 
 export const dynamic = "force-dynamic";
 
@@ -17,9 +20,15 @@ export default function PortalPage({
 }) {
   const mode = searchParams?.mode === "warehouse" ? "warehouse" : "factory";
   const atelierParam: AtelierId | null =
-    searchParams?.atelier === "1" ? 1 : searchParams?.atelier === "2" ? 2 : searchParams?.atelier === "3" ? 3 : null;
+    searchParams?.atelier === "1" ? 1
+    : searchParams?.atelier === "2" ? 2
+    : searchParams?.atelier === "3" ? 3
+    : searchParams?.atelier === "4" ? 4
+    : null;
   const etapeParam = searchParams?.etape ? Number(searchParams.etape) : null;
   const etape = etapeParam && etapeParam >= 1 && etapeParam <= 30 ? etapeParam : null;
+  const DERNIERE_ETAPE_A1 = ETAPES_A1_GAMME.length; // 6 postes + transfert A3
+  const estEco = atelierParam === 1 && etape !== null && etape >= 1 && etape <= DERNIERE_ETAPE_A1;
 
   const panel =
     atelierParam === 1
@@ -30,7 +39,7 @@ export default function PortalPage({
           bg: "bg-[#c24a08]",
           bgSoft: "bg-[#c24a08]/[0.06]",
           border: "border-[#c24a08]/20",
-          slogan: "Bois & Découpe — DEP-MP → Stock A1",
+          slogan: "Gamme Tôle — Coupe → Perçage → Soudage → Contrôle → Transfert vers l'Atelier 3 (poudrage)",
         }
       : atelierParam === 2
         ? {
@@ -40,8 +49,18 @@ export default function PortalPage({
             bg: "bg-[#2f6eb5]",
             bgSoft: "bg-[#2f6eb5]/[0.06]",
             border: "border-[#2f6eb5]/20",
-            slogan: "Assemblage & Finition — A1 → Stock A2",
+            slogan: "Montage sur pièces poudrées — A3 (poudrage) → A2 (montage) → A3 (emballage)",
           }
+        : atelierParam === 4
+          ? {
+              label: etape ? `Atelier 3 — Étape ${etape}` : "Portail Atelier 3",
+              title: "Atelier 3",
+              accent: "text-[#0f766e]",
+              bg: "bg-[#0f766e]",
+              bgSoft: "bg-[#0f766e]/[0.06]",
+              border: "border-[#0f766e]/20",
+              slogan: "Poudrage & Emballage en 2 passes — reçoit l'Atelier 1 et l'Atelier 2",
+            }
         : atelierParam === 3
           ? {
               label: etape ? `Atelier MOBILIX — Étape ${etape}` : "Portail Atelier MOBILIX",
@@ -64,9 +83,7 @@ export default function PortalPage({
 
   return (
     <div className="min-h-screen bg-[#f5f6f2] text-[#1a1d23]">
-      <Suspense fallback={null}>
-        <PortalAutoRoute atelierDemande={atelierParam} />
-      </Suspense>
+      {/* Portail libre : prénom + atelier + étape, sans mot de passe */}
       {/* Socle synchronisation : file hors-ligne + temps réel + bouton Synchroniser */}
       <Suspense fallback={null}>
         <PortalSync />
@@ -114,20 +131,31 @@ export default function PortalPage({
 
         {/* Atelier chooser — no atelier selected */}
         {!atelierParam && (
-          <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <a href="/portal?atelier=1" className="group rounded-2xl border border-[#c24a08]/10 bg-white p-6 shadow-sm transition hover:shadow-md hover:border-[#c24a08]/30">
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#9ca3af]">Atelier 1 · 5 étapes</p>
-              <p className="mt-3 text-2xl font-black tracking-tight text-[#1a1d23]">🪚 Bois &amp; Découpe</p>
-              <p className="mt-2 text-sm text-[#6b7280]">Arrivée MP → Découpe → Usinage → Préparation → Contrôle + Stock A1.</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#9ca3af]">Atelier 1 · ADMEDCO</p>
+              <p className="mt-3 text-2xl font-black tracking-tight text-[#1a1d23]">🪚 Tôle &amp; Gros œuvre</p>
+              <p className="mt-2 text-sm text-[#6b7280]">Les pièces lourdes et la tôle : coupe, perçage, soudage. Puis transfert vers l&apos;Atelier 3.</p>
               <p className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[#c24a08] group-hover:translate-x-0.5 transition-transform">
                 Choisir mon étape <span className="text-lg">→</span>
               </p>
             </a>
             <a href="/portal?atelier=2" className="group rounded-2xl border border-[#2f6eb5]/10 bg-white p-6 shadow-sm transition hover:shadow-md hover:border-[#2f6eb5]/30">
-              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#9ca3af]">Atelier 2 · 6 étapes</p>
-              <p className="mt-3 text-2xl font-black tracking-tight text-[#1a1d23]">🔧 Assemblage &amp; Finition</p>
-              <p className="mt-2 text-sm text-[#6b7280]">Réception A1 → Assemblage → Soudage → Poudrage → Montage → Contrôle + Stock A2.</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#9ca3af]">Atelier 2 · ADMEDCO</p>
+              <p className="mt-3 text-2xl font-black tracking-tight text-[#1a1d23]">🔧 Bureau</p>
+              <p className="mt-2 text-sm text-[#6b7280]">Reçoit les pièces <em>déjà poudrées</em> par l&apos;Atelier 3, monte le mobilier de bureau, puis renvoie à l&apos;Atelier 3 pour l&apos;emballage.</p>
               <p className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[#2f6eb5] group-hover:translate-x-0.5 transition-transform">
+                Choisir mon étape <span className="text-lg">→</span>
+              </p>
+            </a>
+            <a href="/portal?atelier=4" className="group rounded-2xl border border-[#0f766e]/10 bg-white p-6 shadow-sm transition hover:shadow-md hover:border-[#0f766e]/30">
+              <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#9ca3af]">Atelier 3 · ADMEDCO · {ETAPES_A3.length} étapes</p>
+              <p className="mt-3 text-2xl font-black tracking-tight text-[#1a1d23]">🎨 Poudrage &amp; Emballage</p>
+              <p className="mt-2 text-sm text-[#6b7280]">
+                Travaille pour l&apos;Atelier 1 <em>et</em> l&apos;Atelier 2, en 2 passes : phase 1 poudrage des pièces brutes,
+                phase 2 emballage du produit monté → stock produit fini.
+              </p>
+              <p className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[#0f766e] group-hover:translate-x-0.5 transition-transform">
                 Choisir mon étape <span className="text-lg">→</span>
               </p>
             </a>
@@ -141,6 +169,9 @@ export default function PortalPage({
             </a>
           </div>
         )}
+
+        {/* Mon poste (prénom + atelier + étape, sans mot de passe) */}
+        <PortailSimple atelierDemande={atelierParam} etapeDemande={etape} />
 
         {/* Step chooser — atelier selected, no step */}
         {atelierParam && !etape && (
@@ -158,6 +189,11 @@ export default function PortalPage({
         {atelierParam === 2 && etape && (
           <div className="mb-6">
             <Atelier2Tools etape={etape} />
+          </div>
+        )}
+        {atelierParam === 4 && etape && (
+          <div className="mb-6">
+            <Atelier3Tools etape={etape} />
           </div>
         )}
         {atelierParam === 3 && etape && (
