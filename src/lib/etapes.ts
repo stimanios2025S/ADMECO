@@ -104,10 +104,19 @@ export const ETAPES_A3: EtapeDef[] = [
 // ── Atelier MOBILIX M1 : process officiel 12 postes / 19 QR (G21 + CANADA) ──
 // Source de vérité : src/lib/process-mobilix.ts (schémas de production officiels).
 // La couture A→H (ordres 5.1→5.8) est scannée QR par QR.
-import { ETAPES_MOBILIX } from "./process-mobilix";
+import { ETAPES_M1_BOIS, ETAPES_M2_TAPISSAGE } from "./process-mobilix";
 
-export const ETAPES_M1: EtapeDef[] = ETAPES_MOBILIX;
+// MOBILIX tient DEUX ateliers (décision exploitant) :
+//   M1 (id 3) — découpe bois
+//   M2 (id 5) — tapissage
+// Chacun a SA gamme. Le parcours complet, qui les entrelace, vit dans
+// src/lib/route-production.ts.
+export const ETAPES_M1: EtapeDef[] = ETAPES_M1_BOIS;
+export const ETAPES_M2: EtapeDef[] = ETAPES_M2_TAPISSAGE;
 
+// Conservé pour les appelants existants, avec sa signature d'origine
+// (une fonction, pas une valeur) : « la gamme MOBILIX » désigne
+// désormais M1, l'atelier bois. Le nom reste, la valeur a changé.
 export const etapesAtelierMobilix = (): EtapeDef[] => ETAPES_M1;
 
 // Chaque atelier a sa gamme, sans repli implicite : un `atelier` inconnu
@@ -118,6 +127,7 @@ export const etapesAtelier = (atelier: AtelierId): EtapeDef[] =>
   : atelier === 2 ? ETAPES_A2
   : atelier === 4 ? ETAPES_A3
   : atelier === 3 ? ETAPES_M1
+  : atelier === 5 ? ETAPES_M2
   : [];
 
 export const etapeNom = (atelier: AtelierId, ordre: number): string =>

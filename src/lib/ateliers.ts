@@ -37,12 +37,13 @@ export const ATELIERS = [
   { id: 1 as const, code: "A1", nom: "Atelier 1 — Tôle & Gros œuvre", description: "Pièces lourdes : coupe, perçage, soudage", usine: "ADMEDCO" as UsineCode },
   { id: 2 as const, code: "A2", nom: "Atelier 2 — Bureau", description: "Montage du mobilier de bureau sur pièces poudrées", usine: "ADMEDCO" as UsineCode },
   { id: 4 as const, code: "A3", nom: "Atelier 3 — Poudrage & Emballage", description: "Poudrage (phase 1) puis emballage (phase 2) — travaille pour A1 et A2", usine: "ADMEDCO" as UsineCode },
-  { id: 3 as const, code: "M1", nom: "Atelier MOBILIX — Réception & Finition", description: "Réception ADMEDCO, contrôle, finition, emballage", usine: "MOBILIX" as UsineCode },
+  { id: 3 as const, code: "M1", nom: "Atelier MOBILIX 1 — Découpe bois", description: "Bois, inserts, piètement et assemblage final", usine: "MOBILIX" as UsineCode },
+  { id: 5 as const, code: "M2", nom: "Atelier MOBILIX 2 — Tapissage", description: "Coupe, couture (A→H), rembourrage et emballage", usine: "MOBILIX" as UsineCode },
 ];
 
-export type AtelierId = 1 | 2 | 3 | 4;
+export type AtelierId = 1 | 2 | 3 | 4 | 5;
 
-export type AtelierCode = "A1" | "A2" | "A3" | "M1";
+export type AtelierCode = "A1" | "A2" | "A3" | "M1" | "M2";
 
 // Les deux ateliers de fabrication d'ADMEDCO (A1 tôle, A2 bureau)…
 export const ATELIERS_FABRICATION: AtelierId[] = [1, 2];
@@ -67,14 +68,24 @@ export const DEPOTS = [
   { code: "DEP-A1", nom: "Stock Atelier 1 — Tôle", detail: "Ce que l'Atelier 1 a produit, en attente de poudrage" },
   { code: "DEP-A2", nom: "Stock Atelier 2 — Bureau", detail: "Produit monté par l'Atelier 2, en attente d'emballage à l'Atelier 3" },
   { code: "DEP-A3", nom: "Stock Atelier 3 — Poudrage", detail: "Pièces poudrées attendant leur montage (A2) ou leur emballage" },
-  { code: "DEP-MP-MBX", nom: "Stock Matière Première — Centrale MOBILIX", detail: "Alimente l'Atelier MOBILIX (M1)" },
-  { code: "DEP-M1", nom: "Stock Atelier MOBILIX", detail: "Ce que l'Atelier MOBILIX a réceptionné et fini" },
+  { code: "DEP-MP-MBX", nom: "Stock Matière Première — Centrale MOBILIX", detail: "Alimente les ateliers MOBILIX (M1 et M2)" },
+  { code: "DEP-M1", nom: "Stock Atelier MOBILIX 1 — Découpe bois", detail: "Bois, inserts et piètement préparés par M1" },
+  { code: "DEP-M2", nom: "Stock Atelier MOBILIX 2 — Tapissage", detail: "Ce que M2 a tapissé et emballé" },
+  { code: "DEP-ENCOURS-ADM", nom: "En-cours parcé — ADMEDCO", detail: "Travaux commencés et mis en attente pour une commande urgente" },
+  { code: "DEP-ENCOURS-MBX", nom: "En-cours parcé — MOBILIX", detail: "Travaux commencés et mis en attente pour une commande urgente" },
 ] as const;
 
-export type DepotCode = "DEP-MP" | "DEP-A1" | "DEP-A2" | "DEP-A3" | "DEP-MP-MBX" | "DEP-M1";
+export type DepotCode =
+  | "DEP-MP" | "DEP-A1" | "DEP-A2" | "DEP-A3"
+  | "DEP-MP-MBX" | "DEP-M1" | "DEP-M2"
+  | "DEP-ENCOURS-ADM" | "DEP-ENCOURS-MBX" | "DEP-PF";
 
 export const depotNom = (code: string | null | undefined) =>
   DEPOTS.find((d) => d.code === code)?.nom ?? "Matière Première";
 
+const DEPOTS_MOBILIX: ReadonlySet<string> = new Set([
+  "DEP-MP-MBX", "DEP-M1", "DEP-M2", "DEP-ENCOURS-MBX",
+]);
+
 export const depotUsine = (code: string | null | undefined): UsineCode =>
-  code === "DEP-MP-MBX" || code === "DEP-M1" ? "MOBILIX" : "ADMEDCO";
+  DEPOTS_MOBILIX.has(code ?? "") ? "MOBILIX" : "ADMEDCO";

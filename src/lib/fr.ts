@@ -18,6 +18,14 @@ export const STATUT_FR: Record<string, string> = {
   TRANSFERRED: "Transférée",
   ADMIN: "Admin",
   WORKER: "Opérateur",
+  // Seuils de stock : le plancher est franchi, une dette va naître.
+  SOUS_SEUIL: "Sous le seuil",
+  OK: "Conforme",
+  // Triage : la part « dure » va à ADMEDCO, la part « molle » à MOBILIX.
+  DUR: "Part ADMEDCO",
+  MOU: "Part MOBILIX",
+  PARQUE: "Parquée",
+  REPRIS: "Reprise",
 };
 
 export const statutFr = (s: string) => STATUT_FR[s] ?? s.replace(/_/g, " ");
