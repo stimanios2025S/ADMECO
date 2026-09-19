@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { hasSupabaseConfig } from "./demo";
+import { hasSupabaseConfig } from "./config";
 
 /** Refreshes the auth session on every request + gates /admin behind login. */
 export async function updateSession(request: NextRequest) {
@@ -30,7 +30,9 @@ export async function updateSession(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
 
-  if (!user && (path.startsWith("/admin") || path.startsWith("/templates") || path.startsWith("/portal") || path.startsWith("/portail"))) {
+  // Admin and templates remain authenticated. The floor portal is intentionally
+  // passwordless: workers identify the workstation locally and scan a signed QR.
+  if (!user && (path.startsWith("/admin") || path.startsWith("/templates"))) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

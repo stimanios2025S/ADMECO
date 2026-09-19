@@ -74,9 +74,9 @@ export async function createOrder(input: {
 
 // ─── WORKER: START STEP ──────────────────────────────
 export async function startStep(stepId: string, _workerId: string) {
-  // Note: kiosk workerId is a random session UUID, not a profiles.id — don't persist it
-  // (would violate the worker_id FK). The floor tablet identity stays client-side.
-  const supabase = createServerSupabase();
+  // Le portail atelier ne demande pas de compte : action serveur avec clé service.
+  // Aucun identifiant local de tablette n'est écrit dans worker_id (FK profiles).
+  const supabase = createServiceSupabase();
   const { error } = await supabase.from("work_order_steps").update({
     status: "ACTIVE", started_at: new Date().toISOString()
   }).eq("id", stepId);

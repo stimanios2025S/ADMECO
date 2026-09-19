@@ -1,8 +1,12 @@
 import { createBrowserClient } from "@supabase/ssr";
-import { createDemoSupabaseClient, hasSupabaseConfig } from "./demo";
+import { createDemoSupabaseClient } from "./demo";
+import { demoActif, erreurConfig, hasSupabaseConfig } from "./config";
 
 export function createClient() {
-  if (!hasSupabaseConfig()) return createDemoSupabaseClient() as any;
+  if (!hasSupabaseConfig()) {
+    if (demoActif()) return createDemoSupabaseClient() as any;
+    throw erreurConfig();
+  }
 
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

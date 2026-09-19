@@ -1,8 +1,9 @@
-export function hasSupabaseConfig() {
-  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim();
-  const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim();
-  return Boolean(url && anon && !url.includes("xyzcompany"));
-}
+// ── JEU DE DONNÉES FICTIF — DÉVELOPPEMENT UNIQUEMENT ──
+// Ce client n'est plus jamais sélectionné automatiquement : il n'est
+// instancié que si NEXT_PUBLIC_DEMO_MODE=1 ET qu'aucun vrai projet
+// Supabase n'est configuré (voir ./config.ts). En production, une
+// configuration manquante lève une erreur au lieu d'afficher ces lignes.
+// Les identifiants ci-dessous sont fictifs et sans effet hors démo.
 
 const makeIso = (daysAgo = 0) => new Date(Date.now() - daysAgo * 86400000).toISOString();
 
@@ -23,7 +24,7 @@ const demoUsers = [
     role: "WORKSHOP",
     portal: "portal",
     full_name: "Chef Atelier 1",
-    title: "Portail Atelier 1 — Bois & Découpe"
+    title: "Portail Atelier 1 — Tôle & Gros œuvre"
   },
   {
     id: "demo-atelier2-id",
@@ -32,7 +33,7 @@ const demoUsers = [
     role: "WAREHOUSE",
     portal: "portal",
     full_name: "Chef Atelier 2",
-    title: "Portail Atelier 2 — Assemblage & Finition"
+    title: "Portail Atelier 2 — Bureau"
   },
   {
     id: "demo-mag-id",

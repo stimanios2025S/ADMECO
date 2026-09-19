@@ -1,9 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { createDemoSupabaseClient, hasSupabaseConfig } from "./demo";
+import { createDemoSupabaseClient } from "./demo";
+import { demoActif, erreurConfig, hasSupabaseConfig } from "./config";
 
 export function createServerSupabase() {
-  if (!hasSupabaseConfig()) return createDemoSupabaseClient() as any;
+  if (!hasSupabaseConfig()) {
+    if (demoActif()) return createDemoSupabaseClient() as any;
+    throw erreurConfig();
+  }
 
   const store = cookies();
   return createServerClient(
