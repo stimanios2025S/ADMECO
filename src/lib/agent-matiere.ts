@@ -20,6 +20,21 @@
 //   Rendement : 1 tube → 4 pièces
 //   ⇒ 300 × 4 = 1 200 pièces ⇒ 1 200 / 4 = 300 tubes réservés
 //
+// ── Ce qu'il ne compte PAS comme matière ──
+//
+// La nomenclature Silwane porte AUSSI la gamme : les articles
+// « MAIN D'OEUVRE … » (MD001 à MD005) NOMMENT les opérations —
+// préparation, soudage, poudrage, emballage et montage, cache-jupe.
+//
+// Ce ne sont pas des matières : l'article existe, mais il n'a ni
+// stock ni nomenclature, donc il ne peut jamais être « manquant ».
+// Les compter comme du stock à réserver produisait un manque
+// fantôme par opération et polluait la dette de production.
+//
+// Ils sortent donc du plan matière (`estMainOeuvre`) et ressortent
+// comme OPÉRATIONS (`OperationNomenclature`), exploitables pour
+// dériver la gamme.
+//
 // ── Ce que ce module N'EST PAS ──
 //
 // Il ne touche PAS à la base : toutes les données lui sont fournies
@@ -112,6 +127,34 @@ export type LigneReservation = {
   quantite: number;
 };
 
+/**
+ * Une opération de MAIN D'ŒUVRE déclarée dans la nomenclature.
+ *
+ * L'article existe côté Silwane, mais il ne porte ni stock ni
+ * nomenclature : c'est un NOM D'OPÉRATION. Il ne se réserve pas, ne
+ * se consomme pas, ne se met pas en dette. Il décrit la gamme.
+ */
+export type OperationNomenclature = {
+  articleId: string;
+  code: string;
+  designation: string;
+  /**
+   * Quantité cumulée sur la branche où l'opération a été rencontrée EN
+   * PREMIER — donc pour la totalité de `quantiteProduit`, pas pour une
+   * unité : une nomenclature multi-niveaux multiplie en descendant.
+   *
+   * Une même opération déclarée par deux parents ne donne qu'UNE
+   * entrée, la première rencontrée. Additionner des quantités
+   * relatives à des parents différents n'aurait pas de sens ; ce qui
+   * compte ici, c'est l'enchaînement des opérations, pas leur somme.
+   */
+  quantite: number;
+  /** Code du produit ou semi-fini qui déclare cette opération. */
+  parentCode: string;
+  /** 1 = déclarée directement par le produit fini. */
+  niveau: number;
+};
+
 export type PlanMatiere = {
   besoins: BesoinMatiere[];
   reservations: LigneReservation[];
@@ -119,31 +162,103 @@ export type PlanMatiere = {
   manquants: Array<{ articleId: string; code: string; manque: number; unite: string }>;
   /** true si au moins un rendement était absent — le plan est approximatif. */
   rendementsIncomplets: boolean;
+  /**
+   * Opérations de main-d'œuvre lues dans la nomenclature — hors
+   * matière, donc hors stock et hors dette. C'est la gamme telle que
+   * Silwane l'écrit, à comparer à celle de `process-admedco-a1.ts`.
+   */
+  operations: OperationNomenclature[];
+};
+
+/**
+ * Ce que produit la SEULE allocation sur stock. Le plan matière
+ * complet y ajoute les opérations de main-d'œuvre : les deux
+ * ensembles sortent du même parcours de nomenclature, mais restent
+ * séparés — l'un se réserve sur stock, l'autre décrit la gamme.
+ */
+export type AllocationStock = Omit<PlanMatiere, "operations">;
+
+// ═══════════════════════════════════════════════════════════
+// 0. MAIN D'ŒUVRE — distinguer une opération d'une matière
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Clé de comparaison d'un libellé : majuscules, accents et
+ * ponctuation retirés.
+ *
+ * Silwane écrit « MAIN D'OEUVRE POUDRAGE » avec une apostrophe
+ * droite, « MAIN D’OEUVRE » avec une typographique, et parfois une
+ * espace finale. Tout cela doit se ramener à la même clé — c'est
+ * pourquoi on ne compare pas les libellés caractère par caractère.
+ */
+const cleLibelle = (s: string): string =>
+  String(s ?? "")
+    .toUpperCase()
+    // NFD sépare « É » en « E » + marque combinante. La marque n'est
+    // pas dans [A-Z0-9] et tombe donc avec le reste : inutile de la
+    // lister séparément.
+    .normalize("NFD")
+    // En revanche NFD ne décompose PAS la ligature Œ : sans cette
+    // ligne, « MAIN D'ŒUVRE » deviendrait « MAINDUVRE » et
+    // échapperait à la détection. Bug silencieux, d'où l'explicite.
+    .replace(/Œ/g, "OE")
+    .replace(/[^A-Z0-9]/g, "");
+
+const CODE_MAIN_OEUVRE = /^MD\d+$/;
+const LIBELLE_MAIN_OEUVRE = "MAINDOEUVRE";
+
+/**
+ * true si l'article est une OPÉRATION de main-d'œuvre, pas une
+ * matière.
+ *
+ * Deux signaux, dans cet ordre : le CODE (`MD001`…`MD005`), puis le
+ * LIBELLÉ (« MAIN D'OEUVRE … »). Le libellé rattrape un article dont
+ * le code aurait été ressaisi ; le code rattrape un libellé renommé.
+ *
+ * ⚠️ Aucune table de codes n'est figée ici : le référentiel Silwane
+ *    en contient cinq aujourd'hui (MD001 à MD005), et un MD006
+ *    ajouté demain sera reconnu sans toucher à ce fichier.
+ */
+export const estMainOeuvre = (art: ArticleInfo | undefined): boolean => {
+  if (!art) return false;
+  if (CODE_MAIN_OEUVRE.test(String(art.code ?? "").trim().toUpperCase())) return true;
+  return cleLibelle(art.designation).includes(LIBELLE_MAIN_OEUVRE);
 };
 
 // ═══════════════════════════════════════════════════════════
 // 1. ÉCLATEMENT DE LA NOMENCLATURE
 // ═══════════════════════════════════════════════════════════
 
+type ResultatParcours = {
+  /** Matières à réserver, cumulées par article. */
+  feuilles: Map<string, BesoinMatiere>;
+  /** Opérations de main-d'œuvre, une entrée par article. */
+  operations: Map<string, OperationNomenclature>;
+};
+
 /**
- * Déroule la nomenclature d'un produit jusqu'aux matières premières.
+ * Le parcours récursif commun, qui TRIE ce que contient la
+ * nomenclature en deux ensembles : les matières (à réserver) et les
+ * opérations de main-d'œuvre (à dérouler comme gamme).
+ *
+ * Les deux sorties viennent du MÊME passage. Les calculer par deux
+ * traversées séparées serait deux occasions de diverger, et le
+ * moindre écart entre le plan matière et la gamme serait invisible.
  *
  * La nomenclature Silwane est MULTI-NIVEAUX : un produit fabriqué
  * contient des semi-finis, qui contiennent eux-mêmes des matières.
- * On descend donc récursivement.
- *
  * Les quantités se MULTIPLIENT en descendant : 200 chaises × 4
  * pièces × … et non l'inverse.
  *
- * Une branche est une FEUILLE — donc une matière — dès qu'un
- * article n'a plus de nomenclature. C'est `estFabrique` qui le dit
- * en premier, la nomenclature sert de contrôle.
+ * Une branche est une FEUILLE — donc une matière — dès qu'un article
+ * n'a plus de nomenclature. C'est `estFabrique` qui le dit en
+ * premier, la nomenclature sert de contrôle.
  */
-export const exploserNomenclature = (
+const parcourirNomenclature = (
   produitId: string,
   quantiteProduit: number,
   ctx: ContexteAgent,
-): BesoinMatiere[] => {
+): ResultatParcours => {
   const profondeurMax = ctx.profondeurMax ?? 12;
 
   // Index composants par produit fini, pour ne pas reboucler dessus.
@@ -155,6 +270,7 @@ export const exploserNomenclature = (
   }
 
   const feuilles = new Map<string, BesoinMatiere>();
+  const operations = new Map<string, OperationNomenclature>();
 
   type Tache = { articleId: string; quantite: number; niveau: number; chemin: string[] };
   const pile: Tache[] = [{ articleId: produitId, quantite: quantiteProduit, niveau: 0, chemin: [] }];
@@ -202,17 +318,73 @@ export const exploserNomenclature = (
     }
 
     for (const l of enfant) {
+      const composant = ctx.articles.get(l.composantId);
+      const quantite = t.quantite * (Number(l.quantite) || 0);
+
+      // ── Le tri se fait ICI, à l'entrée ──
+      // Une opération de main-d'œuvre n'entre jamais dans la pile :
+      // elle ne descendra pas jusqu'aux feuilles, donc elle ne
+      // pourra jamais devenir un manque ni une dette.
+      if (estMainOeuvre(composant)) {
+        if (!operations.has(l.composantId)) {
+          operations.set(l.composantId, {
+            articleId: l.composantId,
+            code: composant?.code ?? "—",
+            designation: composant?.designation ?? "(article inconnu)",
+            quantite,
+            parentCode: art?.code ?? t.articleId,
+            niveau: t.niveau + 1,
+          });
+        }
+        continue;
+      }
+
       pile.push({
         articleId: l.composantId,
-        quantite: t.quantite * (Number(l.quantite) || 0),
+        quantite,
         niveau: t.niveau + 1,
         chemin: [...t.chemin, art?.code ?? t.articleId],
       });
     }
   }
 
-  return [...feuilles.values()].sort((a, b) => a.code.localeCompare(b.code));
+  return { feuilles, operations };
 };
+
+/**
+ * Déroule la nomenclature d'un produit jusqu'aux MATIÈRES PREMIÈRES.
+ *
+ * Les opérations de main-d'œuvre sont EXCLUES de ce résultat : elles
+ * ne sont pas de la matière. Pour la gamme, voir
+ * `operationsDeNomenclature`.
+ */
+export const exploserNomenclature = (
+  produitId: string,
+  quantiteProduit: number,
+  ctx: ContexteAgent,
+): BesoinMatiere[] =>
+  [...parcourirNomenclature(produitId, quantiteProduit, ctx).feuilles.values()].sort((a, b) =>
+    a.code.localeCompare(b.code),
+  );
+
+/**
+ * Les OPÉRATIONS de main-d'œuvre déclarées par la nomenclature d'un
+ * produit — la gamme telle que Silwane l'écrit, en clair.
+ *
+ * Une opération rencontrée dans un semi-fini est remontée aussi :
+ * c'est ce qui permet de reconstituer un enchaînement d'ateliers à
+ * partir des seules données, sans table de gammes à maintenir.
+ * `niveau` et `parentCode` disent OÙ l'opération est déclarée, ce
+ * qui laisse l'appelant décider s'il agrège ou s'il détaille.
+ */
+export const operationsDeNomenclature = (
+  produitId: string,
+  quantiteProduit: number,
+  ctx: ContexteAgent,
+): OperationNomenclature[] =>
+  [...parcourirNomenclature(produitId, quantiteProduit, ctx).operations.values()].sort((a, b) =>
+    a.code.localeCompare(b.code),
+  );
 
 // ═══════════════════════════════════════════════════════════
 // 2. APPLICATION DU RENDEMENT MATIÈRE
@@ -276,7 +448,10 @@ export const appliquerRendement = (
  * stock est `quantite - reserve` : ce qui est déjà réservé par une
  * autre commande n'est pas repris.
  */
-export const allouerSurStock = (besoins: readonly BesoinMatiere[], ctx: ContexteAgent): PlanMatiere => {
+export const allouerSurStock = (
+  besoins: readonly BesoinMatiere[],
+  ctx: ContexteAgent,
+): AllocationStock => {
   const parArticle = new Map<string, StockDisponible[]>();
   for (const s of ctx.stocks) {
     const liste = parArticle.get(s.articleId);
@@ -326,15 +501,27 @@ export const allouerSurStock = (besoins: readonly BesoinMatiere[], ctx: Contexte
   };
 };
 
-/** Point d'entrée : produit + quantité → plan matière complet. */
+/**
+ * Point d'entrée : produit + quantité → plan matière complet.
+ *
+ * `besoins` / `reservations` / `manquants` ne parlent que de
+ * MATIÈRE. `operations` est l'autre moitié de la même lecture : la
+ * main-d'œuvre lue dans la nomenclature, qui ne se réserve pas.
+ */
 export const planifierMatiere = (
   produitId: string,
   quantiteProduit: number,
   ctx: ContexteAgent,
 ): PlanMatiere => {
-  const bruts = exploserNomenclature(produitId, quantiteProduit, ctx);
+  const parcours = parcourirNomenclature(produitId, quantiteProduit, ctx);
+
+  const bruts = [...parcours.feuilles.values()].sort((a, b) => a.code.localeCompare(b.code));
   const nets = appliquerRendement(bruts, produitId, ctx);
-  return allouerSurStock(nets, ctx);
+
+  return {
+    ...allouerSurStock(nets, ctx),
+    operations: [...parcours.operations.values()].sort((a, b) => a.code.localeCompare(b.code)),
+  };
 };
 
 // ═══════════════════════════════════════════════════════════

@@ -5,7 +5,7 @@
 //   COM_Item (706)       → erp_articles  (+ typologie MP / semi-fini / fabriqué)
 //   COM_ThirdParty (343) → erp_tiers
 //   COM_Batch (706)      → erp_lots
-//   COM_Formula (244) + COM_BOM (5057) → erp_nomenclatures
+//   COM_Formula (244) + COM_BOM (2315 utiles sur 5057) → erp_nomenclatures
 //   ► NOUVEAU : erp_articles → stock_items (le stock VIVANT du MES)
 //
 // Usage :
@@ -17,7 +17,7 @@
 // ré-exécutable sans doublon. `--dry` compte sans rien écrire.
 // ═══════════════════════════════════════════════════════════
 import { createClient } from "@supabase/supabase-js";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const ARGS = process.argv.slice(2);
@@ -177,20 +177,53 @@ await upsert("erp_lots", lotRows, "sil_oid", "lots");
 // ═══════════ 5. NOMENCLATURES ═══════════
 const formulas = parseCsv("COM_Formula.csv");
 const bom = parseCsv("COM_BOM.csv");
-console.log(`⑤ Nomenclatures (${formulas.length} formules + ${bom.length} lignes)…`);
+// COM_BOM.csv n'est PAS un fichier de 5057 lignes de nomenclature : 2742 de
+// ses lignes sont du REMPLISSAGE PUR (`Oid;;Offset;…`, SyncId et tous les
+// champs métier vides). Les annoncer comme des « lignes » laissait croire
+// qu'on en perdait 2918 alors qu'il n'y en a que 2315 de réelles. On les
+// écarte d'emblée, et on le DIT.
+const estRemplissage = (b) =>
+  String(b.SyncId ?? "").trim() === "" &&
+  Object.entries(b).every(
+    ([k, v]) => k === "Oid" || k === "Offset" || String(v ?? "").trim() === ""
+  );
+const nbRemplissage = bom.filter(estRemplissage).length;
+
+console.log(
+  `⑤ Nomenclatures (${formulas.length} formules + ${bom.length - nbRemplissage} lignes utiles` +
+    `${nbRemplissage ? `, ${nbRemplissage} lignes de remplissage ignorées` : ""})…`
+);
+
 const formulaItem = new Map(); // Formula.Oid → { pfSilOid, code }
 for (const f of formulas) {
   if (f.Oid && f.Item && artBySil.has(String(f.Item)))
     formulaItem.set(String(f.Oid), { pfSilOid: String(f.Item), code: f.Code?.trim() || `F-${f.Oid}` });
 }
+
+// Pour le rapport : Oid Silwane → code article lisible (COM_Item).
+const codeParOid = new Map(items.map((a) => [String(a.Oid), a.Code?.trim() || `ART-${a.Oid}`]));
+
 const nomenRows = [];
-for (const b of bom) {
+const orphelines = []; // lignes réelles SANS parent — jamais écartées en silence
+// Composants consommés par au moins une ligne RATTACHÉE. Sert à séparer,
+// dans le rapport, une orpheline sans conséquence d'une vraie perte.
+const composantsRattaches = new Set();
+for (let i = 0; i < bom.length; i++) {
+  const b = bom[i];
+  if (estRemplissage(b)) continue;
   const f = formulaItem.get(String(b.Formula));
-  if (!f) continue;
+  if (!f) {
+    // `Formula` vide = aucun parent. Rien ne permet de deviner à quelle
+    // nomenclature rattacher la ligne, et l'inventer fausserait la gamme
+    // réelle. On la met de côté, on la compte, on l'écrit pour examen.
+    orphelines.push({ ...b, __ligne: i + 2 }); // +2 : en-tête + base 1
+    continue;
+  }
   // `undefined` = article absent du catalogue ; `null` = mode --dry (id non résolu)
   const pfId = artBySil.get(f.pfSilOid);
   const compId = artBySil.get(String(b.Item));
   if (pfId === undefined || compId === undefined) continue;
+  composantsRattaches.add(String(b.Item));
   nomenRows.push({
     sil_oid: b.Oid,
     code_formule: f.code,
@@ -199,6 +232,57 @@ for (const b of bom) {
     composant_id: compId,
     quantite: num(b.Quantity) || 1,
   });
+}
+
+if (orphelines.length) {
+  // Une orpheline n'est PAS forcément une perte : le relevé montre que la
+  // plupart reprennent un composant qu'une ligne rattachée consomme déjà.
+  // Le vrai signal, c'est une orpheline dont le composant n'apparaît dans
+  // AUCUNE nomenclature importée — là, de la matière est bien perdue.
+  const avecDetail = orphelines.map((b) => {
+    const oid = String(b.Item);
+    return {
+      ligne: b.__ligne,
+      oid: b.Oid,
+      code: codeParOid.get(oid) ?? oid,
+      quantite: String(b.Quantity).replace(",", "."),
+      introuvableAilleurs: !composantsRattaches.has(oid),
+    };
+  });
+  const perdues = avecDetail.filter((b) => b.introuvableAilleurs);
+  // Les plus graves d'abord : le rapport s'ouvre sur ce qu'il faut regarder.
+  const ordonnees = [...perdues, ...avecDetail.filter((b) => !b.introuvableAilleurs)];
+
+  const RAPPORT = "nomenclature-orphelines.csv";
+  writeFileSync(
+    RAPPORT,
+    String.fromCharCode(0xfeff) + // BOM : Excel Windows lit l'UTF-8 sans lui en ANSI
+      [
+        "ligne_csv;oid;code_composant;quantite;matiere_introuvable_ailleurs",
+        ...ordonnees.map((b) =>
+          [b.ligne, b.oid, b.code, b.quantite, b.introuvableAilleurs ? "OUI" : ""].join(";")
+        ),
+      ].join("\n") +
+      "\n",
+    "utf8"
+  );
+
+  console.log(
+    `   ⚠️  ${orphelines.length} ligne(s) sans numéro de formule : parent inconnu,\n` +
+      `      rattachement impossible sans risquer de fausser la gamme.`
+  );
+  if (perdues.length) {
+    console.log(
+      `      Dont ${perdues.length} portent une matière qu'AUCUNE autre nomenclature\n` +
+        `      ne consomme — c'est la seule perte réelle :`
+    );
+    for (const b of perdues) {
+      console.log(`         · ${b.code.padEnd(14)} qté ${b.quantite.padEnd(12)} (ligne CSV ${b.ligne})`);
+    }
+  } else {
+    console.log(`      Aucune ne porte de matière absente ailleurs : aucune perte.`);
+  }
+  console.log(`      Détail complet : ${RAPPORT}`);
 }
 await upsert("erp_nomenclatures", nomenRows, "sil_oid", "lignes nomenclature");
 
