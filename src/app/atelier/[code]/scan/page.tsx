@@ -51,11 +51,27 @@ export default async function PageScanAtelier({
   const id = atelierDuSlug(slug);
   const fiche = ficheAtelier(id);
 
-  // Slug inconnu : on rend la main au portail, qui sait l'expliquer.
-  if (!fiche || !id) redirect(`/portail/${slug}`);
+  // Slug inconnu : on rend la main au choix de l'usine, seul écran
+  // qui sait expliquer qu'un atelier n'existe pas.
+  if (!fiche || !id) redirect("/portail");
 
+  // Un QR de poste collé au mur mène ici. Sans session, on ouvre
+  // l'atelier du QR plutôt que de réclamer un mot de passe : c'est
+  // tout l'intérêt du scan, et l'ouvrier n'a rien à retenir.
+  //
+  // `suite` fait suivre le poste visé : après l'ouverture, l'ouvrier
+  // revient sur LE scan qu'il demandait, pas sur le tableau. Sinon un
+  // scan de QR atterrirait toujours sur l'écran d'accueil de
+  // l'atelier — c'est-à-dire sur rien.
   const profil = await getProfil();
-  if (!profil.email) redirect(`/portail/${slug}`);
+  if (!profil.email) {
+    const reste = new URLSearchParams();
+    if (searchParams?.mode) reste.set("mode", searchParams.mode);
+    if (searchParams?.etape) reste.set("etape", searchParams.etape);
+    const q = reste.toString();
+    const suite = `/atelier/${slug}/scan${q ? `?${q}` : ""}`;
+    redirect(`/ouvrir/${slug}?suite=${encodeURIComponent(suite)}`);
+  }
 
   // ── Le garde-fou ──
   // Un ouvrier de l'Atelier 1 qui tape /atelier/m1/scan doit être

@@ -1,8 +1,8 @@
 "use client";
 import { useMemo, useState } from "react";
-import { UserPlus, Pencil, Trash2, X, Search, Dices, Eye, EyeOff } from "lucide-react";
+import { UserPlus, Pencil, Trash2, X, Search, Dices, Eye, EyeOff, KeyRound } from "lucide-react";
 import { GlassCard, SectionTitle, Stat, StatusPill, Empty } from "@/components/admin/ui";
-import { inviteMember, updateMember, removeMember } from "@/app/actions";
+import { inviteMember, updateMember, removeMember, resetMemberPassword } from "@/app/actions";
 import { ATELIERS, atelierNom } from "@/lib/ateliers";
 import { cn } from "@/lib/utils";
 
@@ -82,6 +82,24 @@ export default function TeamClient({ members: initial }: { members: Member[] }) 
                 </div>
                 <div className="flex shrink-0 gap-1.5">
                   <button onClick={() => { setEditing(m); setError(""); }} className="btn-ghost grid h-8 w-8 place-items-center" title="Modifier"><Pencil size={14} /></button>
+                  {/* ── Le mot de passe est irrécupérable ──
+                      Supabase le hache à l'écriture : personne ne peut
+                      le réafficher, pas même cet écran. La seule issue
+                      est d'en reposer un — sans quoi il fallait
+                      supprimer le compte et le recréer, ce qui effaçait
+                      le profil et l'atelier. */}
+                  <button onClick={async () => {
+                    const nouveau = prompt(
+                      `Nouveau mot de passe pour ${m.full_name}\n(6 caractères minimum — notez-le, il ne sera plus affichable)`
+                    );
+                    if (!nouveau) return;
+                    setBusy(true);
+                    try { await resetMemberPassword({ id: m.id, password: nouveau }); alert("Mot de passe reposé."); }
+                    catch (e: any) { alert(e.message); }
+                    setBusy(false);
+                  }} className="grid h-8 w-8 place-items-center rounded-xl border border-[#e6e1d8] bg-white text-[#7c8091] hover:text-[#1a1d23]" title="Reposer le mot de passe">
+                    <KeyRound size={14} />
+                  </button>
                   <button onClick={async () => {
                     if (!confirm(`Retirer ${m.full_name} ? Son compte sera supprimé.`)) return;
                     setBusy(true);

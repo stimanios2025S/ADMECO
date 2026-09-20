@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, SearchX } from "lucide-react";
-import ConnexionAtelier from "@/components/worker/ConnexionAtelier";
+import OuvrirAtelier from "@/components/worker/OuvrirAtelier";
 import { getProfil } from "@/lib/auth";
 import {
   FICHES_ATELIERS,
@@ -55,7 +55,7 @@ export default async function PageConnexionAtelier({
   const profil = await getProfil();
   if (profil.email) redirect(urlAtelier(id));
 
-  return <ConnexionAtelier fiche={fiche} />;
+  return <OuvrirAtelier fiche={fiche} />;
 }
 
 function AtelierIntrouvable({ slug }: { slug: string }) {

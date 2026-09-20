@@ -1,45 +1,32 @@
 // ═══════════════════════════════════════════════════════════
-// CRÉER LES COMPTES DES CINQ ATELIERS — hors application
+// PRÉPARER LES CINQ PORTAILS D'ATELIER — hors application
 //
 // Usage (à la racine du projet, .env.local renseigné) :
 //   node scripts/creer-comptes-ateliers.mjs
-//   node scripts/creer-comptes-ateliers.mjs --reinitialiser
-//   node scripts/creer-comptes-ateliers.mjs a1=MonMotDePasse
-//   node scripts/creer-comptes-ateliers.mjs --domaine=mobilix.ma
 //
-// ── Pourquoi ce script existe ──
+// ── À quoi ça sert, maintenant ──
 //
-// Un mot de passe Supabase est haché (bcrypt) à l'écriture. Il n'est
-// PAS relisible : ni par la clé anon, ni par la clé service_role, ni
-// par l'écran /admin/team, ni par ce script. Personne ne peut donc
-// « afficher les mots de passe existants » — on ne peut que les
-// DÉFINIR. C'est ce que fait ce script.
+// Les portails d'atelier n'ont plus ni identifiant ni mot de passe :
+// on clique, ça ouvre (voir src/lib/ouvrir-atelier.ts). Le compte de
+// chaque atelier est donc créé automatiquement au premier clic — ce
+// script n'est PAS nécessaire au fonctionnement.
 //
-// ── Le trou qu'il bouche ──
+// Il sert à une chose : VÉRIFIER AVANT LA DÉMONSTRATION. Il crée les
+// cinq comptes d'équipe, les rattache à leur atelier, et affiche une
+// ligne par portail. Si une ligne est rouge, le portail ne s'ouvrira
+// pas — autant le savoir maintenant, pas devant le patron.
 //
-// `inviteMember` (src/app/actions.ts, ligne 233) appelle
-// `admin.auth.admin.createUser({ email, email_confirm: true, ... })`
-// SANS `password`. Le compte créé depuis /admin/team n'a donc aucun
-// mot de passe : il ne peut pas se connecter par `signInWithPassword`,
-// qui est le seul chemin d'entrée du portail d'atelier. Un ouvrier
-// invité aujourd'hui recevrait un identifiant qui refuse son mot de
-// passe, quel qu'il soit.
+// ── Aucun mot de passe n'est affiché ──
+// Les comptes d'atelier reçoivent un mot de passe tiré au hasard, que
+// le serveur remplace par le sien au premier clic. Il n'est pour
+// personne : ni pour vous, ni pour l'ouvrier, ni pour le patron.
 //
-// Ce script crée les comptes COMPLETS — utilisateur + profil — en
-// posant le mot de passe au moment de la création.
-//
-// ── Il ne détruit rien ──
-//
-//   · compte absent  → créé avec son mot de passe
-//   · compte présent → mot de passe LAISSÉ INTACT, seul le profil
-//                      (rôle, atelier, nom) est remis à jour
-//
-// Un mot de passe n'est réécrit que sur `--reinitialiser` explicite.
-// Sans cette précaution, relancer le script le lendemain casserait
-// les postes qui se sont déjà connectés.
+// ── Ce script ne détruit rien ──
+// Un compte déjà présent n'est pas modifié (le mot de passe surtout) :
+// le serveur le reprendra de toute façon à la première ouverture.
 // ═══════════════════════════════════════════════════════════
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
@@ -52,10 +39,10 @@ import { createClient } from "@supabase/supabase-js";
 // l'id 3. C'est historique et volontaire — réattribuer l'id 3
 // réécrirait tout l'historique MOBILIX.
 //
-// Ces cinq lignes sont la copie de `FICHES` dans
-// src/lib/portail-atelier.ts. Si l'un des deux fichiers bouge,
-// l'autre doit bouger — le contrôle croisé en bas de script le
-// vérifie contre la table `ateliers` de la base.
+// Ces lignes recopient `FICHES` (src/lib/portail-atelier.ts), et le
+// contrôle croisé plus bas les compare à la table `ateliers` : si les
+// deux ont divergé, le script s'arrête au lieu de créer des profils
+// qui pointent vers le mauvais poste.
 // ═══════════════════════════════════════════════════════════
 const ATELIERS = [
   { id: 1, slug: "a1", code: "A1", usine: "ADMEDCO", nom: "Tôle & Gros œuvre" },
@@ -64,29 +51,6 @@ const ATELIERS = [
   { id: 3, slug: "m1", code: "M1", usine: "MOBILIX", nom: "Découpe bois" },
   { id: 5, slug: "m2", code: "M2", usine: "MOBILIX", nom: "Tapissage" },
 ];
-
-// ── L'alphabet des mots de passe ──
-// Sans I, O, 0 ni 1 : sur une tablette d'atelier, ces caractères se
-// confondent, et une faute de frappe passe pour un compte en panne.
-const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-const tirer = (n) =>
-  Array.from({ length: n }, () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)]).join("");
-
-// ═══════════════════════════════════════════════════════════
-// LES ARGUMENTS
-// ═══════════════════════════════════════════════════════════
-const args = process.argv.slice(2);
-const reinitialiser = args.includes("--reinitialiser");
-const argDomaine = args.find((a) => a.startsWith("--domaine="));
-const domaine = (argDomaine ? argDomaine.slice("--domaine=".length) : "admedco.ma").trim();
-
-// `a1=MonMotDePasse` — pour imposer un mot de passe plutôt qu'en tirer un.
-const imposes = new Map();
-for (const a of args) {
-  const m = /^([a-z]\d)=(.+)$/.exec(a);
-  if (m) imposes.set(m[1], m[2]);
-}
 
 // ═══════════════════════════════════════════════════════════
 // LA CONFIGURATION — .env.local
@@ -99,7 +63,7 @@ function chargerEnv() {
     if (!m) continue;
     const [, cle, brut] = m;
     // Une variable déjà présente dans l'environnement gagne : sur le
-    // serveur, `pm2` peut fournir les vraies valeurs.
+    // serveur, pm2 peut fournir les vraies valeurs.
     if (process.env[cle]) continue;
     process.env[cle] = brut.trim().replace(/^["']|["']$/g, "");
   }
@@ -118,38 +82,39 @@ if (!url || !cle) {
 }
 
 const sb = createClient(url, cle, { auth: { persistSession: false, autoRefreshToken: false } });
+const base = (process.env.PORTAL_BASE_URL ?? "https://erp.admedco.com").replace(/\/+$/, "");
 
-// ═══════════════════════════════════════════════════════════
-// LE TRAVAIL
-// ═══════════════════════════════════════════════════════════
-const emailDe = (a) => `${a.slug}@${domaine}`;
+// ── Le mot de passe jetable ──
+// Jamais affiché, jamais transmis : le serveur pose le sien au premier
+// clic. Sans I, O, 0 ni 1 — sur une tablette ces caractères se
+// confondent, et une faute de frappe passerait pour une panne.
+const tirerMotDePasse = () => {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const t = Array.from({ length: 24 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+  return `Jetable-${t}`;
+};
 
 async function main() {
-  console.log("\n  Comptes d'atelier — " + new URL(url).host);
+  console.log(`\n  Portails d'atelier — ${new URL(url).host}\n`);
 
   // ── Garde-fou : la base et ce script disent-ils la même chose ? ──
-  // Si `ateliers` a bougé, on crée des profils qui pointent vers le
-  // mauvais poste — et un ouvrier qui déclare au poste du voisin.
-  const { data: table, error: eTable } = await sb
-    .from("ateliers")
-    .select("id, code, nom, usine")
-    .order("id");
+  const { data: table, error: eTable } = await sb.from("ateliers").select("id, usine").order("id");
 
   if (eTable) {
-    console.error(`\n  ✗ Lecture de la table « ateliers » impossible : ${eTable.message}\n`);
+    console.error(`  ✗ Lecture de la table « ateliers » impossible : ${eTable.message}\n`);
     process.exit(1);
   }
 
   for (const a of ATELIERS) {
     const trouve = (table ?? []).find((t) => t.id === a.id);
     if (!trouve) {
-      console.error(`\n  ✗ Aucun atelier d'id ${a.id} en base (attendu : ${a.usine} ${a.code}).\n`);
+      console.error(`  ✗ Aucun atelier d'id ${a.id} en base (attendu : ${a.usine} ${a.code}).\n`);
       process.exit(1);
     }
     if (trouve.usine && trouve.usine !== a.usine) {
       console.error(
-        `\n  ✗ L'atelier ${a.id} est « ${trouve.usine} » en base,` +
-          ` mais « ${a.usine} » dans ce script. Les deux tables ont divergé.\n`
+        `  ✗ L'atelier ${a.id} est « ${trouve.usine} » en base, mais « ${a.usine} » ici.` +
+          ` Les deux tables ont divergé.\n`
       );
       process.exit(1);
     }
@@ -160,122 +125,73 @@ async function main() {
   for (let page = 1; page <= 20; page++) {
     const { data, error } = await sb.auth.admin.listUsers({ page, perPage: 200 });
     if (error) {
-      console.error(`\n  ✗ Liste des comptes impossible : ${error.message}\n`);
+      console.error(`  ✗ Liste des comptes impossible : ${error.message}\n`);
       process.exit(1);
     }
     for (const u of data.users) if (u.email) existants.set(u.email.toLowerCase(), u.id);
     if (data.users.length < 200) break;
   }
 
-  const lignes = [];
+  const resultats = [];
 
   for (const a of ATELIERS) {
-    const email = emailDe(a);
-    const nomComplet = `Équipe ${a.code} — ${a.nom}`;
+    const email = `${a.slug}@admedco.ma`;
+    const nom = `Équipe ${a.code} — ${a.nom}`;
     const connu = existants.get(email.toLowerCase());
-
-    // Le mot de passe n'est tiré QUE s'il faut le poser : soit le
-    // compte est neuf, soit on a demandé une réinitialisation.
-    const aPoser = !connu || reinitialiser;
-    const motDePasse = aPoser
-      ? imposes.get(a.slug) ?? `Admco${a.code}-${tirer(5)}`
-      : null;
-
     let userId = connu;
+    let action = "déjà prêt";
 
     if (!connu) {
       const { data, error } = await sb.auth.admin.createUser({
         email,
-        password: motDePasse,
-        email_confirm: true, // pas de courriel de confirmation : le compte est prêt
-        user_metadata: { full_name: nomComplet, role: "WORKER" },
+        password: tirerMotDePasse(),
+        email_confirm: true, // aucun courriel : le portail ouvre tout de suite
+        user_metadata: { full_name: nom, role: "WORKER" },
       });
       if (error) {
-        console.error(`\n  ✗ Création de ${email} : ${error.message}\n`);
-        process.exit(1);
+        resultats.push({ ...a, ok: false, detail: error.message });
+        continue;
       }
-      userId = data.user?.id;
+      userId = data.user?.id ?? null;
       if (!userId) {
-        console.error(`\n  ✗ ${email} : aucun identifiant retourné par Supabase.\n`);
-        process.exit(1);
+        resultats.push({ ...a, ok: false, detail: "identifiant non retourné" });
+        continue;
       }
-      console.log(`  + créé    ${email}`);
-    } else if (reinitialiser) {
-      const { error } = await sb.auth.admin.updateUserById(connu, {
-        password: motDePasse,
-        user_metadata: { full_name: nomComplet, role: "WORKER" },
-      });
-      if (error) {
-        console.error(`\n  ✗ Mot de passe de ${email} : ${error.message}\n`);
-        process.exit(1);
-      }
-      console.log(`  ↻ repris  ${email}`);
-    } else {
-      console.log(`  = présent ${email}  (mot de passe inchangé)`);
+      action = "créé";
     }
 
-    // ── Le profil ──
-    // Le rattachement à l'atelier est ce qui décide OÙ l'ouvrier
-    // atterrit : sans `atelier_id`, le portail le renvoie au hall au
-    // lieu de sa file. C'est la colonne qui compte ici.
+    // ── Le rattachement ──
+    // `atelier_id` décide OÙ l'ouvrier atterrit et CE QU'il voit :
+    // sans elle, la porte s'ouvrirait sur un hall vide.
     const { error: eProfil } = await sb
       .from("profiles")
-      .upsert(
-        { id: userId, role: "WORKER", full_name: nomComplet, atelier_id: a.id },
-        { onConflict: "id" }
-      );
+      .upsert({ id: userId, role: "WORKER", full_name: nom, atelier_id: a.id }, { onConflict: "id" });
 
     if (eProfil) {
-      console.error(`\n  ✗ Profil de ${email} : ${eProfil.message}\n`);
-      process.exit(1);
+      resultats.push({ ...a, ok: false, detail: eProfil.message });
+      continue;
     }
 
-    lignes.push({ ...a, email, motDePasse });
+    resultats.push({ ...a, ok: true, detail: action });
   }
 
-  // ══ La feuille de remise ══
-  const base = (process.env.PORTAL_BASE_URL ?? "https://erp.admedco.com").replace(/\/+$/, "");
+  // ══ Le tableau ══
+  const echecs = resultats.filter((r) => !r.ok);
 
-  const visibles = lignes.filter((l) => l.motDePasse);
-  if (visibles.length) {
-    const entete = ["Usine", "Atelier", "Adresse de connexion", "Identifiant", "Mot de passe"];
-    const corps = visibles.map((l) => [
-      l.usine,
-      `${l.code} — ${l.nom}`,
-      `${base}/portail/${l.usine.toLowerCase()}/${l.slug}`,
-      l.email,
-      l.motDePasse,
-    ]);
-
-    const largeurs = entete.map((_, i) => Math.max(...corps.map((r) => r[i].length), entete[i].length));
-    const ligne = (r) => "  " + r.map((c, i) => c.padEnd(largeurs[i])).join("  │  ");
-
-    console.log("\n  ── À transmettre ──\n");
-    console.log(ligne(entete));
-    console.log("  " + largeurs.map((w) => "─".repeat(w)).join("──┼──"));
-    for (const r of corps) console.log(ligne(r));
-    console.log("");
-
-    const chemin = resolve(process.cwd(), "comptes-ateliers.csv");
-    writeFileSync(
-      chemin,
-      ["Usine,Atelier,Adresse,Identifiant,Mot de passe"]
-        .concat(
-          visibles.map((l) =>
-            [l.usine, `${l.code} — ${l.nom}`, `${base}/portail/${l.usine.toLowerCase()}/${l.slug}`, l.email, l.motDePasse]
-              .map((c) => `"${String(c).replace(/"/g, '""')}"`)
-              .join(",")
-          )
-        )
-        .join("\n") + "\n",
-      "utf8"
-    );
-    console.log(`  Feuille écrite : ${chemin}`);
-    console.log("  ⚠  Ce fichier contient des mots de passe : ne le commitez pas.\n");
-  } else {
-    console.log("\n  Les cinq comptes existaient déjà. Pour réémettre les mots de passe :");
-    console.log("    node scripts/creer-comptes-ateliers.mjs --reinitialiser\n");
+  for (const r of resultats) {
+    const marque = r.ok ? "✓" : "✗";
+    const lien = `${base}/portail/${r.usine.toLowerCase()}/${r.slug}`;
+    console.log(`  ${marque} ${r.usine.padEnd(8)} ${r.code}  ${r.nom.padEnd(24)} ${r.ok ? r.detail : r.detail}`);
+    if (r.ok) console.log(`      ${lien}`);
   }
+
+  if (echecs.length) {
+    console.error(`\n  ${echecs.length} portail(s) en échec — à corriger avant la remise.\n`);
+    process.exit(1);
+  }
+
+  console.log(`\n  Les cinq portails sont prêts. Aucun mot de passe n'est requis :`);
+  console.log(`  chaque porte s'ouvre au clic.\n`);
 }
 
 main().catch((e) => {

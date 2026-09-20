@@ -132,7 +132,14 @@ export default async function PagePortailUsine({ params }: { params: { usine: st
 function CarteAtelier({ fiche }: { fiche: FicheAtelier }) {
   return (
     <Link
-      href={urlConnexionAtelier(fiche.id)}
+      // ── Un clic, et l'atelier est ouvert ──
+      // On va droit à /ouvrir/<slug>, qui pose la session et redirige
+      // vers la file. L'écran de confirmation
+      // (/portail/<usine>/<slug>) reste en place pour les adresses
+      // mises en favori sur les tablettes : il mène au même endroit,
+      // avec le nom et la gamme de l'atelier sous les yeux.
+      href={`/ouvrir/${fiche.slug}`}
+      prefetch={false}
       className="group flex flex-col rounded-3xl border border-black/[0.05] bg-white p-5 transition-all hover:-translate-y-0.5"
       style={{ boxShadow: `0 1px 2px rgba(0,0,0,.04), 0 14px 32px -20px ${fiche.accent}` }}
     >

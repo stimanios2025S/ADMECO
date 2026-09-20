@@ -29,8 +29,3 @@ deploy/*.env
 
 # modules purs compilés hors application, pour scripts/verifier-chaine.mjs
 .tmp-sim/
-
-# feuille de remise des comptes d'atelier — contient des mots de passe
-# en clair (scripts/creer-comptes-ateliers.mjs). Elle se régénère, elle
-# ne se versionne pas.
-comptes-ateliers.csv

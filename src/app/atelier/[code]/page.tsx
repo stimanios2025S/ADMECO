@@ -21,11 +21,14 @@ export default async function PageAtelier({ params }: { params: { code: string }
   // ── Pas de session : on ouvre la porte de CET atelier ──
   // Pas la page générique de connexion. Un ouvrier qui a mis
   // /atelier/a1 en favori, ou qui arrive par un QR collé au poste,
-  // doit retomber sur le formulaire A1 — pas sur une page où il doit
-  // retrouver son atelier dans une liste. Un slug inconnu
-  // (`/atelier/a4`) aboutit à /portail/a4, qui explique l'erreur.
+  // doit atterrir sur SA file — pas sur une page où il doit retrouver
+  // son atelier dans une liste. `/ouvrir/<slug>` pose la session et
+  // revient ici : adresse en favori, rien à taper.
+  //
+  // Pas de boucle possible : si l'ouverture échoue, `/ouvrir` renvoie
+  // vers le portail de l'usine avec la raison, jamais vers ici.
   const profil = await getProfil();
-  if (!profil.email) redirect(`/portail/${slug}`);
+  if (!profil.email) redirect(`/ouvrir/${slug}`);
 
   // ── Le refus ──
   // On ne redirige PAS en silence vers son propre atelier : un ouvrier
