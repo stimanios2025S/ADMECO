@@ -34,7 +34,7 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   const id = atelierDuSlug(slug);
 
   if (!id || !ficheAtelier(id) || !tousLesSlugs.includes(slug as SlugAtelier)) {
-    return rediriger(req, "/portail");
+    return rediriger("/portail");
   }
 
   const fiche = ficheAtelier(id)!;
@@ -61,16 +61,16 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   // le clic doit être instantané, pas une re-création de compte.
   const profil = await lireProfil();
   if (profil?.role === "ADMIN") {
-    return rediriger(req, versAtelier);
+    return rediriger(versAtelier);
   }
   if (profil?.email && profil.atelier_id === id) {
-    return rediriger(req, versAtelier);
+    return rediriger(versAtelier);
   }
 
   // ── Le compte de l'équipe ──
   const ouverture = await ouvrirAtelier(slug as SlugAtelier);
   if (!ouverture.ok) {
-    return rediriger(req, `/portail/${fiche.usine.toLowerCase()}?echec=${ouverture.raison}`);
+    return rediriger(`/portail/${fiche.usine.toLowerCase()}?echec=${ouverture.raison}`);
   }
 
   // ── La session ──
@@ -83,22 +83,31 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   });
 
   if (error) {
-    return rediriger(req, `/portail/${fiche.usine.toLowerCase()}?echec=session`);
+    return rediriger(`/portail/${fiche.usine.toLowerCase()}?echec=session`);
   }
 
-  return rediriger(req, versAtelier);
+  return rediriger(versAtelier);
 }
 
 /**
  * 303 : la méthode devient GET après la redirection, et le navigateur
- * ne rejoue pas l'ouverture en boucle. Un 307 conserverait le GET aussi,
- * mais 303 est le code juste pour « l'action est faite, va voir là-bas ».
+ * ne rejoue pas l'ouverture.
+ *
+ * ── `location` RELATIF, jamais absolu ──
+ * Le serveur ne connaît pas son propre nom public : il écoute sur
+ * `localhost:4003`, et c'est `cloudflared` qui porte le domaine. Une
+ * URL absolue construite ici porterait donc `localhost` — c'est-à-dire,
+ * une fois arrivée dans le navigateur, la machine du visiteur. D'où
+ * l'`ERR_CONNECTION_REFUSED` : le navigateur cherche le serveur chez
+ * lui.
+ *
+ * Un `location` relatif est résolu par le navigateur contre l'adresse
+ * qu'il a lui-même demandée. Il est donc juste derrière le tunnel, en
+ * direct sur le port, et en local — sans que le serveur ait besoin de
+ * savoir par où on l'appelle.
  */
-function rediriger(req: NextRequest, chemin: string) {
-  const url = req.nextUrl.clone();
-  url.pathname = chemin.split("?")[0];
-  url.search = chemin.includes("?") ? `?${chemin.split("?")[1]}` : "";
-  return NextResponse.redirect(url, 303);
+function rediriger(chemin: string) {
+  return new NextResponse(null, { status: 303, headers: { location: chemin } });
 }
 
 /** Le profil courant, ou `null` si personne n'est connecté. */

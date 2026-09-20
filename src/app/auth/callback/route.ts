@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/admin";
+  const next = cheminInterne(searchParams.get("next")) ?? "/admin";
 
   if (code) {
     const supabase = createServerClient(
@@ -28,4 +28,19 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.redirect(`${origin}${next}`);
+}
+
+/**
+ * N'accepte qu'un chemin interne.
+ *
+ * `?next=` vient de l'URL : sans contrôle, `?next=https://ailleurs.tld`
+ * transforme cette route en redirection ouverte — un lien qui porte
+ * notre domaine et dépose le visiteur n'importe où. `//ailleurs.tld`
+ * est refusé aussi : un navigateur le lit comme une adresse absolue,
+ * protocole relatif.
+ */
+function cheminInterne(valeur: string | null): string | null {
+  if (!valeur) return null;
+  if (!valeur.startsWith("/") || valeur.startsWith("//")) return null;
+  return valeur;
 }
