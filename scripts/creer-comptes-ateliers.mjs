@@ -98,7 +98,16 @@ async function main() {
   console.log(`\n  Portails d'atelier — ${new URL(url).host}\n`);
 
   // ── Garde-fou : la base et ce script disent-ils la même chose ? ──
-  const { data: table, error: eTable } = await sb.from("ateliers").select("id, usine").order("id");
+  //
+  // La table `ateliers` porte quatre colonnes — `id`, `code`, `name`,
+  // `site` — et PAS de colonne `usine` : le site de l'usine est dans
+  // `site` (voir 0008, 0012, 0016, 0017). On vérifie donc le couple
+  // `id` + `code`, qui est ce qui compte, et `site` seulement quand il
+  // porte bien un code d'usine.
+  const { data: table, error: eTable } = await sb
+    .from("ateliers")
+    .select("id, code, name, site")
+    .order("id");
 
   if (eTable) {
     console.error(`  ✗ Lecture de la table « ateliers » impossible : ${eTable.message}\n`);
@@ -107,14 +116,26 @@ async function main() {
 
   for (const a of ATELIERS) {
     const trouve = (table ?? []).find((t) => t.id === a.id);
+
     if (!trouve) {
-      console.error(`  ✗ Aucun atelier d'id ${a.id} en base (attendu : ${a.usine} ${a.code}).\n`);
+      console.error(
+        `  ✗ Aucun atelier d'id ${a.id} en base (attendu : ${a.usine} ${a.code} — ${a.nom}).` +
+          `\n    Les migrations 0008 → 0017 ont-elles toutes été jouées ?\n`
+      );
       process.exit(1);
     }
-    if (trouve.usine && trouve.usine !== a.usine) {
+    if (trouve.code !== a.code) {
       console.error(
-        `  ✗ L'atelier ${a.id} est « ${trouve.usine} » en base, mais « ${a.usine} » ici.` +
-          ` Les deux tables ont divergé.\n`
+        `  ✗ L'atelier ${a.id} porte le code « ${trouve.code} » en base,` +
+          ` mais « ${a.code} » ici. Les deux tables ont divergé —` +
+          ` ne rien créer tant que ce n'est pas tranché.\n`
+      );
+      process.exit(1);
+    }
+    if (trouve.site && trouve.site.startsWith("SITE_")) {
+      console.error(
+        `  ✗ L'atelier ${a.id} est resté sur « ${trouve.site} » : la migration` +
+          ` 0008 (ou 0012) n'a pas renommé son site.\n`
       );
       process.exit(1);
     }
