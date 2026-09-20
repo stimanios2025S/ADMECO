@@ -190,3 +190,91 @@ export const chargeParAtelier = (parcours: ParcoursProduit): Record<number, numb
   for (const e of routePour(parcours)) out[e.atelier] = (out[e.atelier] ?? 0) + 1;
   return out;
 };
+
+// ═══════════════════════════════════════════════════════════
+// QUEL PARCOURS POUR UN ARTICLE SILWANE ?
+// ═══════════════════════════════════════════════════════════
+// L'exploitant choisit toujours le parcours à l'écran. Ce qui suit
+// n'est qu'une PROPOSITION, calculée sur les mots du catalogue :
+//   · une chaise tapissée → MOBILIX (le mou d'abord)
+//   · une pièce de tôle seule → ADMEDCO sans montage
+//   · tout le reste → chaîne ADMEDCO complète
+// La proposition se trompe parfois — c'est pour ça qu'elle est
+// affichée et modifiable, jamais appliquée en silence.
+
+export const PARCOURS_LABEL: Record<ParcoursProduit, string> = {
+  ADMEDCO_ASSEMBLE: "ADMEDCO — tôle, poudrage, montage (A1 → A3 → A2 → A3)",
+  ADMEDCO_TOLE: "ADMEDCO — pièce de tôle seule, semi-fini (A1 → A3)",
+  MOBILIX: "MOBILIX — chaise tapissée (M2 → M1 → M2)",
+};
+
+export const PARCOURS_USINE: Record<ParcoursProduit, "ADMEDCO" | "MOBILIX"> = {
+  ADMEDCO_ASSEMBLE: "ADMEDCO",
+  ADMEDCO_TOLE: "ADMEDCO",
+  MOBILIX: "MOBILIX",
+};
+
+const SANS_ACCENT = (s: string) =>
+  s.toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+export const parcoursProbable = (a: {
+  code?: string | null;
+  designation?: string | null;
+  famille?: string | null;
+}): ParcoursProduit => {
+  const texte = SANS_ACCENT(`${a.famille ?? ""} ${a.designation ?? ""}`);
+  const code = (a.code ?? "").toUpperCase().trim();
+
+  // MOBILIX : la chaise tapissée. Les deux modèles de l'atelier
+  // (G21 et CANADA) sortent en famille CHAISE / TAPISSAGE.
+  if (/(CHAISE|TAPISS|MOBILIX|REMBOURR)/.test(texte)) return "MOBILIX";
+  if (/^(CHG|SCL|MBX|CHA)/.test(code)) return "MOBILIX";
+
+  // Pièce de tôle, structure ou piètement vendue telle quelle : elle
+  // s'arrête au poudrage, personne ne la monte.
+  if (/(TOLE|STRUCTURE|PIETEMENT|SOCLE)/.test(texte)) return "ADMEDCO_TOLE";
+  if (/^(TLE|TOL|STR|FRM|PIET|SOC|COL|PLA)/.test(code)) return "ADMEDCO_TOLE";
+
+  return "ADMEDCO_ASSEMBLE";
+};
+
+// ── Le modèle, pour MOBILIX ──
+// G21 et CANADA partagent les 12 postes : seuls les postes 10 et 11
+// changent de contenu. Le modèle ne modifie donc PAS la route — il
+// change ce que l'ouvrier lit à ces deux postes, et le nombre
+// d'inserts à poser (8 contre 12).
+export type ModeleMobilix = "G21" | "CANADA";
+
+export const modeleProbable = (a: {
+  code?: string | null;
+  designation?: string | null;
+}): ModeleMobilix => {
+  const texte = SANS_ACCENT(`${a.code ?? ""} ${a.designation ?? ""}`);
+  return /\bCANADA\b/.test(texte) ? "CANADA" : "G21";
+};
+
+export const MODELE_DETAIL: Record<ModeleMobilix, { inserts: string; poste10: string; poste11: string }> = {
+  G21: { inserts: "8 inserts (4 dossier + 4 assise)", poste10: "Piètement G21", poste11: "Assemblage final (assise + dossier)" },
+  CANADA: { inserts: "12 inserts (4 dossier + 4 assise + 4 accoudoirs)", poste10: "Accoudoirs", poste11: "Partie métal (réception structure)" },
+};
+
+/**
+ * La route telle qu'elle doit être AFFICHÉE pour un modèle donné.
+ * Même structure, mêmes `sequence` : seuls les libellés des postes
+ * 10 et 11 de MOBILIX changent. On ne réécrit jamais une `sequence`
+ * ici — elle est écrite en base par le lancement de production.
+ */
+export const routeAvecModele = (
+  parcours: ParcoursProduit,
+  modele: ModeleMobilix = "G21",
+): EtapeRoute[] => {
+  if (parcours !== "MOBILIX") return routePour(parcours);
+  const d = MODELE_DETAIL[modele];
+  return routePour(parcours).map((e) =>
+    e.code === "MBX-PIET-ACC"
+      ? { ...e, nom: d.poste10 }
+      : e.code === "MBX-ASSEMBLAGE"
+        ? { ...e, nom: d.poste11 }
+        : e,
+  );
+};
