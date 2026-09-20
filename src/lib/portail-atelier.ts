@@ -67,24 +67,49 @@ export const urlAtelier = (id: number | null | undefined): string => {
 };
 
 /**
- * L'adresse de CONNEXION d'un atelier : `/portail/a1`, `/portail/m2`…
- *
- * Deux adresses, deux métiers — c'est la séparation qui rend le
- * portail lisible :
- *
- *   /portail/<slug>   on entre      (public, formulaire)
- *   /atelier/<slug>   on travaille  (privé, la file)
- *
- * Un ouvrier qui se déconnecte revient donc sur la page de connexion
- * de SON atelier, et pas sur un écran générique où il devrait le
- * retrouver dans une liste.
+ * Le segment d'URL d'une usine : « admedco », « mobilix ».
+ * C'est la PREMIÈRE chose qu'on choisit, avant l'atelier.
  */
-export const urlConnexionAtelier = (id: number | null | undefined): string => {
-  const s = slugAtelier(id);
-  return s ? `/portail/${s}` : "/portail";
+export const segmentUsine = (usine: UsineCode): string => usine.toLowerCase();
+
+/** L'usine d'un segment d'URL, ou `null` si le segment n'en désigne aucune. */
+export const usineDuSegment = (segment: string | null | undefined): UsineCode | null => {
+  const s = (segment ?? "").trim().toLowerCase();
+  const u = USINES_AFFICHEES.find((x) => segmentUsine(x.code) === s);
+  return u ? u.code : null;
 };
 
-/** Le slug d'une adresse `/portail/<slug>` ou `/atelier/<slug>`. */
+/** L'adresse du portail d'une usine : `/portail/admedco`. */
+export const urlPortailUsine = (usine: UsineCode | null | undefined): string =>
+  usine ? `/portail/${segmentUsine(usine)}` : "/portail";
+
+/**
+ * L'adresse de CONNEXION d'un atelier : `/portail/admedco/a1`.
+ *
+ * ── Trois adresses, trois métiers ──
+ *
+ *   /portail                 les deux usines      (public)
+ *   /portail/<usine>         les ateliers         (public)
+ *   /portail/<usine>/<slug>  la connexion         (public)
+ *   /atelier/<slug>          le travail            (privé)
+ *
+ * ── Pourquoi l'usine est dans l'adresse ──
+ * Parce que c'est la séparation qui compte : ADMEDCO fabrique le dur,
+ * MOBILIX la chaise tapissée, et personne ne travaille dans les deux.
+ * Mettre l'usine dans le CHEMIN rend impossible d'ouvrir un atelier
+ * MOBILIX depuis le portail ADMEDCO — l'adresse elle-même le refuse,
+ * avant même que la base ait à trancher.
+ *
+ * Un ouvrier qui se déconnecte revient donc sur la porte de SON
+ * atelier, à sa couleur, et pas sur un écran générique où il devrait
+ * le retrouver dans une liste.
+ */
+export const urlConnexionAtelier = (id: number | null | undefined): string => {
+  const f = ficheAtelier(id);
+  return f ? `/portail/${segmentUsine(f.usine)}/${f.slug}` : "/portail";
+};
+
+/** Tous les slugs d'atelier, dans l'ordre d'affichage. */
 export const tousLesSlugs: SlugAtelier[] = ["a1", "a2", "a3", "m1", "m2"];
 
 // ═══════════════════════════════════════════════════════════

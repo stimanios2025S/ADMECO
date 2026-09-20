@@ -7,7 +7,12 @@ import {
   ArrowLeft, Eye, EyeOff, KeyRound, Loader2, LogIn, ShieldAlert, User2, WifiOff,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { slugAtelier, urlAtelier, type FicheAtelier } from "@/lib/portail-atelier";
+import {
+  slugAtelier,
+  urlAtelier,
+  urlPortailUsine,
+  type FicheAtelier,
+} from "@/lib/portail-atelier";
 
 type Props = {
   fiche: FicheAtelier;
@@ -136,10 +141,10 @@ export default function ConnexionAtelier({ fiche }: Props) {
 
         <div className="relative z-10 flex h-full flex-col">
           <Link
-            href="/portail"
+            href={urlPortailUsine(fiche.usine)}
             className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/12 bg-white/[0.05] px-3.5 py-2 text-[12.5px] font-bold text-white/70 backdrop-blur-sm transition-colors hover:text-white"
           >
-            <ArrowLeft size={14} /> Tous les ateliers
+            <ArrowLeft size={14} /> Ateliers {fiche.usine}
           </Link>
 
           <div className="mt-9 flex items-start gap-4">
@@ -291,7 +296,10 @@ export default function ConnexionAtelier({ fiche }: Props) {
               <p className="mt-1 text-[12px] leading-relaxed text-[#9ca3af]">
                 Votre identifiant ouvre toujours l&apos;atelier auquel vous êtes rattaché : si vous vous
                 trompez de porte, vous serez quand même conduit sur le vôtre.{" "}
-                <Link href="/portail" className="font-bold text-[#7c8091] underline decoration-dotted">
+                <Link
+                  href={urlPortailUsine(fiche.usine)}
+                  className="font-bold text-[#7c8091] underline decoration-dotted"
+                >
                   Changer d&apos;atelier
                 </Link>
                 .
