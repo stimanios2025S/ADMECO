@@ -1,4 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase/server";
+import { urlAtelier } from "@/lib/portail-atelier";
 
 export type Role = "ADMIN" | "WORKER" | "MAGASINIER";
 
@@ -57,11 +58,27 @@ export async function getProfil(): Promise<Profil> {
   };
 }
 
-/** Destination après connexion selon le rôle. */
+/**
+ * Destination après connexion.
+ *
+ * Trois métiers, trois espaces — et un seul endroit qui en décide :
+ *
+ *   ADMIN      → le centre de commande
+ *   MAGASINIER → la Réception matière première
+ *   WORKER     → SON atelier. Pas « le portail » : son atelier.
+ *                Un ouvrier qui doit choisir son poste à chaque
+ *                connexion finit par se tromper de file, et le travail
+ *                du voisin apparaît chez lui.
+ *
+ * Un ouvrier sans affectation n'a pas d'atelier où aller : on le
+ * renvoie vers le hall, qui explique quoi faire. On ne devine jamais
+ * un atelier par défaut — une pièce déclarée au mauvais poste est
+ * plus coûteuse à réparer qu'un écran de plus à passer.
+ */
 export function routeApresLogin(profil: Profil): string {
   if (profil.role === "ADMIN") return "/admin";
   if (profil.role === "MAGASINIER") return "/admin/reception";
-  return "/portal";
+  return urlAtelier(profil.atelier_id); // « /atelier » si le poste n'est pas renseigné
 }
 
 const ROUTES_MAGASINIER = ["/admin/stocks", "/admin/reception", "/admin/depots"];

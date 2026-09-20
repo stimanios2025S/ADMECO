@@ -183,10 +183,13 @@ export default function AdminShell({ children, pageTitle, pageHint }: { children
 
       {/* Bottom links */}
       <div className="border-t border-black/[0.04] px-3 py-3 space-y-0.5">
+        {/* `/atelier` est le hall des portails d'atelier — un accès par
+            atelier et par usine. `/portal` reste l'écran de scan des QR,
+            il n'est plus l'entrée. */}
         {!collapsed && (
-          <Link href="/portal"
+          <Link href="/atelier"
             className="flex items-center gap-3 rounded-xl border border-[#4a7c59]/15 bg-[#4a7c59]/[0.04] px-3 py-2.5 text-[13px] font-medium text-[#4a7c59] hover:bg-[#4a7c59]/[0.08] transition-colors">
-            <TabletSmartphone size={16} /> Portail ateliers
+            <TabletSmartphone size={16} /> Portails d&apos;atelier
           </Link>
         )}
         <div className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-[#9ca3af]">

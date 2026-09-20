@@ -22,10 +22,10 @@ export default function LoginPage() {
       if (authErr) { setError(authErr.message); setBusy(false); return; }
       const res = await fetch("/api/mon-profil");
       if (!res.ok) { setError("Impossible de charger votre profil. Veuillez réessayer."); setBusy(false); return; }
-      const profil = await res.json();
-      if (profil.role === "ADMIN") router.push("/admin");
-      else if (profil.role === "MAGASINIER") router.push("/admin/reception");
-      else router.push(`/portal?usine=${profil.usine_code ?? "ADMEDCO"}`);
+      // Une seule autorité sur la destination : le serveur, via
+      // `/redirection`. Répéter ici « si ADMIN alors… sinon… » avait
+      // déjà divergé une fois de `routeApresLogin`.
+      router.push("/redirection");
       router.refresh();
     } catch {
       setError("Erreur de connexion. Veuillez réessayer.");

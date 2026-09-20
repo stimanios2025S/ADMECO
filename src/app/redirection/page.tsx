@@ -13,9 +13,9 @@ export default async function PageRedirection() {
   const profil = await getProfil();
   if (!profil.email) redirect("/login");
 
-  const destination = routeApresLogin(profil);
-  if (profil.role === "WORKER") {
-    redirect(`${destination}?usine=${profil.usine_code}`);
-  }
-  redirect(destination);
+  // `routeApresLogin` porte désormais TOUTE la décision, y compris
+  // l'atelier de l'ouvrier. L'ancien `?usine=` ajouté ici ne servait
+  // qu'à colorer le portail générique ; il n'a plus d'objet, et un
+  // paramètre d'URL en trop finit toujours par être recopié ailleurs.
+  redirect(routeApresLogin(profil));
 }

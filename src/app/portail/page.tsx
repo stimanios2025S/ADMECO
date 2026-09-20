@@ -22,8 +22,9 @@ export default function PagePortail() {
       if (authErr) { setError(authErr.message); setBusy(false); return; }
       const res = await fetch("/api/mon-profil");
       if (!res.ok) { setError("Impossible de charger votre profil. Veuillez réessayer."); setBusy(false); return; }
-      const profil = await res.json();
-      router.push(`/portal?usine=${profil.usine_code ?? "ADMEDCO"}`);
+      // Le serveur décide où va chaque métier — et surtout, il ouvre à
+      // l'ouvrier SON atelier au lieu d'un portail générique.
+      router.push("/redirection");
       router.refresh();
     } catch {
       setError("Erreur de connexion. Veuillez réessayer.");
