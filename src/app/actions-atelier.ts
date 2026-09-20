@@ -189,9 +189,12 @@ async function lireTout(supabase: any, table: string, select: string): Promise<a
   for (let debut = 0; debut < 100_000; debut += PAGE) {
     const { data, error } = await supabase.from(table).select(select).range(debut, debut + PAGE - 1);
     if (error) throw new Error(`${table} : ${error.message}`);
-    const lignes = (data as any[]) ?? [];
-    out.push(...lignes);
-    if (lignes.length < PAGE) break;
+    // `page` et non `lignes` : le nom est déjà pris par le garde-fou
+    // de forme au bas de ce fichier, et le masquer ici rendrait la
+    // relecture trompeuse.
+    const page = Array.isArray(data) ? (data as any[]) : [];
+    out.push(...page);
+    if (page.length < PAGE) break;
   }
   return out;
 }
@@ -222,9 +225,9 @@ async function etapesDesItems(supabase: any, itemIds: string[]): Promise<any[]> 
         .order("id", { ascending: true })
         .range(debut, debut + PAGE - 1);
       if (error) throw new Error(`work_order_steps : ${error.message}`);
-      const lignes = (data as any[]) ?? [];
-      out.push(...lignes);
-      if (lignes.length < PAGE) break;
+      const page = Array.isArray(data) ? (data as any[]) : [];
+      out.push(...page);
+      if (page.length < PAGE) break;
     }
   }
   return out;
@@ -266,7 +269,7 @@ export async function tachesAtelier(slug: string): Promise<ReponseTaches> {
     //    « 0 » au lieu de son vrai bilan.
     const stats = await statsDuJour(sb, atelierId, profil.id);
 
-    const etapes = (steps as any[]) ?? [];
+    const etapes = lignes(steps);
     if (etapes.length === 0) {
       return { ok: true, taches: [], fiche, profil, stats };
     }
@@ -286,10 +289,21 @@ export async function tachesAtelier(slug: string): Promise<ReponseTaches> {
     ]);
     if (eI) throw new Error(eI.message);
 
-    const itemsTab = (items as any[]) ?? [];
-    const orderIds = [...new Set(itemsTab.map((i) => i.order_id as string))];
+    const itemsTab = lignes(items);
+    const orderIds = [...new Set(itemsTab.map((i) => i.order_id as string).filter(Boolean))];
 
-    const [{ data: orders, error: eO }, articles, ouvriers] = await Promise.all([
+    // ⚠️ Chaque membre de ce Promise.all doit être déstructuré selon
+    //    ce qu'il RÉSOUT. `lireTout` résout un tableau ; un
+    //    `.select()` de supabase-js résout une enveloppe
+    //    `{ data, error }`. Les mettre côte à côte sans le dire est
+    //    exactement ce qui a cassé cette page : `ouvriers` recevait
+    //    l'enveloppe, et `(ouvriers ?? []).map` n'était pas une
+    //    fonction.
+    const [
+      { data: orders, error: eO },
+      articles,
+      { data: ouvriers, error: eW },
+    ] = await Promise.all([
       sb
         .from("work_orders")
         .select("id, order_number, due_at, usine_code, commande_client_id")
@@ -303,6 +317,7 @@ export async function tachesAtelier(slug: string): Promise<ReponseTaches> {
       sb.from("profiles").select("id, full_name"),
     ]);
     if (eO) throw new Error(eO.message);
+    if (eW) throw new Error(eW.message);
 
     // ── Le client ──
     // L'ouvrier ne travaille pas « pour la commande OF-2026-118 » : il
@@ -310,7 +325,7 @@ export async function tachesAtelier(slug: string): Promise<ReponseTaches> {
     // change la façon dont on lit une fiche. Il est facultatif : une
     // commande interne n'a pas de client.
     const commandeClientIds = [
-      ...new Set(((orders as any[]) ?? []).map((o) => o.commande_client_id).filter(Boolean)),
+      ...new Set(lignes(orders).map((o) => o.commande_client_id).filter(Boolean)),
     ] as string[];
     const nomClient = new Map<string, string>();
     if (commandeClientIds.length) {
@@ -318,20 +333,20 @@ export async function tachesAtelier(slug: string): Promise<ReponseTaches> {
         .from("commandes_client")
         .select("id, client_nom")
         .in("id", commandeClientIds);
-      for (const c of ((clients as any[]) ?? []) ) {
+      for (const c of lignes(clients)) {
         if (c.client_nom) nomClient.set(c.id as string, c.client_nom as string);
       }
     }
 
     const parItem = new Map<string, any>(itemsTab.map((i) => [i.id as string, i]));
-    const parOrder = new Map<string, any>(((orders as any[]) ?? []).map((o) => [o.id as string, o]));
-    const parArticle = new Map<string, any>((articles as any[]).map((a) => [a.id as string, a]));
-    const parOuvrier = new Map<string, any>(((ouvriers as any[]) ?? []).map((w) => [w.id as string, w]));
+    const parOrder = new Map<string, any>(lignes(orders).map((o) => [o.id as string, o]));
+    const parArticle = new Map<string, any>(lignes(articles).map((a) => [a.id as string, a]));
+    const parOuvrier = new Map<string, any>(lignes(ouvriers).map((w) => [w.id as string, w]));
 
     // Toutes les étapes d'un article, pour mesurer l'avancement et
     // détecter ce qui bloque.
     const etapesParItem = new Map<string, any[]>();
-    for (const s of (tousSteps as any[]) ?? []) {
+    for (const s of lignes(tousSteps)) {
       const l = etapesParItem.get(s.item_id as string) ?? [];
       l.push(s);
       etapesParItem.set(s.item_id as string, l);
@@ -447,7 +462,7 @@ async function statsDuJour(sb: any, atelierId: number, workerId: string): Promis
     let finies = 0;
     let ok = 0;
     let rebut = 0;
-    for (const s of ((data as any[]) ?? [])) {
+    for (const s of lignes(data)) {
       if (s.worker_id === workerId) finies++;
       ok += nombre(s.quantity_ok);
       rebut += nombre(s.quantity_rebut);
@@ -719,6 +734,23 @@ const nombre = (v: unknown): number => {
   const n = Number(v);
   return Number.isFinite(n) ? Math.max(0, n) : 0;
 };
+
+/**
+ * Ramène n'importe quelle réponse à un tableau.
+ *
+ * ── Pourquoi ce garde-fou existe ──
+ * PostgREST rend un TABLEAU pour un `.select()`, mais une enveloppe
+ * `{ data, error }` quand on oublie de déstructurer, une chaîne quand
+ * la requête part en erreur, et `undefined` quand la ligne n'existe
+ * pas. Un seul de ces cas suffisait à faire tomber tout le portail sur
+ * `(x ?? []).map is not a function` — l'ouvrier voyait une page
+ * d'erreur au lieu de son travail, à cause d'une jointure d'affichage
+ * secondaire.
+ *
+ * Un écran d'atelier ne doit jamais s'effondrer pour une décoration.
+ * Ce qui manque s'affiche vide ; ce qui compte reste debout.
+ */
+const lignes = (v: unknown): any[] => (Array.isArray(v) ? v : []);
 
 const arrondi = (n: number) => Math.round(n * 100) / 100;
 

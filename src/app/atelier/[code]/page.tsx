@@ -66,9 +66,24 @@ export default async function PageAtelier({ params }: { params: { code: string }
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
           <p className="font-black text-[#1a1d23]">Impossible de charger votre poste</p>
           <p className="mt-2 rounded-xl bg-white/70 px-3 py-2 font-mono text-xs text-red-500">{r.message}</p>
-          <p className="mt-3 text-[13px] text-[#7c8091]">
-            Prévenez le chef d'atelier. Si le message parle de <span className="font-mono">profiles</span> ou de
-            récursion, la réparation est la migration <b>0019</b>.
+          {/* ── Deux pannes, deux remèdes ──
+              Une récursion RLS n'a rien à voir avec un bug de forme
+              des données. Les confondre envoie l'exploitant chercher
+              au mauvais endroit — c'est déjà arrivé sur la page
+              « Nouvelle commande ». */}
+          <p className="mt-3 text-[13px] leading-relaxed text-[#7c8091]">
+            {/infinite recursion|row-level security|permission denied/i.test(r.message) ? (
+              <>
+                Une politique RLS interroge <span className="font-mono">profiles</span> depuis une politique
+                posée sur <span className="font-mono">profiles</span> : PostgreSQL refuse de planifier. La
+                migration <b>0019</b> ferme cette récursion.
+              </>
+            ) : (
+              <>
+                Prévenez le chef d&apos;atelier et transmettez-lui la ligne ci-dessus telle quelle : elle dit
+                exactement ce qui a échoué. Ce n&apos;est pas une panne de production, la file est intacte.
+              </>
+            )}
           </p>
         </div>
       </AtelierShell>
