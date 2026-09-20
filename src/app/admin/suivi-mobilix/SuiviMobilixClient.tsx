@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Sofa, Play, CheckCircle2, Clock, Loader2, Package } from "lucide-react";
 import { lancerSuiviMobilix } from "@/app/actions-usines";
 import { ETAPES_MOBILIX, MODELES_MOBILIX, ordreMobilixCourt, type ModeleMobilix } from "@/lib/process-mobilix";
@@ -168,7 +169,17 @@ export default function SuiviMobilixClient({ usine, orders, items, steps }: Prop
             })}
           </div>
         )}
-        <p className="mt-3 text-[11px] text-[#9ca3af]">Usine connectée : <b>{usine}</b> · Les ouvriers scannent les 19 QR depuis le portail M1.</p>
+        <p className="mt-3 text-[11px] text-[#9ca3af]">
+          Usine connectée : <b>{usine}</b> · Les ouvriers déclarent depuis{" "}
+          <Link href="/atelier/m1" className="font-mono font-bold text-[#7c3aed] hover:underline">
+            /atelier/m1
+          </Link>{" "}
+          et{" "}
+          <Link href="/atelier/m2" className="font-mono font-bold text-[#c026d3] hover:underline">
+            /atelier/m2
+          </Link>
+          .
+        </p>
       </div>
     </div>
   );

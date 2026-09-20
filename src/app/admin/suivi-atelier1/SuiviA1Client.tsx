@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Flag, Hammer, Play, CheckCircle2, Clock, Loader2, Package, Target } from "lucide-react";
 import { lancerSuiviEco } from "@/app/actions-usines";
 import { ETAPES_A1_GAMME } from "@/lib/process-eco";
@@ -160,7 +161,15 @@ export default function SuiviA1Client({ usine, orders, items, steps }: Props) {
             })}
           </div>
         )}
-        <p className="mt-3 text-[11px] text-[#9ca3af]">Usine : <b>{usine}</b> · Portail ouvrier sans mot de passe.</p>
+        {/* L'ancienne mention « portail ouvrier sans mot de passe »
+            décrivait /portal, qui n'est plus l'entrée : chaque ouvrier
+            se connecte et atterrit sur son atelier. */}
+        <p className="mt-3 text-[11px] text-[#9ca3af]">
+          Usine : <b>{usine}</b> · Les ouvriers déclarent depuis{" "}
+          <Link href="/atelier/a1" className="font-mono font-bold text-[#c24a08] hover:underline">
+            /atelier/a1
+          </Link>.
+        </p>
       </div>
     </div>
   );
