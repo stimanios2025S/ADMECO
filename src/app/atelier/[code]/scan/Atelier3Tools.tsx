@@ -134,7 +134,7 @@ export default function Atelier3Tools({ etape }: { etape?: number | null }) {
         {/* Quick nav */}
         <div className="mt-4 flex flex-wrap gap-1.5">
           {ETAPES_A3.map((e) => (
-            <Link key={e.code} href={`/portal?atelier=4&etape=${e.ordre}`}
+            <Link key={e.code} href={`/atelier/a3/scan?etape=${e.ordre}`}
               className="rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-colors"
               style={e.ordre === etape
                 ? { background: ACCENT_SOFT, color: ACCENT, boxShadow: `inset 0 0 0 1px ${ACCENT_BORDER}` }
@@ -145,7 +145,7 @@ export default function Atelier3Tools({ etape }: { etape?: number | null }) {
         </div>
 
         {def && (
-          <Link href="/portal?atelier=4"
+          <Link href="/atelier/a3"
             className="mt-3 inline-flex items-center gap-1 rounded-xl border border-black/[0.06] bg-black/[0.02] px-3 py-2 text-xs font-bold text-[#6b7280] hover:text-[#1a1d23] transition-colors">
             ← Toutes les étapes A3
           </Link>

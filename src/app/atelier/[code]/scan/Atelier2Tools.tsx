@@ -2,14 +2,11 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { statutFr } from "@/lib/fr";
-import { ETAPES_A1_GAMME } from "@/lib/process-eco";
+import { ETAPES_A2 } from "@/lib/etapes";
+import { verifyTransfer } from "@/app/actions";
+import { signalerSync } from "./PortalSync";
 import Link from "next/link";
-import { Package, Clock, Loader2 } from "lucide-react";
-
-// Gamme de l'Atelier 01 — Tôle : 6 postes de production puis le transfert
-// vers l'Atelier 3 (poudrage). Source unique : lib/process-admedco-a1.ts,
-// réexposée par lib/process-eco.ts.
-const ETAPES_ATELIER1 = ETAPES_A1_GAMME;
+import { Package, Clock, CheckCircle2, Loader2, Truck } from "lucide-react";
 
 type Etape = {
   id: string; step_order: number; step_name: string; status: string;
@@ -17,14 +14,23 @@ type Etape = {
   work_order_items?: { product_name: string; quantity: number } | null;
 };
 
-const ACCENT = "#c24a08";
-const ACCENT_SOFT = "rgba(194,74,8,.06)";
-const ACCENT_BORDER = "rgba(194,74,8,.15)";
+type Bordereau = {
+  id: string; manifest_qr: string; item_count: number; status: string;
+  created_at: string; work_orders?: { order_number: string } | null;
+};
 
-export default function Atelier1Tools({ etape }: { etape?: number | null }) {
-  const def = ETAPES_ATELIER1.find((e) => e.ordre === etape) ?? null;
+const ACCENT = "#2f6eb5";
+const ACCENT_SOFT = "rgba(47,110,181,.06)";
+const ACCENT_BORDER = "rgba(47,110,181,.15)";
+
+export default function Atelier2Tools({ etape }: { etape?: number | null }) {
+  const def = ETAPES_A2.find((e) => e.ordre === etape) ?? null;
   const [lignes, setLignes] = useState<Etape[]>([]);
   const [stats, setStats] = useState({ pending: 0, active: 0, done: 0 });
+  const [bordereaux, setBordereaux] = useState<Bordereau[]>([]);
+  const [code, setCode] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
   const [charge, setCharge] = useState(true);
 
   useEffect(() => {
@@ -34,25 +40,28 @@ export default function Atelier1Tools({ etape }: { etape?: number | null }) {
 
       let q = supabase.from("work_order_steps")
         .select("id,step_order,step_name,status,estimated_minutes,started_at,work_order_items(product_name,quantity)")
-        .eq("atelier_id", 1);
+        .eq("atelier_id", 2);
       if (etape) q = q.eq("step_order", etape);
       q = q.order("step_order").limit(20);
       const { data } = await q;
       if (actif && data) setLignes(data as any);
 
-      let sq = supabase.from("work_order_steps").select("status", { count: "exact" }).eq("atelier_id", 1);
+      let sq = supabase.from("work_order_steps").select("status", { count: "exact" }).eq("atelier_id", 2);
       if (etape) sq = sq.eq("step_order", etape);
       const { count: total } = await sq;
-      let sq2 = supabase.from("work_order_steps").select("status", { count: "exact" }).eq("atelier_id", 1).eq("status", "DONE");
+      let sq2 = supabase.from("work_order_steps").select("status", { count: "exact" }).eq("atelier_id", 2).eq("status", "DONE");
       if (etape) sq2 = sq2.eq("step_order", etape);
       const { count: done } = await sq2;
-      let sq3 = supabase.from("work_order_steps").select("status", { count: "exact" }).eq("atelier_id", 1).eq("status", "ACTIVE");
+      let sq3 = supabase.from("work_order_steps").select("status", { count: "exact" }).eq("atelier_id", 2).eq("status", "ACTIVE");
       if (etape) sq3 = sq3.eq("step_order", etape);
       const { count: active } = await sq3;
-      if (actif) {
-        setStats({ pending: (total ?? 0) - (done ?? 0) - (active ?? 0), active: active ?? 0, done: done ?? 0 });
-        setCharge(false);
-      }
+      if (actif) setStats({ pending: (total ?? 0) - (done ?? 0) - (active ?? 0), active: active ?? 0, done: done ?? 0 });
+
+      const { data: bData } = await supabase.from("site_transfers")
+        .select("id,manifest_qr,item_count,status,created_at,work_orders(order_number)")
+        .order("created_at", { ascending: false }).limit(10);
+      if (actif && bData) setBordereaux(bData as any);
+      if (actif) setCharge(false);
     };
     void charger();
     // Recharger à chaque signal de synchronisation (temps réel / bouton Synchroniser)
@@ -63,22 +72,34 @@ export default function Atelier1Tools({ etape }: { etape?: number | null }) {
   const total = stats.done + stats.active + stats.pending;
   const pct = total > 0 ? Math.round((stats.done / total) * 100) : 0;
 
+  const verifier = async (id: string) => {
+    setBusy(id);
+    try {
+      await verifyTransfer(id, true);
+      setMsg("✅ Bordereau vérifié — articles réceptionnés en Atelier 2");
+      signalerSync();
+    } catch (e: any) {
+      setMsg(`❌ ${e.message}`);
+    }
+    setBusy(null);
+  };
+
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {/* ── Info card ── */}
       <div className="rounded-2xl border border-black/[0.04] bg-white p-5 shadow-sm">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: ACCENT_SOFT, color: ACCENT }}>
-            {def ? `Étape ${def.ordre}/${ETAPES_ATELIER1.length}` : "Atelier 1 — Poste"}
+            {def ? `Étape ${def.ordre}/${ETAPES_A2.length}` : "Atelier 2 — Poste"}
           </span>
           {def && <span className="rounded-full bg-black/[0.04] px-2.5 py-1 text-[11px] font-bold text-[#9ca3af]">{def.code}</span>}
         </div>
 
         <h2 className="mt-3 text-2xl font-black tracking-tight text-[#1a1d23]">
-          {def ? `${def.icone} ${def.nom}` : "🪚 Tôle & Gros œuvre"}
+          {def ? `${def.icone} ${def.nom}` : "🔧 Assemblage & Finition"}
         </h2>
         <p className="mt-1 text-sm text-[#6b7280]">
-          {def ? def.description : "Coupe, perçage, soudage et transfert vers l'Atelier 3."}
+          {def ? def.description : "Montage du mobilier de bureau sur pièces déjà poudrées par l'Atelier 3."}
         </p>
 
         {def && (
@@ -88,7 +109,7 @@ export default function Atelier1Tools({ etape }: { etape?: number | null }) {
         )}
 
         <div className="mt-3 rounded-xl bg-black/[0.02] px-3 py-2 text-xs text-[#6b7280]">
-          📦 <span className="font-bold text-[#1a1d23]">DEP-MP centrale</span> → alimente ce poste · Sortie → <span className="font-bold text-[#1a1d23]">Atelier 3 (poudrage)</span>
+          📦 <span className="font-bold text-[#1a1d23]">Atelier 3 (pièces poudrées) + DEP-MP</span> → alimentent ce poste · Production → <span className="font-bold text-[#1a1d23]">Atelier 3 (emballage)</span>
         </div>
 
         {/* Progress bar */}
@@ -110,8 +131,8 @@ export default function Atelier1Tools({ etape }: { etape?: number | null }) {
 
         {/* Quick nav */}
         <div className="mt-4 flex flex-wrap gap-1.5">
-          {ETAPES_ATELIER1.map((e) => (
-            <Link key={e.code} href={`/portal?atelier=1&etape=${e.ordre}`}
+          {ETAPES_A2.map((e) => (
+            <Link key={e.code} href={`/atelier/a2/scan?etape=${e.ordre}`}
               className="rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition-colors"
               style={e.ordre === etape
                 ? { background: ACCENT_SOFT, color: ACCENT, boxShadow: `inset 0 0 0 1px ${ACCENT_BORDER}` }
@@ -121,17 +142,32 @@ export default function Atelier1Tools({ etape }: { etape?: number | null }) {
           ))}
         </div>
 
-        <Link href="/portal?atelier=1"
-          className="mt-3 inline-flex items-center gap-1 rounded-xl border border-black/[0.06] bg-black/[0.02] px-3 py-2 text-xs font-bold text-[#6b7280] hover:text-[#1a1d23] transition-colors">
-          ← Toutes les étapes A1
-        </Link>
+        {/* Bordereau form — only at A2-REC-A3 (réception des pièces poudrées) */}
+        {def?.code === "A2-REC-A3" && (
+          <div className="mt-4 rounded-xl border border-dashed p-3" style={{ borderColor: ACCENT_BORDER, background: ACCENT_SOFT }}>
+            <p className="mb-2 text-xs font-bold" style={{ color: ACCENT }}>📦 Réception des pièces poudrées — A3 → A2</p>
+            <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (code.trim()) { setMsg(`🔍 Recherche du bordereau ${code.trim()}…`); } }}>
+              <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Scanner le bordereau (MNF-…)"
+                className="flex-1 rounded-lg border border-black/[0.08] bg-white px-3 py-2.5 text-sm text-[#1a1d23] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#2f6eb5]/20" />
+              <button className="rounded-lg px-4 py-2.5 text-sm font-bold text-white" style={{ background: ACCENT }}>Vérifier</button>
+            </form>
+          </div>
+        )}
+        {msg && <p className="mt-2 rounded-xl bg-black/[0.02] px-3 py-2 text-sm font-bold text-[#1a1d23]">{msg}</p>}
+
+        {def && (
+          <Link href="/atelier/a2"
+            className="mt-3 inline-flex items-center gap-1 rounded-xl border border-black/[0.06] bg-black/[0.02] px-3 py-2 text-xs font-bold text-[#6b7280] hover:text-[#1a1d23] transition-colors">
+            ← Toutes les étapes A2
+          </Link>
+        )}
       </div>
 
       {/* ── Queue ── */}
       <div className="rounded-2xl border border-black/[0.04] bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between">
           <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#9ca3af]">
-            {def ? `File — Étape ${def.ordre}` : "File Atelier 1"} · {lignes.length}
+            {def ? `File — Étape ${def.ordre}` : "File Atelier 2"} · {lignes.length}
           </p>
         </div>
 
@@ -185,6 +221,31 @@ export default function Atelier1Tools({ etape }: { etape?: number | null }) {
                 </span>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Bordereaux list — at A2-REC */}
+        {def?.code === "A2-REC" && bordereaux.length > 0 && (
+          <div className="mt-4 border-t border-black/[0.04] pt-4">
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#9ca3af]">
+              <Truck size={11} className="mr-1 inline" /> Bordereaux MNF- · {bordereaux.length}
+            </p>
+            <div className="mt-2 space-y-1.5">
+              {bordereaux.map((b) => (
+                <div key={b.id} className="flex items-center gap-2 rounded-xl bg-black/[0.02] px-3 py-2 text-sm">
+                  <span className="font-mono font-bold" style={{ color: ACCENT }}>{b.manifest_qr}</span>
+                  <span className="min-w-0 flex-1 truncate text-[#6b7280]">{b.work_orders?.order_number} · ×{b.item_count}</span>
+                  <span className="rounded-md bg-black/[0.04] px-1.5 py-0.5 text-[11px] font-bold text-[#9ca3af]">{statutFr(b.status)}</span>
+                  {b.status === "PENDING" && (
+                    <button disabled={busy === b.id} onClick={() => verifier(b.id)}
+                      className="rounded-lg px-3 py-1.5 text-[12px] font-bold text-white disabled:opacity-40 transition-opacity"
+                      style={{ background: ACCENT }}>
+                      {busy === b.id ? "…" : "Réceptionner"}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { LogIn, Loader2, Eye, EyeOff, Shield, Factory, TabletSmartphone } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -73,8 +74,8 @@ export default function LoginPage() {
 
             <div className="grid gap-4 max-w-lg">
               {[
-                { icon: <Factory size={18} />, title: "3 ateliers ADMEDCO connectés", desc: "Tôle & Gros œuvre + Bureau → Poudrage & Emballage" },
-                { icon: <TabletSmartphone size={18} />, title: "Portails opérateur", desc: "QR scan, timer, déclaration matière en temps réel" },
+                { icon: <Factory size={18} />, title: "2 usines · 5 ateliers", desc: "ADMEDCO — tôle, bureau, poudrage · MOBILIX — bois, tapissage" },
+                { icon: <TabletSmartphone size={18} />, title: "Un portail par atelier", desc: "L'ouvrier ouvre sa file, démarre, déclare — il ne choisit pas son poste" },
                 { icon: <Shield size={18} />, title: "Traçabilité totale", desc: "Stock MP centrale, réservation, consommation déclarée" },
               ].map((f, i) => (
                 <div key={i} className="flex items-start gap-3.5 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-4 backdrop-blur-sm">
@@ -157,6 +158,24 @@ export default function LoginPage() {
                 {busy ? "Connexion en cours…" : "Se connecter"}
               </button>
             </form>
+
+            {/* ── La porte des ouvriers ──
+                Cette page est celle du PILOTAGE. Un opérateur qui
+                atterrit ici cherche son atelier, pas le centre de
+                commande : on lui rend le chemin en un clic, sans le
+                renvoyer vers une page blanche. */}
+            <div className="mt-6 border-t border-black/[0.06] pt-5">
+              <p className="text-[12px] leading-relaxed text-[#9ca3af]">
+                Vous travaillez en atelier ? Passez par le portail des usines pour ouvrir directement
+                votre poste.
+              </p>
+              <Link
+                href="/portail"
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-black/[0.08] bg-white px-4 py-3.5 text-[13px] font-black text-[#1a1d23] shadow-sm transition-colors hover:border-black/[0.16]"
+              >
+                <Factory size={15} className="text-[#4a7c59]" /> Portail des ateliers
+              </Link>
+            </div>
           </div>
         </div>
       </div>

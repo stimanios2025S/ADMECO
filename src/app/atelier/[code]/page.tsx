@@ -15,11 +15,17 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function PageAtelier({ params }: { params: { code: string } }) {
-  const profil = await getProfil();
-  if (!profil.email) redirect("/portail");
-
-  const slug = (params.code ?? "").toLowerCase();
+  const slug = (params.code ?? "").trim().toLowerCase();
   const fiche = ficheAtelier(atelierDuSlug(slug));
+
+  // ── Pas de session : on ouvre la porte de CET atelier ──
+  // Pas la page générique de connexion. Un ouvrier qui a mis
+  // /atelier/a1 en favori, ou qui arrive par un QR collé au poste,
+  // doit retomber sur le formulaire A1 — pas sur une page où il doit
+  // retrouver son atelier dans une liste. Un slug inconnu
+  // (`/atelier/a4`) aboutit à /portail/a4, qui explique l'erreur.
+  const profil = await getProfil();
+  if (!profil.email) redirect(`/portail/${slug}`);
 
   // ── Le refus ──
   // On ne redirige PAS en silence vers son propre atelier : un ouvrier

@@ -60,11 +60,32 @@ export const slugAtelier = (id: number | null | undefined): SlugAtelier | null =
   return ID_VERS_SLUG[id as AtelierId] ?? null;
 };
 
-/** L'adresse du portail d'un atelier. */
+/** L'adresse du portail d'un atelier — le travail, une fois connecté. */
 export const urlAtelier = (id: number | null | undefined): string => {
   const s = slugAtelier(id);
   return s ? `/atelier/${s}` : "/atelier";
 };
+
+/**
+ * L'adresse de CONNEXION d'un atelier : `/portail/a1`, `/portail/m2`…
+ *
+ * Deux adresses, deux métiers — c'est la séparation qui rend le
+ * portail lisible :
+ *
+ *   /portail/<slug>   on entre      (public, formulaire)
+ *   /atelier/<slug>   on travaille  (privé, la file)
+ *
+ * Un ouvrier qui se déconnecte revient donc sur la page de connexion
+ * de SON atelier, et pas sur un écran générique où il devrait le
+ * retrouver dans une liste.
+ */
+export const urlConnexionAtelier = (id: number | null | undefined): string => {
+  const s = slugAtelier(id);
+  return s ? `/portail/${s}` : "/portail";
+};
+
+/** Le slug d'une adresse `/portail/<slug>` ou `/atelier/<slug>`. */
+export const tousLesSlugs: SlugAtelier[] = ["a1", "a2", "a3", "m1", "m2"];
 
 // ═══════════════════════════════════════════════════════════
 // LA FICHE D'UN ATELIER

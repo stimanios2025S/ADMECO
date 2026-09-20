@@ -144,12 +144,17 @@ export default function AtelierShell({ fiche, nom, visiteur, enAttente = 0, sous
           </div>
 
           {/* Le scan des QR n'a pas disparu : il a simplement cessé
-              d'être la porte d'entrée. Il reste à un clic, sur le
-              premier poste de l'atelier — c'est de là que l'ouvrier
-              scanne sa feuille de route. */}
+              d'être la porte d'entrée. Il vit désormais SOUS l'atelier
+              (`/atelier/a1/scan`), avec l'atelier dans le chemin — plus
+              de paramètre à falsifier, plus de risque de scanner pour
+              le poste d'à côté.
+              On n'impose pas d'étape : l'écran de scan affiche les
+              postes de l'atelier, et l'ouvrier ouvre le sien. Verrouiller
+              d'office sur le premier poste obligerait celui du fond à
+              faire un détour. */}
           {fiche && (
             <Link
-              href={`/portal?atelier=${fiche.id}&etape=${fiche.gammes[0]?.ordre ?? 1}`}
+              href={`/atelier/${fiche.slug}/scan`}
               className="hidden h-11 w-11 shrink-0 place-items-center rounded-2xl border border-black/[0.06] bg-white text-[#6b7280] shadow-sm transition-colors hover:text-[#1a1d23] active:scale-95 sm:grid"
               title="Scanner un QR de poste"
             >

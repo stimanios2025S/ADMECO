@@ -29,7 +29,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { createServiceSupabase } from "@/lib/supabase/service";
 import { getProfil, type Profil } from "@/lib/auth";
 import type { AtelierId } from "@/lib/ateliers";
-import { atelierDuSlug, ficheAtelier, urlAtelier } from "@/lib/portail-atelier";
+import { atelierDuSlug, ficheAtelier, urlAtelier, FICHES_ATELIERS } from "@/lib/portail-atelier";
 import { declarerEtape } from "./actions-workflow";
 
 // ── Une tâche, telle que l'ouvrier la lit ──
@@ -565,7 +565,7 @@ export async function commencerTache(input: {
       /* Le suivi du temps ne doit jamais empêcher de produire. */
     }
 
-    revalider(droit.profil.atelier_id);
+    revalider();
     return { ok: true, message: `« ${step.step_name} » commencée — le temps est compté.` };
   } catch (e: any) {
     return { ok: false, message: e?.message ?? String(e) };
@@ -626,7 +626,7 @@ export async function terminerTache(input: {
     });
     if (!r.ok) return r;
 
-    revalider(droit.profil.atelier_id);
+    revalider();
     return r;
   } catch (e: any) {
     return { ok: false, message: e?.message ?? String(e) };
@@ -663,7 +663,7 @@ export async function parquerTache(input: {
     });
     if (!r.ok) return r;
 
-    revalider(droit.profil.atelier_id);
+    revalider();
     return r;
   } catch (e: any) {
     return { ok: false, message: e?.message ?? String(e) };
@@ -719,7 +719,7 @@ export async function lacherTache(input: { stepId: string }): Promise<{ ok: bool
       .eq("worker_id", droit.profil.id)
       .is("fin_at", null);
 
-    revalider(droit.profil.atelier_id);
+    revalider();
     return { ok: true, message: `« ${step.step_name} » remise dans la file de l'atelier.` };
   } catch (e: any) {
     return { ok: false, message: e?.message ?? String(e) };
@@ -754,11 +754,38 @@ const lignes = (v: unknown): any[] => (Array.isArray(v) ? v : []);
 
 const arrondi = (n: number) => Math.round(n * 100) / 100;
 
-/** Rafraîchit les écrans concernés après un geste de l'ouvrier. */
-function revalider(atelierId: number | null) {
-  revalidatePath(urlAtelier(atelierId));
+/**
+ * Rafraîchit les écrans concernés après un geste de l'ouvrier.
+ *
+ * ── Pourquoi TOUS les ateliers, et pas seulement le sien ──
+ * Les cinq portails ne sont pas cinq îlots : c'est une seule chaîne.
+ * Une pièce finie à l'Atelier 1 (tôle) devient immédiatement du
+ * travail pour l'Atelier 3 (poudrage), et une pièce poudrée devient
+ * du travail pour l'Atelier 2 (bureau). Ne rafraîchir que l'atelier
+ * qui vient de déclarer laisserait l'aval afficher une file où la
+ * pièce n'apparaît pas encore — le contremaître appellerait pour
+ * signaler une « pièce perdue » qui est en réalité devant lui.
+ *
+ * Cinq `revalidatePath` coûtent quelques microsecondes et évitent
+ * cette conversation-là. On rafraîchit large.
+ */
+function revalider() {
+  // Les cinq portails d'atelier — l'amont comme l'aval.
+  for (const f of FICHES_ATELIERS) revalidatePath(urlAtelier(f.id));
+
+  // Le hall et les deux portes d'entrée.
+  //
+  // Le scan (`/atelier/<slug>/scan`) n'est pas listé : il est monté en
+  // `force-dynamic` et relit la base à chaque requête, donc il n'a pas
+  // de cache à invalider. L'ajouter ici donnerait l'illusion d'un
+  // rafraîchissement qui n'a jamais lieu.
   revalidatePath("/atelier");
-  revalidatePath("/portal");
-  revalidatePath("/admin/fabrication");
+  revalidatePath("/portail");
+
+  // Le pilotage : ce que le chef regarde pendant que l'ouvrier déclare.
   revalidatePath("/admin");
+  revalidatePath("/admin/fabrication");
+  revalidatePath("/admin/suivi-atelier1");
+  revalidatePath("/admin/suivi-mobilix");
+  revalidatePath("/admin/ouvriers");
 }

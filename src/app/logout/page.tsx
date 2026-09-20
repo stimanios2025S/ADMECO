@@ -13,7 +13,9 @@ export default function LogoutPage() {
       const supabase = createClient();
       await supabase.auth.signOut();
       setPhase("done");
-      setTimeout(() => router.push("/login"), 1200);
+      // Le portail des deux usines, pas l'écran de gestion : sur une
+      // tablette d'atelier, la personne suivante est un ouvrier.
+      setTimeout(() => router.push("/portail"), 1200);
     })();
   }, [router]);
 
@@ -29,7 +31,7 @@ export default function LogoutPage() {
         <p className="mt-2 text-[14px] text-[#7c8091]">
           {phase === "signing-out"
             ? "Fermeture de votre session en cours."
-            : "Redirection vers la page de connexion…"}
+            : "Redirection vers le portail des ateliers…"}
         </p>
       </div>
     </div>

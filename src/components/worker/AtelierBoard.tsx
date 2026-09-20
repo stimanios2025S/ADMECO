@@ -27,17 +27,39 @@ export default function AtelierBoard({ taches, atelierId, accent, nbPostes }: Pr
   const [message, setMessage] = useState<{ ton: "ok" | "ko"; texte: string } | null>(null);
   const [vue, setVue] = useState<Vue>("afaire");
 
-  // ── Rafraîchir sans que l'ouvrier y pense ──
-  // La file bouge dès qu'un collègue déclare une étape. Revenir sur
-  // l'onglet suffit à remettre l'écran à jour ; on ne fait pas de
-  // sondage permanent, qui viderait la batterie de la tablette pour
-  // rien.
+  // ── La synchronisation entre les postes ──
+  //
+  // La file de cet atelier dépend de QUATRE autres écrans : la pièce
+  // que l'Atelier 1 vient de souder débloque le poudrage ici ; celle
+  // que le poudrage libère débloque le bureau. Un écran figé affiche
+  // donc une file qui n'existe plus, et l'ouvrier cherche une pièce
+  // qui est déjà devant lui.
+  //
+  // Trois déclencheurs, du moins cher au plus cher :
+  //
+  //   1. après un geste      → `router.refresh()` dans `jouer()` ;
+  //   2. retour sur l'onglet → un ouvrier qui reprend sa tablette ;
+  //   3. un battement de 30 s, tant que l'onglet est VISIBLE.
+  //
+  // Le battement s'arrête tout seul quand l'écran est éteint ou que
+  // l'onglet passe en arrière-plan : une tablette posée ne consomme
+  // rien. Trente secondes, c'est le temps qu'un cariste met à
+  // traverser l'atelier — plus court ne se verrait pas, plus long
+  // ferait douter de l'écran.
   useEffect(() => {
-    const auRetour = () => {
+    const auReveil = () => {
       if (document.visibilityState === "visible") router.refresh();
     };
-    document.addEventListener("visibilitychange", auRetour);
-    return () => document.removeEventListener("visibilitychange", auRetour);
+
+    document.addEventListener("visibilitychange", auReveil);
+    window.addEventListener("focus", auReveil);
+    const battement = window.setInterval(auReveil, 30_000);
+
+    return () => {
+      document.removeEventListener("visibilitychange", auReveil);
+      window.removeEventListener("focus", auReveil);
+      window.clearInterval(battement);
+    };
   }, [router]);
 
   useEffect(() => {

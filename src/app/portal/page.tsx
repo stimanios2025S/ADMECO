@@ -1,136 +1,52 @@
-import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft, QrCode } from "lucide-react";
-import PortalClient from "./PortalClient";
-import Atelier1Tools from "./Atelier1Tools";
-import Atelier2Tools from "./Atelier2Tools";
-import Atelier3Tools from "./Atelier3Tools";
-import MobilixTools from "./MobilixTools";
-import PortalSync from "./PortalSync";
-import type { AtelierId } from "@/lib/ateliers";
-import { getProfil } from "@/lib/auth";
-import { ficheAtelier, slugAtelier, urlAtelier } from "@/lib/portail-atelier";
+import { atelierDuSlug, slugAtelier } from "@/lib/portail-atelier";
 
 export const dynamic = "force-dynamic";
 
 // ═══════════════════════════════════════════════════════════
-// /portal — LE SCAN DES QR, ET RIEN D'AUTRE
+// /portal — L'ANCIENNE ADRESSE, QUI CONTINUE DE MENER QUELQUE PART
 //
-// ── Ce que cette page était ──
-// Un méga-écran qui faisait quatre métiers à la fois : choisir un
-// atelier, choisir une étape, saisir son prénom sans mot de passe,
-// puis scanner. L'ouvrier devait donc retrouver sa file lui-même,
-// alors qu'elle est calculée depuis `work_order_steps` — c'est-à-dire
-// depuis la commande que l'admin vient de créer.
+// ── Pourquoi cette page existe encore ──
+// Le scan des QR vivait ici. Il vit maintenant SOUS l'atelier :
 //
-// ── Ce qu'elle est ──
-// La SEULE chose qui a vraiment besoin d'être ici : la caméra. Un
-// numéro d'étape dans l'URL, et l'écran de scan de ce poste.
+//   /portal?atelier=1&etape=3   →   /atelier/a1/scan?etape=3
 //
-// Tout le reste vit sur `/atelier/<code>`, où la file est tirée de
-// la base. Une URL sans étape n'a rien à faire sur cette page : elle
-// renvoie vers le portail d'atelier, qui sait où aller.
-//
-// ── La règle de navigation ──
-//   /portal                      → /atelier (puis l'atelier de l'ouvrier)
-//   /portal?atelier=1            → /atelier/a1
-//   /portal?atelier=1&etape=3    → LE SCAN (cette page)
+// Cette page ne fait plus rien d'autre que traduire l'ancienne
+// adresse. Elle n'affiche ni écran, ni formulaire, ni caméra : c'est
+// une redirection, pas un portail. La supprimer franchement laisserait
+// un 404 à quiconque a l'habitude de taper `/portal` — et, dans une
+// usine, une adresse qui marchait hier et qui casse aujourd'hui passe
+// pour une panne du système, pas pour un changement d'URL.
 //
 // ── Le piège des ids ──
-// Les ateliers sont désignés par leur `id` technique : A3 = 4, M1 = 3.
-// La conversion passe par `slugAtelier` / `ficheAtelier`, jamais par un
-// calcul — c'est écrit noir sur blanc dans lib/portail-atelier.ts.
+// `?atelier=` porte un id TECHNIQUE (A3 = 4, M1 = 3). La traduction
+// vers un slug passe par `slugAtelier`, jamais par un calcul — la
+// règle est posée dans lib/portail-atelier.ts.
 // ═══════════════════════════════════════════════════════════
 
-export default async function PortalPage({
+export default function AncienPortal({
   searchParams,
 }: {
-  searchParams?: { mode?: string; atelier?: string; etape?: string };
+  searchParams?: { atelier?: string; etape?: string };
 }) {
-  const mode = searchParams?.mode === "warehouse" ? "warehouse" : "factory";
+  const slugDirect = atelierDuSlug(searchParams?.atelier ?? "");
+  const depuisId = Number(searchParams?.atelier);
+  const slug = slugDirect
+    ? slugAtelier(slugDirect)
+    : [1, 2, 3, 4, 5].includes(depuisId)
+      ? slugAtelier(depuisId)
+      : null;
 
-  const etapeParam = searchParams?.etape ? Number(searchParams.etape) : null;
-  const etape = etapeParam && etapeParam >= 1 && etapeParam <= 30 ? etapeParam : null;
-
-  // L'atelier peut venir de l'URL ou du profil connecté. L'URL gagne
-  // quand elle est fournie : l'ouvrier a explicitement ouvert ce poste.
-  const profil = await getProfil();
-  const depuisUrl = Number(searchParams?.atelier);
-  const atelierId: AtelierId | null =
-    [1, 2, 3, 4, 5].includes(depuisUrl)
-      ? (depuisUrl as AtelierId)
-      : ((profil.atelier_id as AtelierId | null) ?? null);
-
-  // Pas d'étape → ce n'est pas une demande de scan. On renvoie vers le
-  // portail d'atelier, qui, lui, affiche la file réelle.
-  if (!etape && mode !== "warehouse") {
-    const slug = atelierId ? slugAtelier(atelierId) : null;
-    redirect(slug ? `/atelier/${slug}` : "/atelier");
+  // Une étape précise : c'était une demande de scan. On la porte au
+  // même endroit dans la nouvelle arborescence.
+  const etape = Number(searchParams?.etape);
+  if (slug && Number.isFinite(etape) && etape >= 1 && etape <= 30) {
+    redirect(`/atelier/${slug}/scan?etape=${etape}`);
   }
 
-  const fiche = ficheAtelier(atelierId);
+  // Un atelier sans étape : la file de travail.
+  if (slug) redirect(`/atelier/${slug}`);
 
-  return (
-    <div className="min-h-screen bg-[#f5f6f2] text-[#1a1d23]">
-      <Suspense fallback={null}>
-        <PortalSync />
-      </Suspense>
-
-      <div className="mx-auto max-w-4xl px-4 py-5 sm:px-6">
-        {/* ── En-tête : d'où je viens, où je retourne ──
-            Un ouvrier qui scanne doit pouvoir revenir à sa file d'un
-            seul geste. Le bandeau porte la couleur de son atelier. */}
-        <header
-          className="mb-5 rounded-2xl border border-black/[0.05] bg-white p-4 shadow-sm"
-          style={fiche ? { boxShadow: `inset 4px 0 0 ${fiche.accent}` } : undefined}
-        >
-          <div className="flex items-center gap-3">
-            <Link
-              href={atelierId ? urlAtelier(atelierId) : "/atelier"}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-black/[0.06] bg-black/[0.02] text-[#6b7280] transition-colors hover:text-[#1a1d23]"
-              title="Retour à ma file de travail"
-            >
-              <ArrowLeft size={18} />
-            </Link>
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#9ca3af]">
-                Scan des QR {fiche ? `· ${fiche.usine} · ${fiche.code}` : ""}
-              </p>
-              <h1 className="truncate text-[19px] font-extrabold tracking-tight">
-                {fiche ? `${fiche.emoji} ${fiche.court}` : "Poste de production"}
-                {etape ? <span style={{ color: fiche?.accent }}> — étape {etape}</span> : null}
-              </h1>
-            </div>
-            <span
-              className="hidden shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold text-white sm:inline-flex"
-              style={{ background: fiche?.accent ?? "#4a7c59" }}
-            >
-              <QrCode size={13} /> Scanner actif
-            </span>
-          </div>
-          <p className="mt-3 border-t border-black/[0.04] pt-3 text-[12.5px] leading-relaxed text-[#7c8091]">
-            Scannez le QR collé sur la pièce ou sur la feuille de route. Ce que vous déclarez ici est écrit
-            directement dans <span className="font-mono">work_order_steps</span> — la même table que lit
-            votre portail d&apos;atelier.
-          </p>
-        </header>
-
-        {/* ── Les outils du poste ──
-            Chaque composant interroge SON atelier : `MobilixTools`
-            filtre sur atelier_id = 3 (M1), pas sur MOBILIX en général.
-            On ne le monte donc QUE pour M1 — l'afficher pour M2 (id 5)
-            montrerait la file du bois sous le titre du tapissage.
-            M2 n'a pas encore d'outil dédié : le scan fonctionne, et
-            sa file est sur /atelier/m2. */}
-        {atelierId === 1 && <Atelier1Tools etape={etape} />}
-        {atelierId === 2 && <Atelier2Tools etape={etape} />}
-        {atelierId === 4 && <Atelier3Tools etape={etape} />}
-        {atelierId === 3 && <MobilixTools etape={etape} />}
-
-        {/* ── La caméra ── */}
-        <PortalClient mode={mode} atelierId={atelierId} etape={etape} />
-      </div>
-    </div>
-  );
+  // Rien du tout : l'entrée des deux usines.
+  redirect("/portail");
 }

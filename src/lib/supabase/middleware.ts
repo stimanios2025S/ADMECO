@@ -30,8 +30,17 @@ export async function updateSession(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
 
-  // Admin and templates remain authenticated. The floor portal is intentionally
-  // passwordless: workers identify the workstation locally and scan a signed QR.
+  // The pilotage (`/admin`, `/templates`) is gated here, at the edge:
+  // it is a role question, and getting it wrong should never depend on
+  // a page remembering to check.
+  //
+  // The atelier portals are NOT gated here, and that is deliberate.
+  // `/portail` and `/portail/<atelier>` must stay public — they ARE the
+  // login screen. And `/atelier/...` needs a smarter answer than "not
+  // logged in → /login": an anonymous visitor who opens
+  // `/atelier/m2/scan` must land on the MOBILIX 2 login, not on a
+  // generic page. That decision lives in the page, which knows the
+  // atelier from its own slug.
   if (!user && (path.startsWith("/admin") || path.startsWith("/templates"))) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
