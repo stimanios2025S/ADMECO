@@ -228,10 +228,30 @@ export async function deleteStockItem(id: string) {
 }
 
 // ─── TEAM (service-role: auth.admin + profiles bypass RLS safely server-side) ──
-export async function inviteMember(input: { email: string; fullName: string; role: "ADMIN" | "WORKER"; atelierId: number | null }) {
+
+/** Le mot de passe minimum, aligné sur la politique Supabase par défaut. */
+const MIN_MOT_DE_PASSE = 6;
+
+/**
+ * Crée un membre — AVEC son mot de passe.
+ *
+ * ── Pourquoi `password` est obligatoire ──
+ * Sans lui, Supabase crée un utilisateur SANS mot de passe : le compte
+ * existe, mais `signInWithPassword` refuse toute saisie. C'est le seul
+ * chemin d'entrée du portail d'atelier — un membre invité sans mot de
+ * passe ne pouvait donc pas travailler, et rien ne le signalait.
+ *
+ * Un mot de passe Supabase est haché (bcrypt) et n'est plus relisible
+ * ensuite, par personne : il doit être posé ici, à la création. Si le
+ * chef d'atelier l'égare, on en repose un (`resetMemberPassword`).
+ */
+export async function inviteMember(input: { email: string; fullName: string; role: "ADMIN" | "WORKER"; atelierId: number | null; password: string }) {
+  if (!input.password || input.password.length < MIN_MOT_DE_PASSE) {
+    throw new Error(`Le mot de passe doit faire au moins ${MIN_MOT_DE_PASSE} caractères.`);
+  }
   const admin = createServiceSupabase();
   const { data, error } = await admin.auth.admin.createUser({
-    email: input.email, email_confirm: true,
+    email: input.email, password: input.password, email_confirm: true,
     user_metadata: { full_name: input.fullName, role: input.role }
   });
   if (error) throw new Error(error.message);
@@ -241,6 +261,25 @@ export async function inviteMember(input: { email: string; fullName: string; rol
   if (e2) throw new Error(e2.message);
   revalidatePath("/admin/team");
   return { id: userId };
+}
+
+/**
+ * Repose le mot de passe d'un membre existant.
+ *
+ * C'est la seule façon de « retrouver » un mot de passe : l'ancien est
+ * irrécupérable, on le remplace. Sans cette action, un ouvrier qui
+ * perd son mot de passe n'avait aucune porte de sortie — ni écran, ni
+ * procédure — et il fallait supprimer puis recréer le compte, ce qui
+ * effaçait son profil et son atelier.
+ */
+export async function resetMemberPassword(input: { id: string; password: string }) {
+  if (!input.password || input.password.length < MIN_MOT_DE_PASSE) {
+    throw new Error(`Le mot de passe doit faire au moins ${MIN_MOT_DE_PASSE} caractères.`);
+  }
+  const admin = createServiceSupabase();
+  const { error } = await admin.auth.admin.updateUserById(input.id, { password: input.password });
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/team");
 }
 
 export async function updateMember(input: { id: string; fullName: string; role: "ADMIN" | "WORKER"; atelierId: number | null }) {

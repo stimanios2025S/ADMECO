@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { UserPlus, Pencil, Trash2, X, Search } from "lucide-react";
+import { UserPlus, Pencil, Trash2, X, Search, Dices, Eye, EyeOff } from "lucide-react";
 import { GlassCard, SectionTitle, Stat, StatusPill, Empty } from "@/components/admin/ui";
 import { inviteMember, updateMember, removeMember } from "@/app/actions";
 import { ATELIERS, atelierNom } from "@/lib/ateliers";
@@ -135,18 +135,34 @@ function friendlyError(msg: string) {
 function MemberModal({ title, error, busy, initial, hideEmail, onClose, onSubmit }: {
   title: string; error: string; busy: boolean; initial?: Member; hideEmail?: boolean;
   onClose: () => void;
-  onSubmit: (v: { email: string; fullName: string; role: "ADMIN" | "WORKER"; atelierId: number | null }) => void;
+  onSubmit: (v: { email: string; fullName: string; role: "ADMIN" | "WORKER"; atelierId: number | null; password: string }) => void;
 }) {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState(initial?.full_name ?? "");
   const [role, setRole] = useState<"ADMIN" | "WORKER">(initial?.role ?? "WORKER");
   const [atelierId, setAtelierId] = useState<string>(initial?.atelier_id ? String(initial.atelier_id) : "");
+  const [motDePasse, setMotDePasse] = useState("");
+  const [voir, setVoir] = useState(false);
+
+  // ── Le mot de passe est obligatoire à l'invitation ──
+  // Supabase hache le mot de passe à la création : il n'est plus
+  // relisible ensuite, par personne. Un compte invité sans mot de
+  // passe ne peut donc PAS se connecter — et rien ne le signalait.
+  // On le saisit ici, une fois, et on le remet à l'ouvrier.
+  const creerMotDePasse = () => {
+    // Sans I, O, 0 ni 1 : sur une tablette d'atelier ces caractères
+    // se confondent, et une faute de frappe passe pour une panne.
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const tirage = Array.from({ length: 6 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+    setMotDePasse(`Admco-${tirage}`);
+    setVoir(true);
+  };
 
   return (
     <div className="fixed inset-0 z-[90] grid place-items-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <form className="card relative w-full max-w-md space-y-3 p-6"
-        onSubmit={(e) => { e.preventDefault(); onSubmit({ email, fullName, role, atelierId: atelierId ? Number(atelierId) : null }); }}>
+        onSubmit={(e) => { e.preventDefault(); onSubmit({ email, fullName, role, atelierId: atelierId ? Number(atelierId) : null, password: motDePasse }); }}>
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-black">{title}</h3>
           <button type="button" onClick={onClose} className="btn-ghost grid h-8 w-8 place-items-center"><X size={16} /></button>
@@ -167,9 +183,44 @@ function MemberModal({ title, error, busy, initial, hideEmail, onClose, onSubmit
             {ATELIERS_LOCAL.map((a) => <option key={a.id} value={a.id} className="bg-white">{a.nom}</option>)}
           </select>
         </div>
+
+        {/* Le mot de passe : à l'invitation seulement. En modification,
+            on ne touche pas à un mot de passe qui fonctionne déjà sur
+            un poste. */}
+        {!hideEmail && (
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <input
+                  required
+                  minLength={6}
+                  type={voir ? "text" : "password"}
+                  value={motDePasse}
+                  onChange={(e) => setMotDePasse(e.target.value)}
+                  placeholder="Mot de passe — au moins 6 caractères"
+                  autoComplete="new-password"
+                  className="input w-full px-4 py-2.5 pr-11 text-sm"
+                />
+                <button type="button" onClick={() => setVoir((v) => !v)}
+                  className="absolute right-2.5 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg text-[#7c8091] hover:text-[#1a1d23]"
+                  aria-label={voir ? "Masquer" : "Afficher"}>
+                  {voir ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+              <button type="button" onClick={creerMotDePasse}
+                className="btn-ghost grid h-10 w-10 shrink-0 place-items-center" title="Tirer un mot de passe">
+                <Dices size={16} />
+              </button>
+            </div>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-[#9ca3af]">
+              Notez-le et remettez-le à l&apos;ouvrier : il n&apos;est plus affichable ensuite.
+            </p>
+          </div>
+        )}
+
         {error && <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-500">{error}</p>}
         <div className="flex gap-2">
-          <button disabled={busy} className="btn-fire flex-1 px-4 py-2.5 text-sm">{busy ? "Enregistrement…" : hideEmail ? "Enregistrer" : "Envoyer l'invitation"}</button>
+          <button disabled={busy} className="btn-fire flex-1 px-4 py-2.5 text-sm">{busy ? "Enregistrement…" : hideEmail ? "Enregistrer" : "Créer le compte"}</button>
           <button type="button" onClick={onClose} className="btn-ghost px-4 py-2.5 text-sm">Annuler</button>
         </div>
       </form>
