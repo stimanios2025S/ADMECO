@@ -122,24 +122,52 @@ export default async function NewOrderPage() {
       </AdminShell>
     );
   } catch (e: any) {
+    const msg = e?.message ?? String(e);
+    // ── Deux pannes très différentes, deux remèdes opposés ──
+    // « infinite recursion » n'a RIEN à voir avec un catalogue vide :
+    // c'est la RLS qui s'auto-appelle. Proposer de relancer l'import
+    // enverrait l'exploitant chercher au mauvais endroit — c'est
+    // exactement ce qui s'est produit.
+    const recursion = /infinite recursion|row-level security|permission denied/i.test(msg);
+
     return (
       <AdminShell pageTitle="Nouvelle commande" pageHint="Choisissez de vrais articles Silwane.">
-        <div className="card space-y-2 border-red-200 p-6">
-          <p className="font-black text-[#1a1d23]">Chargement du catalogue impossible</p>
-          <p className="rounded-xl bg-red-50 px-3 py-2 font-mono text-xs text-red-500">
-            {e?.message ?? String(e)}
+        <div className="card space-y-3 border-red-200 p-6">
+          <p className="font-black text-[#1a1d23]">
+            {recursion ? "La sécurité de la base se bloque elle-même" : "Chargement du catalogue impossible"}
           </p>
-          <p className="text-sm text-[#7c8091]">
-            Cette page lit le catalogue réel : <span className="font-mono">erp_articles</span>,{" "}
-            <span className="font-mono">erp_familles</span>,{" "}
-            <span className="font-mono">erp_nomenclatures</span>. Si elles sont vides, l'import
-            Silwane n'a pas encore tourné :
-          </p>
-          <pre className="overflow-x-auto rounded-xl bg-[#1a1d23] px-4 py-3 font-mono text-[11px] leading-relaxed text-[#e8e6e1]">
-{`bash deploy/migrate.sh
+          <p className="rounded-xl bg-red-50 px-3 py-2 font-mono text-xs text-red-500">{msg}</p>
+
+          {recursion ? (
+            <>
+              <p className="text-sm text-[#7c8091]">
+                Une politique RLS interroge <span className="font-mono">profiles</span> depuis une
+                politique posée sur <span className="font-mono">profiles</span> : PostgreSQL refuse de
+                planifier la requête. Le catalogue n'est pas en cause — il n'est même pas lu. La
+                migration <b>0019</b> répare cela en déplaçant le test « suis-je ADMIN ? » dans une
+                fonction <span className="font-mono">SECURITY DEFINER</span>.
+              </p>
+              <pre className="overflow-x-auto rounded-xl bg-[#1a1d23] px-4 py-3 font-mono text-[11px] leading-relaxed text-[#e8e6e1]">
+{`cd /opt/admedco && git pull --ff-only
+bash deploy/migrate.sh
+pm2 restart admedco:4003`}
+              </pre>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-[#7c8091]">
+                Cette page lit le catalogue réel : <span className="font-mono">erp_articles</span>,{" "}
+                <span className="font-mono">erp_familles</span>,{" "}
+                <span className="font-mono">erp_nomenclatures</span>. Si elles sont vides, l'import
+                Silwane n'a pas encore tourné :
+              </p>
+              <pre className="overflow-x-auto rounded-xl bg-[#1a1d23] px-4 py-3 font-mono text-[11px] leading-relaxed text-[#e8e6e1]">
+{`cd /opt/admedco
 set -a; . ./.env.local; set +a
 node scripts/import-silwane.mjs ./Massiexporte`}
-          </pre>
+              </pre>
+            </>
+          )}
         </div>
       </AdminShell>
     );
