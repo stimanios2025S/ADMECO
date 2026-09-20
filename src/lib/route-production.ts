@@ -222,18 +222,31 @@ export const parcoursProbable = (a: {
   designation?: string | null;
   famille?: string | null;
 }): ParcoursProduit => {
-  const texte = SANS_ACCENT(`${a.famille ?? ""} ${a.designation ?? ""}`);
-  const code = (a.code ?? "").toUpperCase().trim();
+  const fam = SANS_ACCENT(a.famille ?? "").trim();
+  const des = SANS_ACCENT(a.designation ?? "").trim();
+  const code = (a.code ?? "").toUpperCase().replace(/\s+/g, "").trim();
 
-  // MOBILIX : la chaise tapissée. Les deux modèles de l'atelier
-  // (G21 et CANADA) sortent en famille CHAISE / TAPISSAGE.
-  if (/(CHAISE|TAPISS|MOBILIX|REMBOURR)/.test(texte)) return "MOBILIX";
-  if (/^(CHG|SCL|MBX|CHA)/.test(code)) return "MOBILIX";
+  // ── 1. La FAMILLE d'abord ──
+  // C'est le signal le plus fiable, et le seul qui sépare proprement
+  // une chaise de son socle : les deux portent « CHAISE » dans leur
+  // désignation, aucune analyse de mots ne les distinguera.
+  //
+  //   CHAISE / TAPISSAGE  → le mou, donc MOBILIX
+  //   PRODUITS SEMI-FINI  → la pièce s'arrête au poudrage, ADMEDCO
+  if (/^(CHAISE|TAPISSAGE)\b/.test(fam)) return "MOBILIX";
+  if (/^PRODUITS SEMI-FINI/.test(fam)) return "ADMEDCO_TOLE";
 
-  // Pièce de tôle, structure ou piètement vendue telle quelle : elle
-  // s'arrête au poudrage, personne ne la monte.
-  if (/(TOLE|STRUCTURE|PIETEMENT|SOCLE)/.test(texte)) return "ADMEDCO_TOLE";
-  if (/^(TLE|TOL|STR|FRM|PIET|SOC|COL|PLA)/.test(code)) return "ADMEDCO_TOLE";
+  // ── 2. La désignation, par matière ──
+  const mou = /(SKAI|MOUSSE|TISSUS?|TAPISS|REMBOURR|HOUSSE|COUSSIN|EPONGE|BOIS|MDF|MULTIPLEX)/.test(des);
+  const dur = /(SOCLE|TUBE|TOLE|PIETEMENT|STRUCTURE|METALLIQ|ACIER|INOX)/.test(des);
+  if (mou && !dur) return "MOBILIX";
+  if (dur && !mou) return "ADMEDCO_TOLE";
+
+  // ── 3. Le code, en dernier recours ──
+  // `SL`/`SCL` sont exclus volontairement : un socle est du tube
+  // soudé et poudré, jamais du tapissage.
+  if (/^(CHG|CHC|CHB|MBX|KITCHAISE)/.test(code)) return "MOBILIX";
+  if (/^(TLE|TOL|STR|FRM|PIET|SOC|SCL|COL|PLA)/.test(code)) return "ADMEDCO_TOLE";
 
   return "ADMEDCO_ASSEMBLE";
 };

@@ -74,6 +74,16 @@ const atelierNomCourt = (id: number) => {
 
 const nf = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 3 });
 
+// ── Comparaison à plat ──
+// Les codes Silwane ne sont pas propres : la MÊME nomenclature écrit
+// `CHG020` (sans espace) et `CHG 021` (avec), `FIL 7` avec son espace.
+// Une recherche littérale sur « CHG021 » ne trouverait donc RIEN — ce
+// qui se lit « le produit n'a pas été importé » alors qu'il est bien
+// là. On compare donc sur une forme aplatie, où les espaces, les
+// accents et la ponctuation ne comptent plus.
+const aplatir = (s: string) =>
+  s.toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Z0-9]/g, "");
+
 export default function NewOrderClient({ articles }: { articles: ArticleFabrique[] }) {
   const [clientNom, setClientNom] = useState("");
   const [clientTelephone, setClientTelephone] = useState("");
@@ -104,13 +114,13 @@ export default function NewOrderClient({ articles }: { articles: ArticleFabrique
 
   /** Les articles qui correspondent à la recherche, plafonnés à 60. */
   const suggestions = (i: number): ArticleFabrique[] => {
-    const q = recherches[i]?.trim().toLowerCase() ?? "";
+    const q = aplatir(recherches[i] ?? "");
     const base = q
       ? articles.filter(
           (a) =>
-            a.code.toLowerCase().includes(q) ||
-            a.designation.toLowerCase().includes(q) ||
-            (a.famille ?? "").toLowerCase().includes(q),
+            aplatir(a.code).includes(q) ||
+            aplatir(a.designation).includes(q) ||
+            aplatir(a.famille ?? "").includes(q),
         )
       : articles;
     return base.slice(0, 60);
@@ -357,6 +367,10 @@ export default function NewOrderClient({ articles }: { articles: ArticleFabrique
                     <p className="text-[11px] text-[#9aa0ae]">
                       {articles.length} articles fabricables au catalogue
                       {recherches[i]?.trim() ? ` · ${suggestions(i).length} affiché(s)` : " · affinez la recherche"}
+                      {" · "}
+                      <span title="CHG020 s'écrit sans espace, CHG 021 avec : la comparaison ignore les espaces">
+                        les espaces ne comptent pas
+                      </span>
                     </p>
                   </div>
 
@@ -411,7 +425,7 @@ export default function NewOrderClient({ articles }: { articles: ArticleFabrique
                       <div className="mb-2 flex items-center gap-2">
                         <Wrench size={14} className="text-[#c24a08]" />
                         <p className="text-xs font-black uppercase tracking-wide text-[#5b6070]">
-                          Gamme — {route.length} étapes
+                          Gamme proposée — {route.length} étapes
                         </p>
                         <span className="ml-auto rounded-md bg-white px-2 py-0.5 font-mono text-[10px] text-[#7c8091]">
                           {PARCOURS_USINE[parcours]}
@@ -443,7 +457,9 @@ export default function NewOrderClient({ articles }: { articles: ArticleFabrique
                       </div>
                       <p className="mt-2 text-[10px] leading-relaxed text-[#9aa0ae]">
                         Le nombre de gauche est la <b>séquence globale</b> : c'est elle qui dit ce qui
-                        vient avant quoi, tous ateliers confondus.
+                        vient avant quoi, tous ateliers confondus. Cette gamme est une{" "}
+                        <b>proposition</b> : à la validation, l'agent de triage la recalcule à partir
+                        des composants réels de la formule.
                       </p>
                     </div>
 
